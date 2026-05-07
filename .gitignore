@@ -1,0 +1,60 @@
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies & package managers
+node_modules/
+.pnp
+.pnp.js
+vendor/
+
+# Build & output
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+*.tsbuildinfo
+
+# Python (若後端使用)
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Logs & debug
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE (個人本機設定；若希望整個 .vscode 不入庫可取消下行註解)
+# .vscode/
+
+# Cursor / 本地對話與工具快取
+.specstory/
+
+# 測試覆蓋率
+coverage/
+.nyc_output/
+
+# 暫存與壓縮檔（避免誤提交大型二進位）
+*.tmp
+*.temp
+*.swp
+*~
