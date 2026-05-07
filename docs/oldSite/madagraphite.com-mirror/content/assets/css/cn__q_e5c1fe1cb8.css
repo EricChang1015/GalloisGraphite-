@@ -1,0 +1,5 @@
+.banner .banner-text{ background-image: url(../images/cn/banner.png); width: 722px; height: 309px;}
+@media screen and (max-width: 640px){
+    .banner .banner-text{ background-image:none; width: 100%; height: auto;}
+    .banner .banner-text img{  width: 68%;}
+}
