@@ -1,0 +1,30 @@
+---
+description: Mada Graphite project — overall conventions
+alwaysApply: true
+---
+
+This is the Mada Graphite B2B trading platform. The single source of truth for
+project-wide rules is the file [`.cursorrules`](mdc:.cursorrules) at the
+repository root. **Read it before writing or refactoring any code.**
+
+Quick reminders that override training data:
+
+- This project uses **Next.js 16** (App Router, Server Actions, route types).
+  APIs may differ from older Next.js versions; see `node_modules/next/dist/docs/`
+  if uncertain.
+- This project uses **Tailwind CSS v4** (CSS-variable theming, no `tailwind.config.js`).
+- shadcn style: **base-nova** with **`@base-ui/react`** primitives (NOT Radix UI
+  by default; only specific components like `@radix-ui/react-slot` are
+  installed where needed).
+- Mutations live in `src/actions/*` as Server Actions. New API routes are only
+  for streaming (`/api/chat`) or webhooks.
+- Database access: `@supabase/ssr` clients in `src/lib/supabase/`. Client/server
+  separation is critical — `SUPABASE_SERVICE_ROLE_KEY` must never reach the
+  browser.
+
+## Implementation flow
+1. Plan first, write code second.
+2. Validate inputs with `zod`.
+3. Return `{ data, error }` from server actions; never throw to the UI.
+4. Append timeline events for every order state transition.
+5. Append an `audit_logs` row for every admin action.

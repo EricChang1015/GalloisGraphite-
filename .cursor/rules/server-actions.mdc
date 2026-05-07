@@ -1,0 +1,50 @@
+---
+description: Patterns for Server Actions in src/actions/*
+globs: src/actions/**/*.ts
+alwaysApply: false
+---
+
+# Server Action conventions
+
+All mutations live here. Follow this template:
+
+```ts
+"use server"
+
+import { z } from "zod"
+import { createServerClient } from "@/lib/supabase/server"
+import { revalidatePath } from "next/cache"
+
+const InputSchema = z.object({
+  // ...
+})
+
+export async function doSomething(formData: FormData) {
+  const parsed = InputSchema.safeParse(Object.fromEntries(formData))
+  if (!parsed.success) {
+    return { data: null, error: parsed.error.flatten() }
+  }
+
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: { message: "Unauthorized" } }
+
+  // ... business logic ...
+
+  revalidatePath("/some/path")
+  return { data: result, error: null }
+}
+```
+
+Rules:
+- Always `"use server"` at the top of the file.
+- Validate every external input with zod.
+- Authenticate via `supabase.auth.getUser()` (not `getSession()` for server).
+- Never throw to the client; always return `{ data, error }`.
+- Use `revalidatePath` / `revalidateTag` after data mutations.
+- Authorization: re-check `profile.role` for any role-restricted action. RLS
+  is the second line of defense, not the first.
+- For order state transitions: read current `orders.status`, validate the
+  transition is legal, append a timeline event in the same update.

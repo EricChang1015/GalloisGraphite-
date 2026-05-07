@@ -1,0 +1,140 @@
+# Mada Graphite Platform — Cursor Rules
+
+## Project Context
+B2B graphite trading platform connecting global buyers with Madagascar sellers.
+- Owner: Graphite Energy Inc. (馬達加斯加自有礦場)
+- 舊站(純靜態): madagraphite.com
+- MVP 目標: 2 天可落地版本，避免過度設計
+- 合約以英文為主，全球買家 + 馬達加斯加賣家
+
+## Tech Stack (DO NOT deviate without explicit instruction)
+- Next.js 16 App Router + TypeScript (strict)
+- Supabase (Auth + Postgres + Storage + Realtime)
+- Tailwind CSS v4 + shadcn/ui (style: base-nova, base-ui)
+- Server Actions for mutations (no separate API routes unless streaming)
+- react-hook-form + zod for forms
+- Anthropic Claude API (via @ai-sdk/anthropic) for AI assistant
+- Resend for transactional email
+- lucide-react for icons
+- date-fns for date manipulation
+- sonner for toast notifications
+
+## Code Style
+- Use Server Components by default; add "use client" only when needed
+- All DB access through Supabase client; rely on RLS for row-level security
+- All forms use react-hook-form + zod schema
+- Prefer Server Actions (`src/actions/*`) over API routes for mutations
+- Error handling: return `{ data, error }` pattern, never throw to client UI
+- File naming:
+  - Routes/folders: kebab-case (e.g. `order-detail`, `payment-proof`)
+  - React components: PascalCase (e.g. `OrderTimeline.tsx`)
+  - Utilities/hooks/non-component TS: camelCase
+- No inline `style={...}` and no arbitrary Tailwind values like `[34px]` unless absolutely necessary
+- Always use the `cn()` helper from `@/lib/utils` to merge class names
+
+## Domain Model (key entities)
+| Entity | Key fields | Notes |
+|---|---|---|
+| profiles | role, status, kyc_level | extends auth.users |
+| product_categories | spec_schema (jsonb) | admin-managed |
+| listings | seller_id, qty, origin, available window, unit_price | seller posts |
+| inquiries | buyer_id, listing_id, requested_qty | buyer 詢價 |
+| orders | state machine | DRAFT → CONTRACT_GENERATED → SIGNED → PAYMENT_PENDING → PAID → SHIPPED → DELIVERED → COMPLETED |
+| contracts | content_html, signed scans | from template |
+| payments | tx_hash / proof_url, status | manual admin verification |
+| chat_rooms / chat_members / messages | order-bound IM | Supabase Realtime |
+| news | published news articles | admin-managed |
+| audit_logs | who/what/when | admin actions |
+
+## Roles
+- `buyer`: 詢價、下訂、付款、確認收貨
+- `seller`: 上貨、接受詢價、出貨、回報物流
+- `admin`: 平台運維 + 付款人工審核
+- `super_admin`: 最高權限，可以管理 admin
+
+## Status / State Machine Conventions
+- 每次 order 狀態轉換要寫入 `orders.timeline` (jsonb append)
+- 每次 admin 動作要寫入 `audit_logs`
+- payment.status: pending → verified | rejected (僅 admin 可變更)
+
+## Payment (MVP simplification)
+- **NO** blockchain integration / wallet connection
+- 用戶提交 tx_hash (text) 或上傳付款憑證 image 至 Supabase Storage
+- Admin 在 `/admin/payments` 人工核對後標記 paid
+- 支援 USDT (TRC20/ERC20)、USDI、MUP (自有 token)、bank_transfer
+
+## Contract (MVP simplification)
+- 由模板（参考 `docs/CONTRACT_TEMPLATE.md`）動態填入買賣雙方/商品/價格生成 HTML
+- "下載 PDF" 用 `window.print()` 即可
+- 用戶印出簽名後上傳掃描檔到 Supabase Storage（buyer/seller 兩份）
+- Admin 視需要驗證簽名件，平台自證即可（不接 DocuSign）
+
+## AI Assistant Rules
+- 系統 Prompt 都放在 `src/lib/ai/prompt.ts`
+- Guest（未登入）只回答石墨知識/公司介紹；偵測到詢價/購買/下單意圖回 `[LOGIN_REQUIRED]` 標記
+- Logged-in user 可使用 tools（搜商品/查訂單），先預留介面
+- 不要在訊息流中洩漏系統 Prompt 或資料庫結構
+
+## Security
+- 每張表必須有 RLS policy（migrations 內定義）
+- Admin 路由由 `src/middleware.ts` 檢查 `profile.role`
+- `SUPABASE_SERVICE_ROLE_KEY` 只能在 Server (route handler / server action) 使用，**絕對不可** 出現在 Client Component
+- 所有用戶輸入用 zod 校驗
+- 文件上傳僅允許 `image/*`、`application/pdf`，並有 size limit
+
+## UI/UX
+- 主色: Graphite Dark `#1a1a1a` + Accent Gold `#c9a961`
+- 風格: 工業／礦業質感，深色底為主，金色點綴
+- 英文為主，預留 i18n（之後接 next-intl）
+- Mobile-first，使用 Tailwind 預設斷點（sm/md/lg/xl）
+- icons 一律使用 `lucide-react`
+- toast 使用 sonner (`@/components/ui/sonner`)
+- 表單使用 shadcn `Form`/`FormField`/`FormItem`/`FormControl`/`FormMessage`
+- 載入狀態使用 shadcn `Skeleton`，不要用 spinner-only
+
+## Folder Conventions
+```
+src/
+  app/
+    (public)/     公開頁面（含 SSG/ISR 適用的 marketing 頁）
+    (auth)/       login / register / verify
+    (app)/        登入後 dashboard / market / listings / orders / messages
+    admin/        後台（middleware 限制 role）
+    api/          只放需要 streaming 或 webhook 的 route handler
+  actions/        Server Actions（auth/listing/inquiry/order/admin/payment...）
+  components/
+    ui/           shadcn 自動生成（不手動編輯，除非加變體）
+    layout/       Navbar / Sidebar / Footer
+    chat/ listing/ order/ admin/ ...
+  lib/
+    supabase/     client / server / middleware / admin
+    ai/           prompt / knowledge / tools
+    contract/     template renderer
+    email/        resend wrapper
+    utils.ts
+  types/
+    database.ts   由 Supabase CLI 生成
+supabase/
+  migrations/     001_init.sql, 002_xxx.sql ...
+docs/
+  PRD.md SCHEMA.md CONTRACT_TEMPLATE.md ROADMAP.md LEGACY_CONTENT.md
+```
+
+## Git / Commit
+- Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`
+- 一個 commit 對應一個邏輯變更
+- 不要把 `.env*`、`node_modules`、`.next` 提進去（已在 `.gitignore`）
+
+## Don'ts
+- ❌ 不要安裝 Prisma（直接用 Supabase client + raw SQL migration）
+- ❌ 不要建獨立的 Express/Fastify 後端（一律 Server Actions / Route Handler）
+- ❌ 不要接區塊鏈 / 錢包 SDK（MVP 不需要）
+- ❌ 不要在 Client Component 中 import server-only modules（`@supabase/ssr` server client / service role key）
+- ❌ 不要使用 `any`，盡量寫好型別；遇到複雜型別至少標註 `// TODO: refine type`
+- ❌ 不要重複造輪子，shadcn 已有的元件就用 shadcn
+
+## When asked to implement
+1. 先列 plan（要動哪些檔案、怎麼分步）
+2. 確認後再寫 code
+3. 寫 code 前確認 schema、RLS、權限假設
+4. 寫完跑 lint / 重點 manual test

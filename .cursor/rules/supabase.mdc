@@ -1,0 +1,59 @@
+---
+description: Supabase client/server patterns and RLS rules
+globs: src/lib/supabase/**/*.ts,src/actions/**/*.ts,supabase/**/*.sql
+alwaysApply: false
+---
+
+# Supabase patterns
+
+## Three clients, three contexts
+
+| File | When to use | Key |
+|---|---|---|
+| `src/lib/supabase/client.ts` | Client Components | anon key |
+| `src/lib/supabase/server.ts` | Server Components & Server Actions | anon key + cookies |
+| `src/lib/supabase/admin.ts` | Privileged ops (e.g. set role, send email) | service_role key |
+
+`admin.ts` MUST be server-only (use `import "server-only"` at the top).
+
+## Reading data in Server Components
+
+```ts
+import { createServerClient } from "@/lib/supabase/server"
+
+export default async function Page() {
+  const supabase = await createServerClient()
+  const { data: listings } = await supabase
+    .from("listings")
+    .select("*, seller:profiles(full_name)")
+    .eq("status", "active")
+  return <ListingGrid items={listings ?? []} />
+}
+```
+
+## RLS
+
+- Enable RLS on every user-data table.
+- Keep policies in SQL migrations under `supabase/migrations/`.
+- For each new table, write at minimum: `select`, `insert`, `update`, `delete`
+  policies, even if some are `using (false)`.
+- Admin escapes RLS by using the service role key from `admin.ts`.
+
+## Storage
+
+- Bucket layout:
+  - `avatars` — profile photos
+  - `kyc` — KYC documents (private, signed URL only)
+  - `contracts` — signed contract scans
+  - `payments` — payment proofs
+  - `listings` — listing images
+  - `chat` — chat attachments
+- Always set bucket access (public/private) explicitly when creating.
+- Upload via Server Action so we can append audit/timeline entries.
+
+## Realtime
+
+- Use `supabase.channel("messages:room_id={uuid}")` per chat room.
+- Subscribe to `postgres_changes` event on `messages` table filtered by
+  `room_id=eq.${roomId}`.
+- Always unsubscribe in `useEffect` cleanup.

@@ -1,0 +1,80 @@
+---
+description: UI conventions, shadcn (base-nova) usage, theme & accessibility
+globs: src/components/**/*.tsx,src/app/**/*.tsx
+alwaysApply: false
+---
+
+# UI / shadcn conventions
+
+## shadcn style
+- Style preset: **base-nova**
+- Underlying primitives: **`@base-ui/react`** (NOT Radix). Some Radix utilities
+  (e.g. `@radix-ui/react-slot`) are installed where shadcn templates require.
+- Auto-generated files live in `src/components/ui/`. Don't hand-edit unless
+  adding a new variant; always run `npx shadcn add <component>` when possible.
+
+## Theme tokens
+- Primary: graphite dark (`oklch` of `#1a1a1a`-ish), accent gold (`#c9a961`).
+- Color tokens are CSS variables defined in `src/app/globals.css`.
+- Use semantic class names: `bg-primary`, `text-foreground`, `text-muted-foreground`,
+  `border-border`, etc. Avoid raw hex / `bg-[#xxx]`.
+
+## Forms
+Use shadcn `Form` wrapper with `react-hook-form` + `zod`:
+
+```tsx
+"use client"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import {
+  Form, FormField, FormItem, FormLabel, FormControl, FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+
+const Schema = z.object({ email: z.string().email() })
+
+export function MyForm() {
+  const form = useForm<z.infer<typeof Schema>>({
+    resolver: zodResolver(Schema),
+    defaultValues: { email: "" },
+  })
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(/* ... */)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl><Input {...field} type="email" /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </form>
+    </Form>
+  )
+}
+```
+
+## Toast / feedback
+- Mount `<Toaster />` from `@/components/ui/sonner` once in root layout.
+- Use `toast.success(...)` / `toast.error(...)` from `sonner` after server
+  action results.
+
+## Loading & empty states
+- Loading: render skeletons (`@/components/ui/skeleton`) at the same shape as
+  the content. No bare spinners.
+- Empty states: provide a brief message + primary CTA, never an empty page.
+
+## Icons
+- Always import from `lucide-react`.
+- Default icon size matches button size variant; for inline text icons use
+  `className="size-4"`.
+
+## Accessibility
+- All interactive elements need accessible labels.
+- `<Input>` must be paired with `<Label>` (or `FormLabel`).
+- Color contrast: don't rely on color alone for status — also use icons/badges.

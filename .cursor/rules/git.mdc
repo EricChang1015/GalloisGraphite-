@@ -1,0 +1,88 @@
+---
+description: Git workflow, commit conventions, and branch strategy
+alwaysApply: true
+---
+
+# Git conventions
+
+## Commit message format (Conventional Commits)
+
+```
+<type>(<optional scope>): <imperative, lowercase summary>
+
+[optional body explaining WHY, not WHAT]
+
+[optional footer: Breaking change / Closes #issue]
+```
+
+Types:
+| Type | When to use |
+|---|---|
+| `feat` | New user-facing feature |
+| `fix` | Bug fix |
+| `chore` | Dependency bump, config, tooling |
+| `docs` | Documentation only |
+| `refactor` | Internal code restructure, no behavior change |
+| `style` | Formatting, lint, CSS only |
+| `test` | Add or fix tests |
+| `perf` | Performance improvement |
+
+Examples:
+```
+feat(auth): add email verification flow with Supabase trigger
+fix(order): prevent invalid state transition from paid -> draft
+chore: upgrade supabase-js to 2.106
+docs(schema): document RLS policy matrix
+```
+
+## Branch naming
+
+```
+feature/<ticket-or-slug>   e.g. feature/seller-listing-form
+fix/<slug>                 e.g. fix/middleware-redirect-loop
+chore/<slug>               e.g. chore/upgrade-supabase
+release/vX.Y.Z
+```
+
+## Safe git operations
+
+- **NEVER** `git push --force` on `main`/`master`.
+- **NEVER** commit `.env`, `.env.local`, or any file containing real API keys.
+- Use `git add -p` for selective staging on large refactors.
+- Squash WIP commits before merging to `main`.
+
+## Files that must NOT be committed
+
+```
+.env
+.env.local
+.env.*.local
+supabase/.branches
+supabase/.temp
+node_modules/
+.next/
+```
+
+These are all in `.gitignore`. Always verify with `git status` before committing.
+
+## Recommended workflow
+
+```powershell
+# Check what will be committed
+git status
+git diff --cached
+
+# Stage and commit
+git add -A
+git commit -m "feat(auth): implement signup/signin server actions"
+
+# Push feature branch (NOT force-push to main)
+git push origin feature/auth-flow
+```
+
+## When writing commit messages as an AI agent
+
+1. Run `git diff --cached` first to see exact changes.
+2. Summarize the **why** (business reason), not just the **what**.
+3. Keep the subject line ≤ 72 chars.
+4. Reference related issues with `Closes #N` if applicable.
