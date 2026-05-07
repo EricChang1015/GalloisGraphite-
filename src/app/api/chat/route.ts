@@ -45,11 +45,15 @@ export async function POST(req: Request) {
     );
   }
 
-  // Determine mode from auth state
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Determine mode from auth state (fall back to guest if Supabase is unavailable)
+  let user = null;
+  try {
+    const supabase = await createServerClient();
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    // Non-fatal: treat as guest when auth cannot be resolved
+  }
 
   const system = buildSystemPrompt(user ? "user" : "guest");
   const model = process.env.POE_MODEL ?? "claude-3-5-sonnet";
