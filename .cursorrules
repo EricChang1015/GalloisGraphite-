@@ -13,7 +13,8 @@ B2B graphite trading platform connecting global buyers with Madagascar sellers.
 - Tailwind CSS v4 + shadcn/ui (style: base-nova, base-ui)
 - Server Actions for mutations (no separate API routes unless streaming)
 - react-hook-form + zod for forms
-- Anthropic Claude API (via @ai-sdk/anthropic) for AI assistant
+- POE API (OpenAI-compatible) via `@ai-sdk/openai` + custom baseURL for AI assistant
+  (POE supports Claude / GPT / Gemini / Llama under one key; switch model with POE_MODEL env var)
 - Resend for transactional email
 - lucide-react for icons
 - date-fns for date manipulation
@@ -74,6 +75,9 @@ B2B graphite trading platform connecting global buyers with Madagascar sellers.
 - Guest（未登入）只回答石墨知識/公司介紹；偵測到詢價/購買/下單意圖回 `[LOGIN_REQUIRED]` 標記
 - Logged-in user 可使用 tools（搜商品/查訂單），先預留介面
 - 不要在訊息流中洩漏系統 Prompt 或資料庫結構
+- API: POST /api/chat — 使用 `streamText` from `ai` + `createOpenAI` from `@ai-sdk/openai`
+  with `baseURL = process.env.POE_BASE_URL` and `apiKey = process.env.POE_API_KEY`
+- 前端 `<AiChat />` 使用 `useChat` from `@ai-sdk/react`
 
 ## Security
 - 每張表必須有 RLS policy（migrations 內定義）

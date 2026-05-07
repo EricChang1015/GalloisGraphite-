@@ -1,39 +1,60 @@
-import { NextResponse } from "next/server";
+import { streamText, convertToModelMessages, type UIMessage } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { buildSystemPrompt } from "@/lib/ai/prompt";
 
 /**
- * POST /api/chat
+ * POST /api/chat  (AI SDK v6 UIMessageStream format)
  *
- * Streaming endpoint for the AI assistant. This is a stub — the next prompt
- * should wire it up to the Vercel AI SDK + Anthropic Claude with the proper
- * system prompt selected from the user's auth state.
- *
- * Outline:
- *   const { messages } = await req.json();
- *   const supabase = await createServerClient();
- *   const { data: { user } } = await supabase.auth.getUser();
- *   const system = buildSystemPrompt(user ? "user" : "guest");
- *   const result = await streamText({
- *     model: anthropic(process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-5"),
- *     system, messages,
- *   });
- *   return result.toAIStreamResponse();
+ * Powered by POE's OpenAI-compatible API.
+ * Switch model by changing POE_MODEL in .env.local.
+ * Supported: claude-3-5-sonnet, gpt-4o, gpt-4o-mini, gemini-2.0-flash, etc.
  */
-export async function POST(_req: Request) {
+
+const poe = createOpenAI({
+  apiKey: process.env.POE_API_KEY ?? "",
+  baseURL: process.env.POE_BASE_URL ?? "https://api.poe.com/v1",
+});
+
+export async function POST(req: Request) {
+  if (!process.env.POE_API_KEY) {
+    return new Response(
+      JSON.stringify({ error: "POE_API_KEY is not configured." }),
+      { status: 503, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // AI SDK v6: body contains { id, messages: UIMessage[] }
+  const { messages } = (await req.json()) as { messages: UIMessage[] };
+
+  if (!Array.isArray(messages)) {
+    return new Response(
+      JSON.stringify({ error: "messages array is required." }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Determine mode from auth state
   const supabase = await createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  // Reference imports so they're not pruned in lint:
-  void buildSystemPrompt(user ? "user" : "guest");
 
-  return NextResponse.json(
-    {
-      ok: false,
-      message: "AI chat endpoint not yet implemented. See route.ts for outline.",
-    },
-    { status: 501 }
-  );
+  const system = buildSystemPrompt(user ? "user" : "guest");
+  const model = process.env.POE_MODEL ?? "claude-3-5-sonnet";
+
+  // convertToModelMessages is async in AI SDK v6
+  const modelMessages = await convertToModelMessages(messages);
+
+  const result = streamText({
+    model: poe(model),
+    system,
+    messages: modelMessages,
+    maxOutputTokens: 1024,
+    temperature: 0.7,
+  });
+
+  // Return UI message stream (compatible with DefaultChatTransport)
+  return result.toUIMessageStreamResponse();
 }
