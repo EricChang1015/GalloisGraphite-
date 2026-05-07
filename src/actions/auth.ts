@@ -9,7 +9,7 @@ export type ActionResult<T> =
   | { data: T; error: null }
   | { data: null; error: { message: string; fieldErrors?: Record<string, string[]> } };
 
-function validationError(error: z.ZodError): ActionResult<never>["error"] {
+function validationError(error: z.ZodError): { message: string; fieldErrors?: Record<string, string[]> } {
   return {
     message: "Please check the highlighted fields.",
     fieldErrors: z.flattenError(error).fieldErrors,

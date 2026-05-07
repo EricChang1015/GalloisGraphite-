@@ -1,29 +1,94 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-export const ListingInputSchema = z.object({
-  category_id: z.string().uuid(),
-  title: z.string().min(3).max(200),
-  specs: z.record(z.string(), z.unknown()).default({}),
-  quantity: z.number().positive(),
-  unit: z.enum(["MT", "KG"]).default("MT"),
-  origin_location: z.string().min(1),
-  available_from: z.string().optional(),
-  available_to: z.string().optional(),
-  unit_price: z.number().positive(),
-  currency: z.string().default("USDT"),
-  incoterm: z.string().default("CFR"),
-  description: z.string().optional(),
-  images: z.array(z.string().url()).default([]),
-});
+import { createServerClient } from "@/lib/supabase/server";
+import { ListingInputSchema, type ListingInput } from "@/lib/validations/forms";
+import type { ActionResult } from "./auth";
 
-export type ListingInput = z.infer<typeof ListingInputSchema>;
+export { ListingInputSchema };
+export type { ListingInput } from "@/lib/validations/forms";
 
-// TODO: implement createListing / updateListing / pauseListing / resumeListing.
-// Steps:
-//   1. createServerClient
-//   2. supabase.auth.getUser() — must exist
-//   3. read profile, ensure role === 'seller' (or admin)
-//   4. validate input with ListingInputSchema
-//   5. insert/update listings; revalidatePath('/listings'); return { data, error }
+export async function createListing(
+  input: ListingInput
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = ListingInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      data: null,
+      error: { message: "Invalid input.", fieldErrors: z.flattenError(parsed.error).fieldErrors },
+    };
+  }
+
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { data: null, error: { message: "Not authenticated." } };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, status")
+    .eq("id", user.id)
+    .single<{ role: string; status: string }>();
+
+  if (!profile || profile.status !== "active") {
+    return { data: null, error: { message: "Account not active." } };
+  }
+  if (profile.role !== "seller" && profile.role !== "admin" && profile.role !== "super_admin") {
+    return { data: null, error: { message: "Only sellers can create listings." } };
+  }
+
+  const { data, error } = await supabase
+    .from("listings")
+    .insert({
+      seller_id: user.id,
+      ...parsed.data,
+      specs: parsed.data.specs as unknown as import("@/types/database").Json,
+      images: parsed.data.images as unknown as import("@/types/database").Json,
+      available_from: parsed.data.available_from ?? null,
+      available_to: parsed.data.available_to ?? null,
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error) return { data: null, error: { message: error.message } };
+
+  revalidatePath("/listings");
+  revalidatePath("/market");
+
+  return { data: { id: data.id }, error: null };
+}
+
+export async function updateListing(
+  id: string,
+  input: Partial<ListingInput> & { status?: "active" | "paused" | "sold_out" }
+): Promise<ActionResult<true>> {
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { data: null, error: { message: "Not authenticated." } };
+
+  const { error } = await supabase
+    .from("listings")
+    .update({
+      ...input,
+      specs: input.specs as unknown as import("@/types/database").Json | undefined,
+      images: input.images as unknown as import("@/types/database").Json | undefined,
+    })
+    .eq("id", id)
+    .eq("seller_id", user.id);
+
+  if (error) return { data: null, error: { message: error.message } };
+
+  revalidatePath("/listings");
+  revalidatePath(`/market/${id}`);
+
+  return { data: true, error: null };
+}
+
+export async function pauseListing(id: string): Promise<ActionResult<true>> {
+  return updateListing(id, { status: "paused" });
+}
+
+export async function resumeListing(id: string): Promise<ActionResult<true>> {
+  return updateListing(id, { status: "active" });
+}
