@@ -7,9 +7,6 @@ import { createServerClient } from "@/lib/supabase/server";
 import { ListingInputSchema, type ListingInput } from "@/lib/validations/forms";
 import type { ActionResult } from "./auth";
 
-export { ListingInputSchema };
-export type { ListingInput } from "@/lib/validations/forms";
-
 export async function createListing(
   input: ListingInput
 ): Promise<ActionResult<{ id: string }>> {

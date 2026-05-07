@@ -43,6 +43,8 @@ export function ListingForm({ categories }: ListingFormProps) {
       quantity: 1,
       unit: "MT",
       origin_location: "Madagascar",
+      available_from: "",
+      available_to: "",
       unit_price: 0,
       currency: "USDT",
       incoterm: "CFR",
@@ -72,7 +74,7 @@ export function ListingForm({ categories }: ListingFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Category</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a product category" />
@@ -131,7 +133,7 @@ export function ListingForm({ categories }: ListingFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Unit</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue />
@@ -174,7 +176,7 @@ export function ListingForm({ categories }: ListingFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Currency</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue />
@@ -201,7 +203,7 @@ export function ListingForm({ categories }: ListingFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Incoterm</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue />
@@ -242,7 +244,7 @@ export function ListingForm({ categories }: ListingFormProps) {
               <FormItem>
                 <FormLabel>Available From (optional)</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -255,7 +257,7 @@ export function ListingForm({ categories }: ListingFormProps) {
               <FormItem>
                 <FormLabel>Available To (optional)</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
