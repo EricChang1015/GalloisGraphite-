@@ -17,6 +17,16 @@ const poe = createOpenAI({
   baseURL: process.env.POE_BASE_URL ?? "https://api.poe.com/v1",
 });
 
+function stripProviderMetadata(messages: UIMessage[]): UIMessage[] {
+  // Avoid forwarding provider-specific continuation ids (e.g. OpenAI itemId)
+  // because they are not available for Zero Data Retention orgs.
+  return JSON.parse(
+    JSON.stringify(messages, (key, value) =>
+      key === "providerMetadata" ? undefined : value
+    )
+  ) as UIMessage[];
+}
+
 export async function POST(req: Request) {
   if (!process.env.POE_API_KEY) {
     return new Response(
@@ -45,7 +55,9 @@ export async function POST(req: Request) {
   const model = process.env.POE_MODEL ?? "claude-3-5-sonnet";
 
   // convertToModelMessages is async in AI SDK v6
-  const modelMessages = await convertToModelMessages(messages);
+  const modelMessages = await convertToModelMessages(
+    stripProviderMetadata(messages)
+  );
 
   const result = streamText({
     model: poe(model),
