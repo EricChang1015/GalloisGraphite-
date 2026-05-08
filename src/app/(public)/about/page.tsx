@@ -54,7 +54,7 @@ const SECTIONS = [
 
 export default function AboutPage() {
   return (
-    <div className="bg-neutral-950 text-neutral-100">
+    <div className="bg-background text-foreground">
       {/* Hero */}
       <section className="mx-auto max-w-5xl px-6 py-20 text-center space-y-4">
         <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--gold)]">
@@ -63,23 +63,23 @@ export default function AboutPage() {
         <h1 className="text-4xl sm:text-5xl font-semibold leading-tight">
           About Mada Graphite
         </h1>
-        <p className="text-neutral-400 max-w-2xl mx-auto text-base sm:text-lg">
+        <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg">
           Graphite Energy Inc. is the exclusive sales agent of{" "}
-          <span className="text-neutral-200">Etablissements Gallois S.A.</span>{" "}
-          — operator of the world's most productive natural flake graphite mine,
+          <span className="text-foreground">Etablissements Gallois S.A.</span>{" "}
+          — operator of the world&apos;s most productive natural flake graphite mine,
           in continuous production for over 120 years.
         </p>
       </section>
 
       {/* Key stats */}
-      <section className="border-y border-neutral-800 bg-neutral-900">
+      <section className="border-y border-border bg-card">
         <div className="mx-auto max-w-5xl px-6 py-10 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           {STATS.map((s) => (
             <div key={s.label} className="space-y-1">
               <p className="text-3xl font-bold text-[color:var(--gold)]">
                 {s.value}
               </p>
-              <p className="text-xs text-neutral-400 uppercase tracking-wider">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">
                 {s.label}
               </p>
             </div>
@@ -101,13 +101,16 @@ export default function AboutPage() {
             </h2>
             <div className="space-y-3">
               {sec.paragraphs.map((p, i) => (
-                <p key={i} className="text-neutral-300 text-sm leading-relaxed">
+                <p
+                  key={i}
+                  className="text-foreground/85 text-sm leading-relaxed"
+                >
                   {p}
                 </p>
               ))}
             </div>
           </div>
-          <div className="rounded-xl overflow-hidden border border-neutral-800">
+          <div className="rounded-xl overflow-hidden border border-border">
             <Image
               src={sec.image}
               alt={sec.imageAlt}
@@ -121,26 +124,44 @@ export default function AboutPage() {
       ))}
 
       {/* Mining photos teaser */}
-      <section className="bg-neutral-900 border-t border-neutral-800">
+      <section className="bg-card border-t border-border">
         <div className="mx-auto max-w-5xl px-6 py-16 space-y-8">
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-semibold">Photos of Mining Sites</h2>
-            <p className="text-neutral-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               A look inside the Gallois mine operations in Madagascar.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {[
-              { src: "/images/legacy/mining/header/1.jpg", label: "General View of the Mine" },
-              { src: "/images/legacy/mining/header/2.jpg", label: "Processing Plant" },
-              { src: "/images/legacy/mining/header/3.jpg", label: "Final Products Warehouse + Lab" },
-              { src: "/images/legacy/mining/header/4.jpg", label: "Our Team + Cultural Activities" },
-              { src: "/images/legacy/mining/header/5.jpg", label: "Social Responsibilities" },
-              { src: "/images/legacy/mining/header/6.jpg", label: "Local Customs and Practices" },
+              {
+                src: "/images/legacy/mining/header/1.jpg",
+                label: "General View of the Mine",
+              },
+              {
+                src: "/images/legacy/mining/header/2.jpg",
+                label: "Processing Plant",
+              },
+              {
+                src: "/images/legacy/mining/header/3.jpg",
+                label: "Final Products Warehouse + Lab",
+              },
+              {
+                src: "/images/legacy/mining/header/4.jpg",
+                label: "Our Team + Cultural Activities",
+              },
+              {
+                src: "/images/legacy/mining/header/5.jpg",
+                label: "Social Responsibilities",
+              },
+              {
+                src: "/images/legacy/mining/header/6.jpg",
+                label: "Local Customs and Practices",
+              },
             ].map((photo) => (
               <div
                 key={photo.src}
-                className="group relative overflow-hidden rounded-lg border border-neutral-700 aspect-[4/3]"
+                className="group relative overflow-hidden rounded-lg border border-border aspect-[4/3]"
               >
                 <Image
                   src={photo.src}
@@ -149,8 +170,9 @@ export default function AboutPage() {
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
                   unoptimized
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 to-transparent" />
-                <p className="absolute bottom-2 left-2 right-2 text-xs text-neutral-200 leading-tight">
+                {/* Caption gradient: always darken bottom regardless of theme */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                <p className="absolute bottom-2 left-2 right-2 text-xs text-white leading-tight">
                   {photo.label}
                 </p>
               </div>

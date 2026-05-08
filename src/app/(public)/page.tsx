@@ -124,7 +124,7 @@ export default function HomePage() {
   return (
     <>
       {/* ─── Hero ─── */}
-      <section className="relative bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-800 text-neutral-100 overflow-hidden">
+      <section className="relative overflow-hidden bg-gradient-to-br from-background via-background to-muted text-foreground">
         <div className="mx-auto max-w-5xl px-6 py-24 sm:py-36 text-center space-y-6">
           <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--gold)]">
             Mada Graphite — B2B Trading Platform
@@ -136,7 +136,7 @@ export default function HomePage() {
               traded transparently worldwide.
             </span>
           </h1>
-          <p className="text-base sm:text-lg text-neutral-300 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
             Connect with verified buyers and sellers. Generate contracts, settle
             payments, and ship — all backed by Graphite Energy Inc. and the
             Etablissements Gallois mine, in continuous production since 1901.
@@ -150,10 +150,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/chat"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "bg-transparent text-neutral-100 hover:bg-neutral-800"
-              )}
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
             >
               Ask the AI assistant
             </Link>
@@ -162,14 +159,14 @@ export default function HomePage() {
       </section>
 
       {/* ─── Key Stats ─── */}
-      <section className="border-y border-neutral-800 bg-neutral-900 text-neutral-100">
+      <section className="border-y border-border bg-card text-foreground">
         <div className="mx-auto max-w-5xl px-6 py-10 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           {STATS.map((s) => (
             <div key={s.label} className="space-y-1">
               <p className="text-3xl sm:text-4xl font-bold text-[color:var(--gold)]">
                 {s.value}
               </p>
-              <p className="text-xs text-neutral-400 uppercase tracking-wider">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">
                 {s.label}
               </p>
             </div>
@@ -180,15 +177,15 @@ export default function HomePage() {
       {/* ─── Mine Introduction ─── */}
       <section className="mx-auto max-w-5xl px-6 py-16 grid gap-10 md:grid-cols-2 items-center">
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold text-neutral-100">
+          <h2 className="text-2xl font-semibold text-foreground">
             The World&apos;s Most Productive Graphite Mine
           </h2>
-          <p className="text-neutral-400 text-sm leading-relaxed">
+          <p className="text-muted-foreground text-sm leading-relaxed">
             Located in the Tamatave province of northeast Madagascar, the
             Gallois mine covers 280 km² of high-grade flake graphite deposit —
             with an average ore carbon content of ~10%, rare globally.
           </p>
-          <p className="text-neutral-400 text-sm leading-relaxed">
+          <p className="text-muted-foreground text-sm leading-relaxed">
             Since taking over in 2016, Graphite Energy Inc. has driven annual
             production from under 5,000 tonnes to over 140,000 tonnes across two
             active sites. A third site (Ambalafotaka) remains unexploited, and
@@ -199,13 +196,13 @@ export default function HomePage() {
             href="/about"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "mt-2 border-neutral-600 text-neutral-200 hover:bg-neutral-800"
+              "mt-2"
             )}
           >
             Learn more about the mine
           </Link>
         </div>
-        <div className="rounded-xl overflow-hidden border border-neutral-800">
+        <div className="rounded-xl overflow-hidden border border-border">
           <Image
             src="/images/legacy/map_a.png"
             alt="Madagascar graphite mine location"
@@ -218,24 +215,24 @@ export default function HomePage() {
       </section>
 
       {/* ─── Products ─── */}
-      <section className="bg-neutral-900 border-t border-neutral-800">
+      <section className="bg-card border-t border-border">
         <div className="mx-auto max-w-5xl px-6 py-16 space-y-8">
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-semibold text-neutral-100">
+            <h2 className="text-2xl font-semibold text-foreground">
               Our Products
             </h2>
-            <p className="text-neutral-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               Two brands, six standard grades, unlimited custom specs.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-3">
             {PRODUCTS.map((p) => (
               <Link key={p.name} href={p.href}>
-                <div className="rounded-xl border border-neutral-700 bg-neutral-800/50 p-6 space-y-3 h-full hover:border-[color:var(--gold)]/50 transition-colors cursor-pointer">
+                <div className="rounded-xl border border-border bg-muted/40 p-6 space-y-3 h-full hover:border-[color:var(--gold)]/50 transition-colors cursor-pointer">
                   <h3 className="text-lg font-semibold text-[color:var(--gold)]">
                     {p.name}
                   </h3>
-                  <p className="text-sm text-neutral-400 leading-relaxed">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     {p.description}
                   </p>
                 </div>
@@ -256,10 +253,10 @@ export default function HomePage() {
       {/* ─── Applications ─── */}
       <section className="mx-auto max-w-5xl px-6 py-16 space-y-8">
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-semibold text-neutral-100">
+          <h2 className="text-2xl font-semibold text-foreground">
             Applications
           </h2>
-          <p className="text-neutral-400 text-sm">
+          <p className="text-muted-foreground text-sm">
             Gallois graphite serves every major segment of the global carbon
             industry.
           </p>
@@ -268,7 +265,7 @@ export default function HomePage() {
           {APPLICATIONS.map((app) => (
             <span
               key={app}
-              className="rounded-full border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm text-neutral-300"
+              className="rounded-full border border-border bg-muted px-4 py-2 text-sm text-foreground/90"
             >
               {app}
             </span>
@@ -277,13 +274,13 @@ export default function HomePage() {
       </section>
 
       {/* ─── Partners ─── */}
-      <section className="bg-neutral-900 border-y border-neutral-800">
+      <section className="bg-card border-y border-border">
         <div className="mx-auto max-w-5xl px-6 py-16 space-y-8">
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-semibold text-neutral-100">
+            <h2 className="text-2xl font-semibold text-foreground">
               Partners in the world
             </h2>
-            <p className="text-neutral-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               Long-term collaborators across the global graphite and refractory
               supply chain.
             </p>
@@ -291,7 +288,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {PARTNERS.map((partner) => {
               const card = (
-                <div className="h-full rounded-xl border border-neutral-700 bg-neutral-800/50 p-4 hover:border-[color:var(--gold)]/50 transition-colors">
+                <div className="h-full rounded-xl border border-border bg-muted/40 p-4 hover:border-[color:var(--gold)]/50 transition-colors">
                   <div className="relative h-12 w-full">
                     <Image
                       src={partner.logo}
@@ -301,7 +298,7 @@ export default function HomePage() {
                       unoptimized
                     />
                   </div>
-                  <p className="mt-3 text-center text-xs text-neutral-300 leading-snug">
+                  <p className="mt-3 text-center text-xs text-foreground/85 leading-snug">
                     {partner.name}
                   </p>
                 </div>
@@ -328,12 +325,12 @@ export default function HomePage() {
       </section>
 
       {/* ─── AI Assistant CTA ─── */}
-      <section className="bg-neutral-900 border-t border-neutral-800">
+      <section className="bg-card border-t border-border">
         <div className="mx-auto max-w-5xl px-6 py-16 text-center space-y-4">
-          <h2 className="text-2xl font-semibold text-neutral-100">
+          <h2 className="text-2xl font-semibold text-foreground">
             Not sure what grade you need?
           </h2>
-          <p className="text-neutral-400 text-sm max-w-xl mx-auto">
+          <p className="text-muted-foreground text-sm max-w-xl mx-auto">
             Our AI assistant can help you find the right product for your
             application, answer technical questions, and guide you through the
             inquiry process.
@@ -347,10 +344,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/register"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "bg-transparent text-neutral-100 hover:bg-neutral-800 border-neutral-600"
-              )}
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
             >
               Start trading
             </Link>
@@ -359,7 +353,7 @@ export default function HomePage() {
       </section>
 
       {/* ─── Mine photos strip ─── */}
-      <section className="border-t border-neutral-800 overflow-hidden">
+      <section className="border-t border-border overflow-hidden">
         <div className="flex gap-1">
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <div key={n} className="relative flex-1 aspect-[3/2] min-w-0">

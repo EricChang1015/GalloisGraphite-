@@ -37,14 +37,14 @@ export default async function NewsPage() {
   const list = articles ?? [];
 
   return (
-    <div className="bg-neutral-950 text-neutral-100 min-h-screen">
+    <div className="bg-background text-foreground min-h-screen">
       {/* Header */}
       <section className="mx-auto max-w-5xl px-6 py-16 space-y-3">
         <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--gold)]">
           Industry Updates
         </p>
         <h1 className="text-4xl font-semibold">News</h1>
-        <p className="text-neutral-400 text-sm max-w-xl">
+        <p className="text-muted-foreground text-sm max-w-xl">
           Latest graphite industry news, market intelligence and company
           announcements, curated by the Mada Graphite team.
         </p>
@@ -53,9 +53,9 @@ export default async function NewsPage() {
       {/* Articles */}
       <section className="mx-auto max-w-5xl px-6 pb-20">
         {list.length === 0 ? (
-          <div className="rounded-xl border border-neutral-800 border-dashed p-20 text-center space-y-2">
-            <p className="text-neutral-500">No published articles yet.</p>
-            <p className="text-xs text-neutral-600">
+          <div className="rounded-xl border border-border border-dashed p-20 text-center space-y-2">
+            <p className="text-muted-foreground">No published articles yet.</p>
+            <p className="text-xs text-muted-foreground/80">
               Check back soon — our editorial team publishes regularly.
             </p>
           </div>
@@ -65,7 +65,7 @@ export default async function NewsPage() {
               <Link
                 key={article.id}
                 href={`/news/${article.slug}`}
-                className="group block rounded-xl border border-neutral-800 bg-neutral-900 overflow-hidden hover:border-neutral-600 transition-colors"
+                className="group block rounded-xl border border-border bg-card overflow-hidden hover:border-[color:var(--gold)]/50 transition-colors"
               >
                 {article.cover_image_url ? (
                   <div className="relative aspect-video overflow-hidden">
@@ -78,8 +78,8 @@ export default async function NewsPage() {
                     />
                   </div>
                 ) : (
-                  <div className="aspect-video bg-neutral-800 flex items-center justify-center">
-                    <span className="text-xs text-neutral-600 uppercase tracking-wider">
+                  <div className="aspect-video bg-muted flex items-center justify-center">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">
                       Mada Graphite
                     </span>
                   </div>
@@ -88,11 +88,11 @@ export default async function NewsPage() {
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
-                      className="text-[color:var(--gold)] border-[color:var(--gold)]/30 text-xs"
+                      className="text-[color:var(--gold)] border-[color:var(--gold)]/40 text-xs"
                     >
                       News
                     </Badge>
-                    <span className="text-xs text-neutral-500">
+                    <span className="text-xs text-muted-foreground">
                       {new Date(
                         article.published_at ?? article.created_at
                       ).toLocaleDateString("en-US", {
@@ -106,7 +106,7 @@ export default async function NewsPage() {
                     {article.title}
                   </h2>
                   {article.summary && (
-                    <p className="text-xs text-neutral-400 leading-relaxed line-clamp-3">
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
                       {article.summary}
                     </p>
                   )}

@@ -25,8 +25,9 @@ const BRANDS = [
       "Man-made diamond feedstock",
       "Advanced refractories",
     ],
-    accent: "text-[color:var(--gold)]",
-    border: "border-[color:var(--gold)]/30",
+    accentClass: "text-[color:var(--gold)]",
+    borderClass: "border-[color:var(--gold)]/40",
+    dotClass: "bg-[color:var(--gold)]",
   },
   {
     name: "MADA2",
@@ -42,10 +43,12 @@ const BRANDS = [
       "Sealing materials",
       "Brake pads & pencils",
     ],
-    accent: "text-blue-400",
-    border: "border-blue-400/30",
+    accentClass: "text-sky-500 dark:text-sky-300 editorial:text-sky-700",
+    borderClass:
+      "border-sky-500/40 dark:border-sky-300/40 editorial:border-sky-700/40",
+    dotClass: "bg-sky-500 dark:bg-sky-300 editorial:bg-sky-700",
   },
-];
+] as const;
 
 const GRADES: { grade: string; fc: string; mesh: string }[] = [
   { grade: "+35 MESH", fc: "75–99%", mesh: "+35 MESH  80% MIN" },
@@ -58,7 +61,7 @@ const GRADES: { grade: string; fc: string; mesh: string }[] = [
 
 export default function ProductsPage() {
   return (
-    <div className="bg-neutral-950 text-neutral-100">
+    <div className="bg-background text-foreground">
       {/* Hero */}
       <section className="mx-auto max-w-5xl px-6 py-20 text-center space-y-4">
         <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--gold)]">
@@ -67,7 +70,7 @@ export default function ProductsPage() {
         <h1 className="text-4xl sm:text-5xl font-semibold leading-tight">
           Product Catalogue
         </h1>
-        <p className="text-neutral-400 max-w-2xl mx-auto text-base sm:text-lg">
+        <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg">
           Etablissements Gallois S.A. supplies natural flake graphite with fixed
           carbon ranging from 80% to 99%, flake sizes +32 to −100 mesh.
           Custom specifications available on request.
@@ -79,7 +82,10 @@ export default function ProductsPage() {
         {BRANDS.map((brand) => (
           <div
             key={brand.name}
-            className={`rounded-xl border ${brand.border} bg-neutral-900 p-6 space-y-5`}
+            className={cn(
+              "rounded-xl border bg-card p-6 space-y-5",
+              brand.borderClass
+            )}
           >
             <div className="flex items-center gap-4">
               <div className="w-24 h-16 relative flex-shrink-0 bg-white rounded-lg overflow-hidden">
@@ -92,26 +98,33 @@ export default function ProductsPage() {
                 />
               </div>
               <div>
-                <h2 className={`text-2xl font-bold ${brand.accent}`}>
+                <h2 className={cn("text-2xl font-bold", brand.accentClass)}>
                   {brand.name}
                 </h2>
-                <p className="text-xs text-neutral-400">{brand.subtitle}</p>
+                <p className="text-xs text-muted-foreground">
+                  {brand.subtitle}
+                </p>
               </div>
             </div>
-            <p className="text-neutral-300 text-sm leading-relaxed">
+            <p className="text-foreground/85 text-sm leading-relaxed">
               {brand.description}
             </p>
             <div>
-              <p className="text-xs uppercase tracking-wider text-neutral-500 mb-2">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
                 Key Applications
               </p>
               <ul className="space-y-1">
                 {brand.applications.map((app) => (
                   <li
                     key={app}
-                    className="flex items-center gap-2 text-sm text-neutral-300"
+                    className="flex items-center gap-2 text-sm text-foreground/85"
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${brand.accent} bg-current flex-shrink-0`} />
+                    <span
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full flex-shrink-0",
+                        brand.dotClass
+                      )}
+                    />
                     {app}
                   </li>
                 ))}
@@ -122,11 +135,11 @@ export default function ProductsPage() {
       </section>
 
       {/* Spec table */}
-      <section className="bg-neutral-900 border-t border-neutral-800">
+      <section className="bg-card border-t border-border">
         <div className="mx-auto max-w-5xl px-6 py-16 space-y-8">
           <div className="space-y-2">
             <h2 className="text-2xl font-semibold">Standard Grades</h2>
-            <p className="text-neutral-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               All grades available in MADA1 and MADA2.{" "}
               <span className="text-[color:var(--gold)]">
                 Moisture: 0.5% MAX
@@ -135,10 +148,10 @@ export default function ProductsPage() {
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-neutral-700">
+          <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-neutral-800 text-neutral-300">
+                <tr className="bg-muted text-foreground">
                   <th className="px-4 py-3 text-left font-semibold">Grade</th>
                   <th className="px-4 py-3 text-left font-semibold">
                     Fixed Carbon
@@ -155,24 +168,27 @@ export default function ProductsPage() {
                 {GRADES.map((g, idx) => (
                   <tr
                     key={g.grade}
-                    className={`border-t border-neutral-700 ${
-                      idx % 2 === 0 ? "bg-neutral-900" : "bg-neutral-800/40"
-                    }`}
+                    className={cn(
+                      "border-t border-border",
+                      idx % 2 === 0 ? "bg-card" : "bg-muted/40"
+                    )}
                   >
                     <td className="px-4 py-3 font-mono font-semibold text-[color:var(--gold)]">
                       {g.grade}
                     </td>
-                    <td className="px-4 py-3 text-neutral-200">{g.fc}</td>
-                    <td className="px-4 py-3 text-neutral-300 font-mono text-xs">
+                    <td className="px-4 py-3 text-foreground">{g.fc}</td>
+                    <td className="px-4 py-3 text-foreground/85 font-mono text-xs">
                       {g.mesh}
                     </td>
-                    <td className="px-4 py-3 text-neutral-400">0.5% MAX</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      0.5% MAX
+                    </td>
                   </tr>
                 ))}
-                <tr className="border-t border-neutral-700 bg-neutral-800/20">
+                <tr className="border-t border-border bg-muted/20">
                   <td
                     colSpan={4}
-                    className="px-4 py-3 text-xs text-neutral-400 italic"
+                    className="px-4 py-3 text-xs text-muted-foreground italic"
                   >
                     In addition to the standard grades listed above,
                     Etablissements Gallois can match many specifications to meet
@@ -183,15 +199,15 @@ export default function ProductsPage() {
             </table>
           </div>
 
-          <div className="rounded-lg border border-[color:var(--gold)]/20 bg-[color:var(--gold)]/5 p-5 space-y-3">
+          <div className="rounded-lg border border-[color:var(--gold)]/30 bg-[color:var(--gold)]/8 p-5 space-y-3">
             <h3 className="font-semibold text-[color:var(--gold)]">
               Custom Specifications
             </h3>
-            <p className="text-sm text-neutral-300">
+            <p className="text-sm text-foreground/90">
               Carbon content ranges from{" "}
-              <strong className="text-neutral-100">80% to 99%</strong>. Flake
+              <strong className="text-foreground">80% to 99%</strong>. Flake
               sizes available:{" "}
-              <strong className="text-neutral-100 font-mono">
+              <strong className="text-foreground font-mono">
                 +32 / +50 / +80 / +100 / +150 / −100 mesh
               </strong>
               . Contact our sales team for custom orders and technical
@@ -207,8 +223,7 @@ export default function ProductsPage() {
               <Link
                 href="/chat"
                 className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" }),
-                  "bg-transparent text-neutral-100 hover:bg-neutral-800 border-neutral-600"
+                  buttonVariants({ variant: "outline", size: "sm" })
                 )}
               >
                 Ask the AI assistant

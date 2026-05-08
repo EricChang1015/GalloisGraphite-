@@ -62,14 +62,14 @@ export default async function NewsArticlePage({ params }: PageProps) {
   });
 
   return (
-    <div className="bg-neutral-950 text-neutral-100 min-h-screen">
+    <div className="bg-background text-foreground min-h-screen">
       <article className="mx-auto max-w-3xl px-6 py-16 space-y-8">
         {/* Back */}
         <Link
           href="/news"
           className={cn(
             buttonVariants({ variant: "ghost", size: "sm" }),
-            "text-neutral-400 hover:text-neutral-100 -ml-2"
+            "text-muted-foreground hover:text-foreground -ml-2"
           )}
         >
           <ArrowLeftIcon className="w-4 h-4 mr-1" />
@@ -78,14 +78,14 @@ export default async function NewsArticlePage({ params }: PageProps) {
 
         {/* Header */}
         <header className="space-y-4">
-          <p className="text-xs text-neutral-500 uppercase tracking-wider">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">
             {publishDate}
           </p>
           <h1 className="text-3xl sm:text-4xl font-semibold leading-tight">
             {article.title}
           </h1>
           {article.summary && (
-            <p className="text-neutral-400 text-base leading-relaxed border-l-2 border-[color:var(--gold)] pl-4">
+            <p className="text-muted-foreground text-base leading-relaxed border-l-2 border-[color:var(--gold)] pl-4">
               {article.summary}
             </p>
           )}
@@ -93,7 +93,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
 
         {/* Cover image */}
         {article.cover_image_url && (
-          <div className="relative aspect-video rounded-xl overflow-hidden border border-neutral-800">
+          <div className="relative aspect-video rounded-xl overflow-hidden border border-border">
             <Image
               src={article.cover_image_url}
               alt={article.title}
@@ -107,19 +107,19 @@ export default async function NewsArticlePage({ params }: PageProps) {
         {/* Content */}
         {article.content_html ? (
           <div
-            className="prose prose-invert prose-sm max-w-none prose-headings:text-neutral-100 prose-p:text-neutral-300 prose-a:text-[color:var(--gold)] prose-strong:text-neutral-100"
+            className="prose prose-sm max-w-none dark:prose-invert prose-headings:text-foreground prose-p:text-foreground/85 prose-a:text-[color:var(--gold)] prose-strong:text-foreground"
             dangerouslySetInnerHTML={{ __html: article.content_html }}
           />
         ) : (
-          <p className="text-neutral-500 italic">
+          <p className="text-muted-foreground italic">
             Full article content not available.
           </p>
         )}
 
         {/* Source link */}
         {article.source_url && (
-          <div className="border-t border-neutral-800 pt-6">
-            <p className="text-xs text-neutral-500">
+          <div className="border-t border-border pt-6">
+            <p className="text-xs text-muted-foreground">
               Source:{" "}
               <a
                 href={article.source_url}
@@ -137,7 +137,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
         <div className="pt-4">
           <Link
             href="/news"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "border-neutral-700 text-neutral-300")}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
             <ArrowLeftIcon className="w-4 h-4 mr-1" />
             Back to all news
