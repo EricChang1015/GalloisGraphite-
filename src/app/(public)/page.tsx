@@ -42,6 +42,84 @@ const APPLICATIONS = [
   "Man-made Diamond",
 ];
 
+const PARTNERS = [
+  {
+    name: "Vesuvius",
+    href: "https://www.vesuvius.com/en/index.html",
+    logo: "/images/partners/vesuvius.svg",
+  },
+  {
+    name: "AMG Graphite GK",
+    href: "https://www.maaxlubritech.com/amg-graphite-gk/",
+    logo: "/images/partners/amg-graphite-gk.png",
+  },
+  {
+    name: "Asbury",
+    href: "https://www.asbury.com/",
+    logo: "/images/partners/asbury.svg",
+  },
+  {
+    name: "Minchem Impex",
+    href: "https://minchem.in/",
+    logo: "/images/partners/minchem-impex.png",
+  },
+  {
+    name: "SGL Carbon",
+    href: "https://www.sglcarbon.com/",
+    logo: "/images/partners/sgl-carbon.svg",
+  },
+  {
+    name: "Krosaki Harima Corporation",
+    href: "https://www.krosaki.co.jp/en",
+    logo: "/images/partners/krosaki-harima.png",
+  },
+  {
+    name: "RHI Magnesita",
+    href: "https://www.rhimagnesita.com/",
+    logo: "/images/partners/rhi-magnesita.svg",
+  },
+  {
+    name: "Graphite Machining, Inc. (GMI)",
+    href: "https://www.graphitemachininginc.com/",
+    logo: "/images/partners/gmi.png",
+  },
+  {
+    name: "Superior Graphite",
+    href: "https://superiorgraphite.com/",
+    logo: "/images/partners/superior-graphite.svg",
+  },
+  {
+    name: "Morgan Advanced Materials",
+    href: "https://www.morganadvancedmaterials.com/",
+    logo: "/images/partners/morgan-advanced-materials.svg",
+  },
+  {
+    name: "Carbon Graphite Materials, Inc. (CGM)",
+    href: "https://www.cgmgraphite.com/",
+    logo: "/images/partners/cgm.jpg",
+  },
+  {
+    name: "Zircar Refractories Limited",
+    href: "https://zircarrefractories.in/",
+    logo: "/images/partners/zircar-refractories.png",
+  },
+  {
+    name: "Aug. Gundlach KG (Mars-Tiegel)",
+    href: "https://www.aug-gundlach.de/",
+    logo: "/images/partners/aug-gundlach.jpg",
+  },
+  {
+    name: "AGC PPL",
+    href: "#",
+    logo: "/images/partners/agc-ppl.png",
+  },
+  {
+    name: "UNIMEX",
+    href: "https://unimextr.com/",
+    logo: "/images/partners/unimex.png",
+  },
+] as const;
+
 export default function HomePage() {
   return (
     <>
@@ -195,6 +273,57 @@ export default function HomePage() {
               {app}
             </span>
           ))}
+        </div>
+      </section>
+
+      {/* ─── Partners ─── */}
+      <section className="bg-neutral-900 border-y border-neutral-800">
+        <div className="mx-auto max-w-5xl px-6 py-16 space-y-8">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-semibold text-neutral-100">
+              Partners in the world
+            </h2>
+            <p className="text-neutral-400 text-sm">
+              Long-term collaborators across the global graphite and refractory
+              supply chain.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {PARTNERS.map((partner) => {
+              const card = (
+                <div className="h-full rounded-xl border border-neutral-700 bg-neutral-800/50 p-4 hover:border-[color:var(--gold)]/50 transition-colors">
+                  <div className="relative h-12 w-full">
+                    <Image
+                      src={partner.logo}
+                      alt={`${partner.name} logo`}
+                      fill
+                      className="object-contain"
+                      unoptimized
+                    />
+                  </div>
+                  <p className="mt-3 text-center text-xs text-neutral-300 leading-snug">
+                    {partner.name}
+                  </p>
+                </div>
+              );
+
+              if (partner.href === "#") {
+                return <div key={partner.name}>{card}</div>;
+              }
+
+              return (
+                <Link
+                  key={partner.name}
+                  href={partner.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Visit ${partner.name} website`}
+                >
+                  {card}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </section>
 
