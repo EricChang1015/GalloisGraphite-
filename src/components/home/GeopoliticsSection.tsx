@@ -14,8 +14,8 @@ const CRITICAL_LISTS = [
 const ADVANTAGES = [
   {
     Icon: ShieldCheckIcon,
-    title: "No export-control exposure",
-    body: "Madagascar is not subject to China's 2023 graphite export-licensing regime. Origin-traceable lots with full chain-of-custody documentation.",
+    title: "China+1 sourcing option",
+    body: "Madagascar-origin graphite adds a documented second-source pathway alongside established Chinese supply. Origin-traceable lots with full chain-of-custody documentation.",
   },
   {
     Icon: AnchorIcon,
@@ -47,13 +47,14 @@ export function GeopoliticsSection() {
             <h2 className="text-2xl sm:text-3xl font-semibold text-foreground">
               Graphite is on every critical-mineral list. <br className="hidden sm:block" />
               <span className="text-sky-600 dark:text-sky-400">
-                Your supply map needs a non-Chinese answer.
+                Your supply map needs China+1 optionality.
               </span>
             </h2>
             <p className="text-muted-foreground text-sm max-w-xl">
-              China controls the licensing of roughly 65% of the world's natural
-              graphite exports. Etablissements Gallois operates the largest
-              non-Chinese natural flake graphite mine by reported capacity.
+              China remains central to the graphite industry. Mada Graphite
+              complements that base with a Madagascar-origin supply option for
+              buyers who need redundancy, traceability, and procurement
+              flexibility.
             </p>
           </div>
           <Link

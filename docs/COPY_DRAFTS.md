@@ -38,13 +38,13 @@ Open-cast deposit, weathering-formed ore, ~10 % carbon at the surface — Galloi
 
 ### 1C. 切片 — Geopolitics
 
-**Eyebrow**: Strategic Mineral · Non-Chinese Origin
+**Eyebrow**: Strategic Mineral · China+1 Optionality
 
 **Headline**:  
-A flake graphite supply outside Chinese export-control reach.
+A Madagascar graphite source that strengthens your China+1 supply map.
 
 **Subheadline**:  
-Since China's 2023 export-licensing regime on natural graphite, OEMs have been re-mapping their critical-mineral supply. Etablissements Gallois operates the world's largest non-Chinese natural flake graphite mine — same metallurgy, fewer policy risks, transparent paperwork.
+As graphite buyers diversify sourcing strategies, Mada Graphite offers an additional, origin-traceable option alongside established Chinese supply. Etablissements Gallois delivers comparable flake metallurgy, flexible documentation, and a resilient second-source pathway.
 
 **CTAs**: `Why Madagascar` · `Request KYC pack`
 
@@ -89,15 +89,15 @@ Since China's 2023 export-licensing regime on natural graphite, OEMs have been r
 
 ## 3. `/geopolitics` 專頁長文（草稿大綱）
 
-> 建議定位：**「The Strategic Case for Madagascar Graphite」**。寫給供應鏈總監、政府採購、戰略物資基金。
+> 建議定位：**「The China+1 Case for Madagascar Graphite」**。寫給供應鏈總監、政府採購、戰略物資基金。
 
 ### Lede
-> Graphite is on every critical-mineral list — US, EU, Japan, Korea, India. China refines roughly 65 % of the world's natural graphite and now controls export licensing on it. If you build batteries, refractories, or anything that pours metal, your supply map needs a non-Chinese answer.
+> Graphite is on every critical-mineral list — US, EU, Japan, Korea, India. China remains the industry’s central supplier and processing hub. If you build batteries, refractories, or anything that pours metal, your supply map benefits from an additional China+1 option.
 
 ### Section 1: The 2023 Inflection
-- China's October 2023 export-control announcement on natural graphite
-- What it actually means: not a ban, but licensing latency + opacity
-- Effects observed in 2024–2025: spot price volatility, Western OEM scramble
+- October 2023 graphite export-control announcement and its impact on documentation timelines
+- What it actually means: not a ban, but additional licensing and documentation steps
+- Effects observed in 2024–2025: more buyers adding China+1 lanes for procurement resilience
 
 ### Section 2: The Critical-Mineral Map (data-led)
 - US `Critical Minerals List` (2022 update): graphite designated
@@ -113,15 +113,15 @@ Since China's 2023 export-licensing regime on natural graphite, OEMs have been r
 - Bilateral trade agreements: list relevant ones
 
 ### Section 4: Why Gallois Specifically
-- Largest non-Chinese natural flake graphite mine by capacity (140 kt/a)
+- Major China+1 natural flake graphite source by reported capacity (140 kt/a)
 - Operating since 1901 — long enough to be infrastructure, not a startup risk
-- Same metallurgy as the Chinese benchmarks (Heilongjiang / Inner Mongolia)
+- Comparable metallurgy to established Northeast Asia reference grades
 - Documented buyer roster: Vesuvius, SGL Carbon, Morgan Advanced, RHI Magnesita…
 
 ### Section 5: What We Offer Buyers Re-Mapping Their Supply
 - Long-term supply agreements with locked qty + price floors
 - Origin-traceable lots; KYC + chain-of-custody documents
-- AI-assisted spec matching against your existing Chinese reference grade
+- AI-assisted spec matching against your current reference grade
 - Dual-source contingency: Mada Graphite as your second source, not your only one
 
 ### Section 6: Honest Risks
@@ -137,7 +137,7 @@ Since China's 2023 export-licensing regime on natural graphite, OEMs have been r
 
 | 不要寫 | 改寫成 |
 |---|---|
-| "the largest in the world" | "the largest non-Chinese natural flake graphite mine by reported capacity" |
+| "the largest in the world" | "a major China+1 natural flake graphite source by reported capacity" |
 | "100% sustainable" | "lower-impact open-cast extraction with no tailings dam" |
 | "AI-powered" | "AI-assisted" 或 "AI co-pilot"（不要 over-claim） |
 | "carbon neutral" | "carbon-disclosed by 2027" |

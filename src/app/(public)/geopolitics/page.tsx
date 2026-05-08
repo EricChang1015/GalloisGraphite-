@@ -12,9 +12,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "The Strategic Case for Madagascar Graphite — Mada Graphite",
+  title: "The China+1 Case for Madagascar Graphite — Mada Graphite",
   description:
-    "Why supply-chain professionals, OEMs and government buyers are rerouting flake graphite sourcing through Madagascar after China's 2023 export-licensing regime.",
+    "Why supply-chain professionals, OEMs and government buyers use Madagascar graphite as an additional China+1 sourcing option for resilience and traceability.",
 };
 
 const CRITICAL_LISTS = [
@@ -41,7 +41,7 @@ const CRITICAL_LISTS = [
   {
     region: "🇮🇳 India",
     instrument: "Critical Minerals Mission (2023)",
-    note: "Graphite designated; India seeking non-Chinese anode material for domestic gigafactory pipeline.",
+    note: "Graphite designated; India seeking diversified anode material options for domestic gigafactory pipeline.",
   },
 ];
 
@@ -71,7 +71,7 @@ const MADAGASCAR_ADVANTAGES = [
 const WHAT_WE_OFFER = [
   "Long-term supply agreements with locked volumes and USD floor pricing",
   "Origin-traceable lots with mine-to-port chain-of-custody documentation",
-  "AI-assisted spec matching against your existing Chinese reference grade — no reformulation required",
+  "AI-assisted spec matching against your current reference grade — no reformulation required",
   "KYC pack including entity verification, beneficial ownership declaration, and export licence copies",
   "Dual-source structure: position Mada Graphite as a strategic second source, not your only one",
 ];
@@ -106,16 +106,17 @@ export default function GeopoliticsPage() {
       <section className="border-b border-border">
         <div className="mx-auto max-w-3xl px-6 py-20 space-y-5">
           <p className="text-xs uppercase tracking-[0.3em] text-sky-600 dark:text-sky-400">
-            Strategic Mineral · Non-Chinese Origin
+            Strategic Mineral · China+1 Optionality
           </p>
           <h1 className="text-4xl sm:text-5xl font-semibold leading-tight">
-            The strategic case for Madagascar graphite.
+            The China+1 case for Madagascar graphite.
           </h1>
           <p className="text-muted-foreground text-base sm:text-lg leading-relaxed max-w-2xl">
             Graphite is on every critical-mineral list — US, EU, Japan, Korea,
-            India. China licenses roughly 65% of the world&apos;s natural
-            graphite exports. If you build batteries, refractories, or anything
-            that pours metal, your supply map needs a non-Chinese answer.
+            India. China remains the graphite industry&apos;s central supplier
+            and processing hub. If you build batteries, refractories, or
+            anything that pours metal, your supply map benefits from an
+            additional China+1 option.
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
             <Link
@@ -149,8 +150,8 @@ export default function GeopoliticsPage() {
               export-licensing controls on natural graphite — including the
               high-purity, high-hardness, and large-flake grades most relevant
               to battery anodes and aerospace applications. The controls are not
-              an outright ban: they require Chinese exporters to obtain a licence
-              for each shipment.
+              an outright ban: they add documentation and licensing steps for
+              certain export categories.
             </p>
             <p className="text-muted-foreground text-sm leading-relaxed">
               What licensing latency means in practice: lead times lengthen by
@@ -161,9 +162,9 @@ export default function GeopoliticsPage() {
             <div className="rounded-lg border border-sky-500/30 bg-sky-50/50 dark:bg-sky-900/10 p-4">
               <p className="text-xs text-muted-foreground">
                 <strong className="text-foreground">Note:</strong> The licensing
-                regime does not currently apply to Madagascar-origin graphite.
-                Gallois shipments require only standard Malagasy export
-                documentation and the buyer&apos;s import clearance.
+                regime highlights why many buyers prefer China+1 redundancy.
+                Gallois shipments add a Madagascar-origin lane with standard
+                Malagasy export documentation and the buyer&apos;s import clearance.
               </p>
             </div>
           </div>
@@ -261,7 +262,7 @@ export default function GeopoliticsPage() {
             <ul className="space-y-2 text-sm text-muted-foreground list-disc list-inside">
               <li>
                 <strong className="text-foreground">
-                  Largest non-Chinese natural flake graphite mine
+                  Major China+1 natural flake graphite source
                 </strong>{" "}
                 by reported capacity (140,000 t/a across two active sites)
               </li>

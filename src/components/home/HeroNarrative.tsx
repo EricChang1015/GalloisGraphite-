@@ -59,9 +59,9 @@ const NARRATIVES = [
     id: "geo",
     Icon: GlobeIcon,
     label: "Geopolitics",
-    eyebrow: "Strategic Mineral · Non-Chinese Origin",
-    headline: "A flake graphite supply outside Chinese export-control reach.",
-    sub: "Since China's 2023 export-licensing regime on natural graphite, OEMs have been re-mapping their critical-mineral supply. Etablissements Gallois operates the world's largest non-Chinese natural flake graphite mine — same metallurgy, fewer policy risks, transparent paperwork.",
+    eyebrow: "Strategic Mineral · China+1 Optionality",
+    headline: "A Madagascar graphite source that strengthens your China+1 supply map.",
+    sub: "As graphite buyers diversify sourcing strategies, Mada Graphite offers an additional, origin-traceable option alongside established Chinese supply. Etablissements Gallois delivers comparable flake metallurgy, flexible documentation, and a resilient second-source pathway.",
     ctas: [
       { label: "Why Madagascar", href: "/geopolitics", outline: false },
       { label: "Request KYC pack", href: "/register", outline: true },
