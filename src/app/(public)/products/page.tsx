@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "Products — Mada Graphite",
   description:
-    "MADA1 and MADA2 natural flake graphite. Carbon content 75–99%, mesh sizes +35 to -100. Custom specs available.",
+    "MADA1 and MADA2 natural flake graphite. Standard grades run 80–99% fixed carbon, with custom lower-carbon feedstock available on request.",
 };
 
 const BRANDS = [
@@ -18,7 +18,7 @@ const BRANDS = [
     description:
       "MADA1 graphite has a perfect crystalline structure, high density, and in ash a very low content of substances unfavourable for purification. It is the first choice for high-technology applications.",
     applications: [
-      "Spherical graphite for Li-ion battery anodes",
+      "Feedstock for downstream spheroidization and Li-ion anode qualification",
       "Expandable graphite (fire-proofing / intumescent)",
       "High-purity graphite",
       "Military & aerospace graphite",
@@ -51,12 +51,12 @@ const BRANDS = [
 ] as const;
 
 const GRADES: { grade: string; fc: string; mesh: string }[] = [
-  { grade: "+35 MESH", fc: "75–99%", mesh: "+35 MESH  80% MIN" },
-  { grade: "+50 MESH", fc: "75–99%", mesh: "+50 MESH  80% MIN" },
-  { grade: "+80 MESH", fc: "75–99%", mesh: "+80 MESH  80% MIN" },
-  { grade: "+100 MESH", fc: "75–99%", mesh: "+100 MESH  80% MIN" },
-  { grade: "+150 MESH", fc: "75–99%", mesh: "+150 MESH  80% MIN" },
-  { grade: "−100 MESH", fc: "75–99%", mesh: "−100 MESH  80% MIN" },
+  { grade: "+35 MESH", fc: "80–99%", mesh: "+35 MESH  80% MIN" },
+  { grade: "+50 MESH", fc: "80–99%", mesh: "+50 MESH  80% MIN" },
+  { grade: "+80 MESH", fc: "80–99%", mesh: "+80 MESH  80% MIN" },
+  { grade: "+100 MESH", fc: "80–99%", mesh: "+100 MESH  80% MIN" },
+  { grade: "+150 MESH", fc: "80–99%", mesh: "+150 MESH  80% MIN" },
+  { grade: "−100 MESH", fc: "80–99%", mesh: "−100 MESH  80% MIN" },
 ];
 
 export default function ProductsPage() {
@@ -190,9 +190,9 @@ export default function ProductsPage() {
                     colSpan={4}
                     className="px-4 py-3 text-xs text-muted-foreground italic"
                   >
-                    In addition to the standard grades listed above,
-                    Etablissements Gallois can match many specifications to meet
-                    individual customer requirements.
+                    Standard commercial grades run 80–99% fixed carbon. Lower
+                    carbon feedstock or special specifications may be available
+                    as custom orders and must be confirmed lot by lot.
                   </td>
                 </tr>
               </tbody>

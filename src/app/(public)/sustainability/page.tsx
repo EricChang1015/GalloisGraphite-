@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   MountainSnowIcon,
   CalendarIcon,
-  FlaskConicalIcon,
   UsersIcon,
   AlertCircleIcon,
   TrendingUpIcon,
@@ -95,10 +94,9 @@ export default function SustainabilityPage() {
               and energy inputs per tonne of product.
             </p>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              There is no tailings dam — the key failure-risk structure in
-              conventional hard-rock graphite mines. Flotation tailings are
-              managed as inert sandy waste on-site with standard earthwork
-              containment.
+              Current operations do not use a conventional wet tailings dam.
+              Flotation tailings are managed on-site with standard earthwork
+              containment; independent geotechnical characterisation is pending.
             </p>
           </div>
         </div>
@@ -155,16 +153,17 @@ export default function SustainabilityPage() {
             </p>
             <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
               <p className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                Community programmes (placeholder — numbers to be verified by Mada Graphite)
+                Community metrics under collection
               </p>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                <li>Local hiring preference at both active sites</li>
-                <li>Host-village infrastructure partnerships</li>
-                <li>Education programme for workers&apos; families</li>
-                <li>Health &amp; safety protocols exceeding Madagascar baseline</li>
+                <li>Local employment ratio at both active sites</li>
+                <li>Safety performance and training hours</li>
+                <li>Community infrastructure support</li>
+                <li>Education support for workers&apos; families</li>
               </ul>
               <p className="text-xs text-muted-foreground/70 mt-2">
-                ⚠ These items are stated intentions. Verified metrics will be published in the 2026 ESG datasheet.
+                These metrics are being collected for the 2026 ESG datasheet and
+                will be marked as verified, estimated, or pending review.
               </p>
             </div>
           </div>

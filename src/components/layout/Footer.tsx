@@ -123,7 +123,9 @@ export function Footer() {
             )}
           </div>
           <p className="text-xs text-muted-foreground/80">
-            All payments manually verified by platform admins.
+            All payments are manually verified and remain subject to invoice
+            review, KYC/AML checks, sanctions screening, and final admin
+            approval.
           </p>
         </div>
       </div>

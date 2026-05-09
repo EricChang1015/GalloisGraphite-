@@ -13,28 +13,37 @@ export const metadata: Metadata = {
 export const revalidate = 300; // ISR: re-fetch every 5 minutes
 
 export default async function NewsPage() {
-  const supabase = await createServerClient();
+  let list: {
+    id: string;
+    title: string;
+    slug: string;
+    summary: string | null;
+    cover_image_url: string | null;
+    published_at: string | null;
+    created_at: string;
+  }[] = [];
+  let loadError = false;
 
-  const { data: articles } = await supabase
-    .from("news")
-    .select(
-      "id, title, slug, summary, cover_image_url, published_at, created_at"
-    )
-    .eq("is_published", true)
-    .order("published_at", { ascending: false })
-    .returns<
-      {
-        id: string;
-        title: string;
-        slug: string;
-        summary: string | null;
-        cover_image_url: string | null;
-        published_at: string | null;
-        created_at: string;
-      }[]
-    >();
+  try {
+    const supabase = await createServerClient();
 
-  const list = articles ?? [];
+    const { data: articles, error } = await supabase
+      .from("news")
+      .select(
+        "id, title, slug, summary, cover_image_url, published_at, created_at"
+      )
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .returns<typeof list>();
+
+    if (error) {
+      loadError = true;
+    } else {
+      list = articles ?? [];
+    }
+  } catch {
+    loadError = true;
+  }
 
   return (
     <div className="bg-background text-foreground min-h-screen">
@@ -54,9 +63,15 @@ export default async function NewsPage() {
       <section className="mx-auto max-w-5xl px-6 pb-20">
         {list.length === 0 ? (
           <div className="rounded-xl border border-border border-dashed p-20 text-center space-y-2">
-            <p className="text-muted-foreground">No published articles yet.</p>
+            <p className="text-muted-foreground">
+              {loadError
+                ? "News is temporarily unavailable."
+                : "No published articles yet."}
+            </p>
             <p className="text-xs text-muted-foreground/80">
-              Check back soon — our editorial team publishes regularly.
+              {loadError
+                ? "Please check back soon while we restore the news feed."
+                : "Check back soon — our editorial team publishes regularly."}
             </p>
           </div>
         ) : (

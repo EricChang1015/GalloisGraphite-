@@ -47,14 +47,14 @@ const CRITICAL_LISTS = [
 
 const MADAGASCAR_ADVANTAGES = [
   {
-    title: "No active sanctions",
+    title: "Country-level sanctions position",
     detail:
-      "Madagascar is not on any US, EU, UK, or UN sanctions list. Gallois shipments face no OFAC, EU Regulation, or ITAR restrictions.",
+      "As of May 2026, Madagascar is not subject to broad country-level US, EU, UK, or UN sanctions. Each shipment still requires counterparty, beneficial ownership, bank, vessel, and end-use screening.",
   },
   {
     title: "AGOA eligibility",
     detail:
-      "Madagascar benefits from Africa Growth and Opportunity Act preferences — qualifying Mada Graphite shipments may enter the US market with reduced or zero tariffs.",
+      "Madagascar is currently listed as AGOA-eligible by USTR. Any preferential tariff outcome depends on HS code, rules of origin, direct shipment, importer documentation, and CBP determination.",
   },
   {
     title: "Deep-water port 45 km from Site No. 1",
@@ -71,7 +71,7 @@ const MADAGASCAR_ADVANTAGES = [
 const WHAT_WE_OFFER = [
   "Long-term supply agreements with locked volumes and USD floor pricing",
   "Origin-traceable lots with mine-to-port chain-of-custody documentation",
-  "AI-assisted spec matching against your current reference grade — no reformulation required",
+  "AI-assisted grade comparison to support sample qualification, COA review, and application-specific testing",
   "KYC pack including entity verification, beneficial ownership declaration, and export licence copies",
   "Dual-source structure: position Mada Graphite as a strategic second source, not your only one",
 ];
@@ -282,9 +282,15 @@ export default function GeopoliticsPage() {
                   AI-assisted spec matching
                 </strong>{" "}
                 — our platform can map your current reference grade against Mada
-                Graphite grades and flag equivalence or required adjustment
+                Graphite grades and flag potential equivalence or required
+                adjustment for technical review
               </li>
             </ul>
+            <p className="text-xs text-muted-foreground/70 border-l-2 border-sky-500/30 pl-3">
+              Policy and tariff statements are informational only and should be
+              reviewed by the buyer&apos;s customs, sanctions, and export-control
+              counsel before shipment.
+            </p>
           </div>
         </div>
       </section>

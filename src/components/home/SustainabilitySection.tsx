@@ -7,7 +7,7 @@ const PILLARS = [
   {
     Icon: MountainSnowIcon,
     title: "Open-cast mining",
-    body: "No underground blasting. Weathering-formed deposit means low overburden removal and significantly lower diesel intensity per tonne of fixed carbon.",
+    body: "No underground blasting. The weathering-formed deposit indicates lower overburden and diesel intensity potential; third-party verification is pending.",
     accentClass: "text-emerald-600 dark:text-emerald-400",
     bgClass: "bg-emerald-50 dark:bg-emerald-900/20",
   },
@@ -21,13 +21,13 @@ const PILLARS = [
   {
     Icon: FlaskConicalIcon,
     title: "~10% ore carbon grade",
-    body: "Twice the global average ore grade means roughly half the material moved per tonne of product — a direct reduction in processing energy and chemical inputs.",
+    body: "Operational estimates indicate ~10% raw ore carbon grade. Verified sampling and audit data will replace estimates as the ESG programme matures.",
     accentClass: "text-emerald-600 dark:text-emerald-400",
     bgClass: "bg-emerald-50 dark:bg-emerald-900/20",
   },
   {
     Icon: SunIcon,
-    title: "Carbon-disclosed by 2027",
+    title: "ESG disclosure roadmap",
     body: "We commit to attaching an ESG datasheet to every shipment by 2026, and a third-party-verified carbon intensity label per lot by 2028.",
     accentClass: "text-emerald-600 dark:text-emerald-400",
     bgClass: "bg-emerald-50 dark:bg-emerald-900/20",

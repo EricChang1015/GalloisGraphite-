@@ -9,15 +9,15 @@ import { SustainabilitySection } from "@/components/home/SustainabilitySection";
 const STATS = [
   { value: "1901", label: "Year Founded" },
   { value: "120+", label: "Years of Production" },
-  { value: "240M t", label: "Graphite Reserves" },
-  { value: "140,000 t", label: "Annual Capacity" },
+  { value: "240M t", label: "Estimated Reserves" },
+  { value: "140,000 t", label: "Reported Capacity" },
 ];
 
 const PRODUCTS = [
   {
     name: "MADA1",
     description:
-      "Spherical graphite (Li-ion battery anode), expandable graphite, high-purity graphite, aerospace & military.",
+      "Natural flake graphite feedstock for downstream spheroidization, purification, expandable graphite, high-purity graphite, aerospace & military.",
     href: "/products",
   },
   {
@@ -149,7 +149,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-5xl px-6 py-16 grid gap-10 md:grid-cols-2 items-center">
         <div className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">
-            The World&apos;s Most Productive Graphite Mine
+            A Major Long-Operating Madagascar Graphite Operation
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
             Located in the Tamatave province of northeast Madagascar, the
@@ -158,10 +158,11 @@ export default function HomePage() {
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed">
             Since taking over in 2016, Graphite Energy Inc. has driven annual
-            production from under 5,000 tonnes to over 140,000 tonnes across two
-            active sites. A third site (Ambalafotaka) remains unexploited, and
-            only 1% of the total area has been explored, with 240 million tonnes
-            of estimated reserves.
+            production from under 5,000 tonnes toward a reported 140,000 t/a
+            capacity across two active sites. A third site (Ambalafotaka) remains
+            unexploited, and only 1% of the total area has been explored, with
+            240 million tonnes of estimated reserves reported by prior geological
+            review.
           </p>
           <Link
             href="/about"
@@ -252,8 +253,8 @@ export default function HomePage() {
               Partners in the world
             </h2>
             <p className="text-muted-foreground text-sm">
-              Long-term collaborators across the global graphite and refractory
-              supply chain.
+              Historical commercial relationships across the global graphite and
+              refractory supply chain.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -292,6 +293,11 @@ export default function HomePage() {
               );
             })}
           </div>
+          <p className="text-center text-xs text-muted-foreground/70">
+            Logos identify historical commercial relationships or public company
+            references only; they do not imply endorsement unless expressly
+            stated.
+          </p>
         </div>
       </section>
 

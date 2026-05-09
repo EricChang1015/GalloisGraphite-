@@ -24,8 +24,8 @@ const ADVANTAGES = [
   },
   {
     Icon: MapPinIcon,
-    title: "Same metallurgy, fewer policy risks",
-    body: "Gallois flake matches Heilongjiang and Inner Mongolia reference grades. Switching to Mada supply requires no reformulation — only a new origin declaration.",
+    title: "Comparable metallurgy, qualification required",
+    body: "Gallois flake can be compared against Heilongjiang and Inner Mongolia reference grades. Final substitution depends on customer qualification, COA review, and application-specific testing.",
   },
   {
     Icon: ClockIcon,
@@ -117,7 +117,7 @@ export function GeopoliticsSection() {
               Re-mapping your supply chain?
             </p>
             <p className="text-xs text-muted-foreground">
-              We offer long-term supply agreements with locked volumes, USD pricing, and origin-traceable KYC documentation.
+              We offer long-term supply agreements with locked volumes, USD pricing, origin-traceable documentation, and transaction-level compliance screening.
             </p>
           </div>
           <div className="flex gap-2 shrink-0">

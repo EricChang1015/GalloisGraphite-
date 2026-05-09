@@ -9,7 +9,7 @@ sellers. Built on Next.js 16 (App Router) + Supabase + Tailwind v4 + shadcn/ui.
 
    ```powershell
    Copy-Item .env.example .env.local
-   # Fill in your Supabase / Anthropic / Resend keys
+   # Fill in your Supabase / AI API / Resend keys
    ```
 
 2. Install dependencies (already done if cloned with `node_modules/`):
