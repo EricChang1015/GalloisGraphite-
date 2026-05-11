@@ -65,14 +65,21 @@ node_modules/
 
 These are all in `.gitignore`. Always verify with `git status` before committing.
 
-## Recommended workflow
+## Build gate — MANDATORY before every commit
+
+**`npm run build` MUST succeed (exit code 0) before any `git commit`.**
+This ensures TypeScript errors, import failures, and Next.js build
+errors are caught locally before they break the Vercel deployment.
 
 ```powershell
-# Check what will be committed
+# Run BEFORE staging and committing
+npm run build   # must exit 0 — fix all errors first
+
+# Then check what will be committed
 git status
 git diff --cached
 
-# Stage and commit
+# Stage and commit only after a clean build
 git add -A
 git commit -m "feat(auth): implement signup/signin server actions"
 
@@ -80,9 +87,17 @@ git commit -m "feat(auth): implement signup/signin server actions"
 git push origin feature/auth-flow
 ```
 
+If `npm run build` fails:
+1. Read the TypeScript / compiler error carefully.
+2. Fix it (never use `// @ts-ignore` or `any` as a workaround unless
+   absolutely unavoidable and accompanied by a `// TODO: refine type` comment).
+3. Re-run `npm run build` until it exits 0.
+4. Then commit.
+
 ## When writing commit messages as an AI agent
 
-1. Run `git diff --cached` first to see exact changes.
-2. Summarize the **why** (business reason), not just the **what**.
-3. Keep the subject line ≤ 72 chars.
-4. Reference related issues with `Closes #N` if applicable.
+1. Run `npm run build` and confirm exit code 0 **before** staging.
+2. Run `git diff --cached` to see exact changes.
+3. Summarize the **why** (business reason), not just the **what**.
+4. Keep the subject line ≤ 72 chars.
+5. Reference related issues with `Closes #N` if applicable.
