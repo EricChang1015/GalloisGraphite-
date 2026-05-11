@@ -4,6 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SendHorizontal, Bot, User, LogIn } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -221,25 +222,66 @@ export function AiChat({
                   <Bot className="size-3.5" />
                 )}
               </div>
-              <div
-                className={cn(
-                  "max-w-[80%] space-y-2 rounded-xl px-3 py-2 text-sm",
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-foreground"
-                )}
-              >
-                <p className="whitespace-pre-wrap break-words">{cleanText}</p>
-                {isLoginRequired && (
-                  <a
-                    href="/login"
-                    className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-[color:var(--gold)] px-3 py-1.5 text-xs font-medium text-[color:var(--gold-foreground)] hover:opacity-90"
-                  >
-                    <LogIn className="size-3" />
-                    Log in to continue
-                  </a>
-                )}
-              </div>
+                <div
+                  className={cn(
+                    "max-w-[80%] space-y-2 rounded-xl px-3 py-2 text-sm",
+                    message.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-foreground"
+                  )}
+                >
+                  {message.role === "user" ? (
+                    <p className="whitespace-pre-wrap break-words">{cleanText}</p>
+                  ) : (
+                    <div className="prose-chat">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => (
+                            <p className="mb-2 last:mb-0 whitespace-pre-wrap break-words">{children}</p>
+                          ),
+                          strong: ({ children }) => (
+                            <strong className="font-semibold">{children}</strong>
+                          ),
+                          em: ({ children }) => (
+                            <em className="italic">{children}</em>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="mb-2 ml-4 list-disc space-y-0.5 last:mb-0">{children}</ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="mb-2 ml-4 list-decimal space-y-0.5 last:mb-0">{children}</ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="leading-snug">{children}</li>
+                          ),
+                          code: ({ children }) => (
+                            <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-xs">{children}</code>
+                          ),
+                          h1: ({ children }) => (
+                            <p className="mb-1 font-semibold">{children}</p>
+                          ),
+                          h2: ({ children }) => (
+                            <p className="mb-1 font-semibold">{children}</p>
+                          ),
+                          h3: ({ children }) => (
+                            <p className="mb-1 font-medium">{children}</p>
+                          ),
+                        }}
+                      >
+                        {cleanText}
+                      </ReactMarkdown>
+                    </div>
+                  )}
+                  {isLoginRequired && (
+                    <a
+                      href="/login"
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-[color:var(--gold)] px-3 py-1.5 text-xs font-medium text-[color:var(--gold-foreground)] hover:opacity-90"
+                    >
+                      <LogIn className="size-3" />
+                      Log in to continue
+                    </a>
+                  )}
+                </div>
             </div>
           );
         })}
