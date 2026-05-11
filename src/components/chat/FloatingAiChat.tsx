@@ -1,21 +1,23 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useCallback, useSyncExternalStore } from "react";
-import { Bot, X, EyeOff } from "lucide-react";
+import { useCallback, useState, useSyncExternalStore } from "react";
+import { Bot, History, X, EyeOff } from "lucide-react";
 
 import { AiChat } from "@/components/chat/AiChat";
+import { ChatHistorySidebar } from "@/components/chat/ChatHistorySidebar";
+import {
+  generateSessionId,
+  setActiveSession,
+  useActiveSessionId,
+  useChatSessions,
+} from "@/lib/ai/sessions";
 import { cn } from "@/lib/utils";
 
 const HIDDEN_KEY = "mada.ai.hidden";
 const OPEN_KEY = "mada.ai.open";
 const VISIBILITY_EVENT = "mada-ai-visibility-change";
 
-/**
- * Cross-tab / cross-component event so the /chat page (which carries the
- * "Pin AI assistant" toggle) can ping the launcher to re-evaluate state
- * without a full page reload.
- */
 function notifyVisibilityChange(hidden: boolean) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
@@ -39,7 +41,7 @@ export function isFloatingAiHidden(): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// useSyncExternalStore wiring
+// useSyncExternalStore wiring for visibility flags
 // ---------------------------------------------------------------------------
 
 function subscribeLocalStorage(callback: () => void) {
@@ -81,7 +83,6 @@ function setOpenInStorage(next: boolean) {
   if (typeof window === "undefined") return;
   if (next) window.localStorage.setItem(OPEN_KEY, "1");
   else window.localStorage.removeItem(OPEN_KEY);
-  // Manual storage events don't fire on the same tab — broadcast ourselves.
   notifyVisibilityChange(getHiddenSnapshot());
 }
 
@@ -104,6 +105,23 @@ export function FloatingAiChat({
   const hidden = useFloatingAiHidden();
   const open = useFloatingAiOpen();
 
+  const sessions = useChatSessions();
+  const storedActiveId = useActiveSessionId();
+
+  // History dropdown is panel-local UI state.
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  // Resolve the session that should be loaded into AiChat. We prefer the
+  // explicit active id from storage; otherwise fall back to the most
+  // recently updated session, otherwise generate a fresh id.
+  const fallbackId =
+    sessions.length > 0
+      ? [...sessions].sort((a, b) => b.updatedAt - a.updatedAt)[0].id
+      : null;
+  const activeSessionId =
+    storedActiveId ?? fallbackId ?? generateSessionIdOnce();
+  const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
+
   const persistOpen = useCallback((next: boolean) => {
     setOpenInStorage(next);
   }, []);
@@ -111,6 +129,11 @@ export function FloatingAiChat({
   const handleHide = useCallback(() => {
     setOpenInStorage(false);
     setFloatingAiHidden(true);
+  }, []);
+
+  const handleSelectSession = useCallback((id: string) => {
+    setActiveSession(id);
+    setHistoryOpen(false);
   }, []);
 
   if (hidden || suppressOnRoute) return null;
@@ -122,18 +145,34 @@ export function FloatingAiChat({
         <div
           className={cn(
             "fixed z-50",
-            // Mobile: bottom sheet covering most of the viewport
             "inset-x-3 bottom-3 top-20",
-            // Desktop: docked to bottom-right
             "sm:inset-auto sm:bottom-20 sm:right-4 sm:top-auto sm:h-[600px] sm:max-h-[80vh] sm:w-[380px]"
           )}
         >
-          <div className="size-full shadow-2xl shadow-black/30 rounded-lg overflow-hidden">
+          <div className="relative size-full rounded-lg overflow-hidden shadow-2xl shadow-black/30">
             <AiChat
+              key={activeSessionId}
               isAuthenticated={isAuthenticated}
               variant="compact"
+              sessionId={activeSessionId}
+              initialMessages={activeSession?.messages}
               headerActions={
                 <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setHistoryOpen((v) => !v)}
+                    aria-label="Show chat history"
+                    aria-expanded={historyOpen}
+                    title="History"
+                    className={cn(
+                      "rounded-md p-1 transition-colors",
+                      historyOpen
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <History className="size-3.5" />
+                  </button>
                   <button
                     type="button"
                     onClick={handleHide}
@@ -155,6 +194,20 @@ export function FloatingAiChat({
                 </div>
               }
             />
+
+            {/* History dropdown — overlays the messages area */}
+            {historyOpen && (
+              <div
+                className="absolute inset-x-0 top-[42px] bottom-0 z-10 border-t border-border bg-card/95 backdrop-blur"
+                role="dialog"
+                aria-label="Chat history"
+              >
+                <ChatHistorySidebar
+                  variant="compact"
+                  onSelect={handleSelectSession}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -168,8 +221,6 @@ export function FloatingAiChat({
         className={cn(
           "fixed bottom-4 right-4 z-50 flex size-12 items-center justify-center rounded-full shadow-lg shadow-black/30 transition-transform hover:scale-105 active:scale-95",
           "bg-[color:var(--gold)] text-[color:var(--gold-foreground)]",
-          // Hide the floating button visually when the panel is open on
-          // mobile (the panel is full-bleed there), but keep it on desktop.
           open && "max-sm:hidden"
         )}
       >
@@ -177,4 +228,22 @@ export function FloatingAiChat({
       </button>
     </>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Session-id helpers
+// ---------------------------------------------------------------------------
+
+let placeholderSessionId: string | null = null;
+
+/**
+ * Returns a deterministic session id when localStorage is empty, so the
+ * floating widget renders without a `null` key while the user is yet to
+ * start their first conversation. We don't write this id back — once they
+ * send the first message, AiChat itself persists the session.
+ */
+function generateSessionIdOnce(): string {
+  if (placeholderSessionId) return placeholderSessionId;
+  placeholderSessionId = generateSessionId();
+  return placeholderSessionId;
 }

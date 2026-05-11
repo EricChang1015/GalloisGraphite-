@@ -16,6 +16,7 @@
 | `003_seed_categories.sql` | 12 個標準 grade（MADA1/MADA2 × 6 mesh）+ Custom Grade |
 | `004_news_schema_update.sql` | `news` 加 `slug` / `content_html` / `cover_image_url` / `created_at` + 索引 |
 | `005_align_payments_and_news.sql` | 對齊實際代碼：`payments.payer_id → buyer_id`、加 `admin_note/reviewed_by/reviewed_at`、`news.author_id`、`orders.updated_at` + trigger |
+| `006_ai_chat_logs.sql` | 新增 `ai_chat_logs` audit table（session_id / IP / geo / UA / role / content）+ admin-only RLS |
 
 ---
 
@@ -278,6 +279,28 @@ Admin 手動發布(MVP 不爬蟲)。
 | metadata | jsonb |
 | created_at | timestamptz |
 
+### `ai_chat_logs`（migration 006）
+AI 助手每個 Q&A turn 的 server-side audit trail。append-only。
+
+| 欄位 | 說明 |
+|---|---|
+| id | uuid PK |
+| session_id | text — client 端產生的 10-byte 隨機 hex（20 chars），透過 `x-mada-session` header 傳入 |
+| user_id | FK profiles，guest 為 NULL |
+| role | `'user'` 或 `'assistant'` |
+| content | text — 該 turn 純文字（最多 16,000 char，超過截斷） |
+| ip | inet — 從 `x-forwarded-for` / `x-real-ip` / `cf-connecting-ip` 抽取 |
+| country / region / city | text — Vercel 的 `x-vercel-ip-*` headers |
+| user_agent | text — 原始 User-Agent header |
+| created_at | timestamptz |
+
+索引：`(session_id, created_at)`、`(user_id, created_at desc)`、`(created_at desc)`
+
+**RLS**：僅 `admin` / `super_admin` 可 select；無 insert/update/delete policy。
+寫入一律由 `/api/chat` 經 service-role admin client 執行。
+
+> 參見 [`docs/AI_PROMPT.md` §6](./AI_PROMPT.md) 了解寫入流程與本機開發 caveat。
+
 ## 9. RLS 概覽
 
 | 表 | select | insert | update | delete |
@@ -294,6 +317,7 @@ Admin 手動發布(MVP 不爬蟲)。
 | messages | room members / admin | room members | sender(短時間內) | -- |
 | news | published 公開 / admin | admin | admin | admin |
 | audit_logs | admin | server action（service_role） | -- | -- |
+| ai_chat_logs | admin only | server action（service_role） | -- | -- |
 
 > Helper SQL function：`public.current_user_role()` returns enum `user_role`。
 > 真正 SQL policy 見 migration 檔案。

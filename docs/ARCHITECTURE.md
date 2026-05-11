@@ -266,17 +266,39 @@ AI SDK v6 的 `UIMessageStream`：
 
 | 元件 | 用途 | 掛載點 |
 |---|---|---|
-| `<AiChat />` | 完整對話 UI（`variant: 'full' \| 'compact'`） | `/chat` 全頁 + floating widget 內部 |
-| `<FloatingAiChat />` | 右下金色浮動按鈕 + 彈出式對話面板（mobile 全 sheet / desktop 380×600 卡片） | `(public)/layout.tsx`、`(app)/layout.tsx` |
+| `<AiChat />` | 完整對話 UI（`variant: 'full' \| 'compact'`、受控 `sessionId` + `initialMessages`） | `/chat` 全頁 + floating widget 內部 |
+| `<FloatingAiChat />` | 右下金色浮動按鈕 + 彈出式對話面板（mobile 全 sheet / desktop 380×600 卡片）+ History dropdown | `(public)/layout.tsx`、`(app)/layout.tsx` |
 | `<AiChatLauncher />` | Server component wrapper，解析 `auth.getUser()` 後傳 `isAuthenticated` 給浮動視窗 | layouts |
 | `<PinAiToggle />` | `/chat` 全頁右上角的「Pin / Hide AI assistant」切換 | `(public)/chat/page.tsx` |
+| `<ChatPageBody />` | `/chat` 全頁兩欄佈局（左 sidebar + 右 chat） | `(public)/chat/page.tsx` |
+| `<ChatHistorySidebar />` | 對話歷史列表 + 新增 / 刪除 / 清空 | floating dropdown / `/chat` 全頁 sidebar |
 
-**狀態持久化**：
-- `localStorage['mada.ai.hidden']` — 完全隱藏浮動按鈕（用戶可在 `/chat` 重新 pin 回來）
-- `localStorage['mada.ai.open']` — 對話面板的展開狀態（跨頁保留）
-- 透過 `useSyncExternalStore` 訂閱（SSR-safe，零 `useEffect` setState）
+**狀態持久化（client localStorage）**：
+- `mada.ai.sessions` — `ChatSession[]`（每 session 含 id / title / createdAt / updatedAt / messages，cap 30 sessions × 100 messages）
+- `mada.ai.activeSession` — 目前選中的 session id（10-byte 隨機 hex = 20 char）
+- `mada.ai.hidden` — 完全隱藏浮動按鈕（用戶可在 `/chat` 重新 pin 回來）
+- `mada.ai.open` — 對話面板的展開狀態（跨頁保留）
+- 全部透過 `useSyncExternalStore` 訂閱（SSR-safe，零 `useEffect` setState）
+
+**Session 切換規則**：父層使用 `<AiChat key={sessionId} ...>` 強制 remount，
+讓 `useChat` 用 `initialMessages` 重新初始化，避免從 effect 中 setState。
 
 **不掛載區域**：`(auth)/`（登入流程不應干擾）、`admin/`（後台運維）。
+
+### 5.6 Server-side audit log（`public.ai_chat_logs`）
+
+每次 `/api/chat` 收到請求：
+
+1. 從 header `x-mada-session` 取出 client 端 sessionId（20-char hex）
+2. 從 `x-forwarded-for` / `x-real-ip` / `cf-connecting-ip` 抽取 IP
+3. 從 Vercel headers `x-vercel-ip-{country,country-region,city}` 取出地理位置
+4. 記下 `user-agent`、`auth.getUser()` 的 `user_id`（guest 為 null）
+5. 寫入兩筆 `ai_chat_logs`：user message（streaming 開始前）+ assistant final（`onFinish` callback）
+
+寫入用 service-role admin client 繞過 RLS；讀取僅 admin / super_admin
+（policy `ai_chat_logs_admin_select`）。寫入失敗 silent，不阻擋對話。
+
+> 詳細「如何修改 prompt / FAQ」請見 [`docs/AI_PROMPT.md`](./AI_PROMPT.md)。
 
 ---
 
@@ -382,6 +404,7 @@ supabase/migrations/
   003_seed_categories.sql       ← 12 個標準 grade + Custom Grade
   004_news_schema_update.sql    ← news 加 slug / content_html / cover_image_url / created_at
   005_align_payments_and_news.sql  ← payments(buyer_id/admin_note/reviewed_*) + news(author_id) + orders(updated_at trigger)
+  006_ai_chat_logs.sql          ← AI 助手 audit table（session_id / IP / geo / UA + admin-only RLS）
 ```
 
 ---

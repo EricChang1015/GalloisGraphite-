@@ -49,7 +49,8 @@ sellers. Built on Next.js 16 (App Router) + Supabase + Tailwind v4 + shadcn/ui.
 - [`AGENTS.md`](./AGENTS.md) — quick reference for any AI tool
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — **current implemented architecture**
 - [`docs/PRD.md`](./docs/PRD.md) — product requirements (with implementation status)
-- [`docs/SCHEMA.md`](./docs/SCHEMA.md) — database schema rationale (post-005 migration)
+- [`docs/SCHEMA.md`](./docs/SCHEMA.md) — database schema rationale (post-006 migration)
+- [`docs/AI_PROMPT.md`](./docs/AI_PROMPT.md) — **AI assistant prompt & FAQ maintenance guide** (start here when changing AI behaviour)
 - [`docs/CONTRACT_TEMPLATE.md`](./docs/CONTRACT_TEMPLATE.md) — sales contract template
 - [`docs/ROADMAP.md`](./docs/ROADMAP.md) — remaining MVP gaps + Phase 2 plan
 - [`docs/LEGACY_CONTENT.md`](./docs/LEGACY_CONTENT.md) — content from old static site
@@ -91,12 +92,17 @@ docs/                   ARCHITECTURE / PRD / SCHEMA / ROADMAP / CONTRACT_TEMPLAT
 Implemented:
 
 - [x] Next.js 16 (App Router, `proxy.ts`) + Tailwind v4 + shadcn/ui base-nova
-- [x] Supabase Auth + Postgres + RLS (migrations 001 → 005)
+- [x] Supabase Auth + Postgres + RLS (migrations 001 → 006)
 - [x] Schema alignment migration `005_align_payments_and_news.sql` (payments
       `buyer_id` / `admin_note` / `reviewed_*`, `news.author_id`,
       `orders.updated_at` trigger)
+- [x] AI chat audit log `006_ai_chat_logs.sql` (session_id / IP / geo /
+      User-Agent + admin-only RLS)
 - [x] Public marketing pages (Home / About / Products / News / Geopolitics /
       Sustainability) + AI Chat (POE-backed)
+- [x] Floating AI assistant on every page (public + app), FAQ-aware prompt,
+      multi-session browser history, and server-side audit logging
+      (see [`docs/AI_PROMPT.md`](./docs/AI_PROMPT.md))
 - [x] Auth flow (register / login / email verify) with role = buyer / seller
 - [x] Seller listings (create / pause / resume)
 - [x] Buyer market + inquiry → order conversion

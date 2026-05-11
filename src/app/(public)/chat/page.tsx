@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 
-import { AiChat } from "@/components/chat/AiChat";
+import { ChatPageBody } from "@/components/chat/ChatPageBody";
 import { PinAiToggle } from "@/components/chat/PinAiToggle";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -21,7 +21,7 @@ export default async function ChatPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col px-4 py-8 h-[calc(100vh-7rem)]">
+    <div className="mx-auto flex max-w-6xl flex-col px-4 py-8 h-[calc(100vh-7rem)]">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">AI Assistant</h1>
@@ -46,9 +46,7 @@ export default async function ChatPage() {
         </div>
         <PinAiToggle />
       </div>
-      <div className="flex-1 overflow-hidden">
-        <AiChat isAuthenticated={isAuthenticated} />
-      </div>
+      <ChatPageBody isAuthenticated={isAuthenticated} />
     </div>
   );
 }

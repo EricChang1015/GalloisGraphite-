@@ -1,27 +1,59 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
-import { useEffect, useRef, useState } from "react";
+import { DefaultChatTransport, type UIMessage } from "ai";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SendHorizontal, Bot, User, LogIn } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  generateSessionId,
+  saveMessages as saveMessagesToStore,
+  type StoredMessage,
+} from "@/lib/ai/sessions";
 import { cn } from "@/lib/utils";
 
 const LOGIN_REQUIRED_TOKEN = "[LOGIN_REQUIRED]";
 
-/**
- * Extract plain text from a UIMessage.
- * AI SDK v6 stores message content in message.parts[].
- */
-function getMessageText(
-  parts: Array<{ type: string; text?: string }>
-): string {
+interface UIPart {
+  type: string;
+  text?: string;
+}
+
+function getMessageText(parts: UIPart[] | undefined): string {
+  if (!parts) return "";
   return parts
     .filter((p): p is { type: "text"; text: string } => p.type === "text")
     .map((p) => p.text)
     .join("");
+}
+
+function toStoredMessages(
+  messages: ReadonlyArray<{
+    id: string;
+    role: string;
+    parts?: UIPart[] | unknown;
+  }>
+): StoredMessage[] {
+  return messages.map((m) => ({
+    id: m.id,
+    role: (m.role === "assistant" || m.role === "system"
+      ? m.role
+      : "user") as StoredMessage["role"],
+    text: getMessageText((m.parts ?? []) as UIPart[]),
+  }));
+}
+
+function fromStoredMessages(stored: StoredMessage[]): UIMessage[] {
+  return stored.map(
+    (m) =>
+      ({
+        id: m.id,
+        role: m.role,
+        parts: [{ type: "text", text: m.text }],
+      }) as UIMessage
+  );
 }
 
 interface AiChatProps {
@@ -33,11 +65,22 @@ interface AiChatProps {
    */
   variant?: "full" | "compact";
   /**
-   * Optional slot rendered to the right of the header title (e.g. close
-   * button when used inside the floating launcher).
+   * Optional slot rendered to the right of the header title.
    */
   headerActions?: React.ReactNode;
   className?: string;
+  /**
+   * Persisted chat session id. The component generates a fresh one if
+   * undefined. Switching this prop is intended to be done via parent
+   * remounting (`<AiChat key={sessionId} ... />`) so the underlying
+   * `useChat` re-initialises cleanly.
+   */
+  sessionId?: string;
+  /**
+   * Initial messages restored from localStorage. Treated as initial state
+   * — set them once via the `key={sessionId}` remount pattern above.
+   */
+  initialMessages?: StoredMessage[];
 }
 
 export function AiChat({
@@ -45,27 +88,61 @@ export function AiChat({
   variant = "full",
   headerActions,
   className,
+  sessionId: sessionIdProp,
+  initialMessages,
 }: AiChatProps) {
   const compact = variant === "compact";
   const [input, setInput] = useState("");
 
+  // Resolve a stable session id for this AiChat instance. Parents change
+  // `key={sessionId}` to switch chats; we never replace this id mid-life.
+  const sessionId = useMemo(
+    () => sessionIdProp ?? generateSessionId(),
+    [sessionIdProp]
+  );
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        headers: () => ({ "x-mada-session": sessionId }),
+      }),
+    [sessionId]
+  );
+
+  const initialUiMessages = useMemo(
+    () => (initialMessages ? fromStoredMessages(initialMessages) : []),
+    // Intentionally only computed at mount — the parent remounts via
+    // `key={sessionId}` when switching to a different session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
   const { messages, sendMessage, status, error } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
+    transport,
+    messages: initialUiMessages,
   });
 
   const isLoading = status === "submitted" || status === "streaming";
+
+  // Persist messages to localStorage on every change. This is a pure
+  // state → external-system sync, which is the canonical use of
+  // useEffect.
+  useEffect(() => {
+    if (messages.length === 0) return;
+    saveMessagesToStore(sessionId, toStoredMessages(messages));
+  }, [sessionId, messages]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const hasLoginPrompt = messages.some((m) => {
-    const text = getMessageText(
-      (m.parts ?? []) as Array<{ type: string; text?: string }>
-    );
-    return m.role === "assistant" && text.includes(LOGIN_REQUIRED_TOKEN);
-  });
+  const hasLoginPrompt = messages.some(
+    (m) =>
+      m.role === "assistant" &&
+      getMessageText(m.parts as UIPart[]).includes(LOGIN_REQUIRED_TOKEN)
+  );
 
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -110,17 +187,13 @@ export function AiChat({
           <div className="py-6 text-center text-xs text-muted-foreground">
             <p>Ask me about specs, applications, or how the platform works.</p>
             {!isAuthenticated && (
-              <p className="mt-1">
-                Pricing &amp; orders need a sign-in.
-              </p>
+              <p className="mt-1">Pricing &amp; orders need a sign-in.</p>
             )}
           </div>
         )}
 
         {messages.map((message) => {
-          const rawText = getMessageText(
-            (message.parts ?? []) as Array<{ type: string; text?: string }>
-          );
+          const rawText = getMessageText(message.parts as UIPart[]);
           const isLoginRequired =
             message.role === "assistant" &&
             rawText.includes(LOGIN_REQUIRED_TOKEN);

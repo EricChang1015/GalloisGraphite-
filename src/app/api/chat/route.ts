@@ -4,17 +4,22 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createServerClient } from "@/lib/supabase/server";
 import { buildSystemPrompt } from "@/lib/ai/prompt";
 import { getMarketContext, type MarketContext } from "@/lib/ai/marketContext";
+import { logChatTurn, readChatRequestMetadata } from "@/lib/ai/logging";
 
 /**
  * POST /api/chat  (AI SDK v6 UIMessageStream format)
  *
  * Powered by POE's OpenAI-compatible API. Switch model by changing
- * POE_MODEL in .env.local. Supported: claude-3-5-sonnet, gpt-4o,
- * gpt-4o-mini, gemini-2.0-flash, etc.
+ * POE_MODEL in .env.local.
  *
  * For signed-in users we additionally inject a market snapshot (active
  * listings + recent settled orders, aggregated per category) so the model
  * can give indicative price ranges without hallucinating.
+ *
+ * Both the latest user prompt and the streamed assistant reply are written
+ * to `public.ai_chat_logs` (server-side audit trail) keyed by the session
+ * id the client sends in the `x-mada-session` header. Audit failures never
+ * break the user experience.
  */
 
 const poe = createOpenAI({
@@ -30,6 +35,15 @@ function stripProviderMetadata(messages: UIMessage[]): UIMessage[] {
       key === "providerMetadata" ? undefined : value
     )
   ) as UIMessage[];
+}
+
+function getMessageText(
+  parts: Array<{ type: string; text?: string }>
+): string {
+  return parts
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("");
 }
 
 export async function POST(req: Request) {
@@ -53,15 +67,15 @@ export async function POST(req: Request) {
   // Resolve auth state and (when signed in) the live market snapshot.
   // Both calls are best-effort — failures fall back to guest mode without
   // market context so the assistant always responds.
-  let isAuthenticated = false;
+  let userId: string | null = null;
   let marketContext: MarketContext | null = null;
 
   try {
     const supabase = await createServerClient();
     const { data } = await supabase.auth.getUser();
-    isAuthenticated = Boolean(data.user);
+    userId = data.user?.id ?? null;
 
-    if (isAuthenticated) {
+    if (userId) {
       try {
         marketContext = await getMarketContext(supabase);
       } catch {
@@ -70,16 +84,31 @@ export async function POST(req: Request) {
       }
     }
   } catch {
-    isAuthenticated = false;
+    userId = null;
+  }
+
+  const meta = readChatRequestMetadata(req, userId);
+
+  // Audit: log the latest user message before streaming begins. We log only
+  // the most recent user turn so the audit table doesn't accumulate
+  // duplicate history every time the conversation is replayed by the SDK.
+  const lastUser = [...messages]
+    .reverse()
+    .find((m) => m.role === "user");
+  if (lastUser) {
+    const text = getMessageText(
+      (lastUser.parts ?? []) as Array<{ type: string; text?: string }>
+    );
+    // Fire-and-forget; logChatTurn already swallows its own errors.
+    void logChatTurn({ ...meta, role: "user", content: text });
   }
 
   const system = buildSystemPrompt({
-    mode: isAuthenticated ? "user" : "guest",
+    mode: userId ? "user" : "guest",
     marketContext,
   });
   const model = process.env.POE_MODEL ?? "claude-3-5-sonnet";
 
-  // convertToModelMessages is async in AI SDK v6
   const modelMessages = await convertToModelMessages(
     stripProviderMetadata(messages)
   );
@@ -90,6 +119,9 @@ export async function POST(req: Request) {
     messages: modelMessages,
     maxOutputTokens: 1024,
     temperature: 0.7,
+    onFinish: ({ text }) => {
+      void logChatTurn({ ...meta, role: "assistant", content: text });
+    },
   });
 
   return result.toUIMessageStreamResponse();
