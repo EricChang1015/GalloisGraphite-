@@ -3,6 +3,14 @@
 B2B graphite trading platform connecting global buyers with Madagascar
 sellers. Built on Next.js 16 (App Router) + Supabase + Tailwind v4 + shadcn/ui.
 
+## Links
+
+- **Production (Vercel)**: <https://galloisgraphite.vercel.app/>
+- **Legacy static site**: <http://madagraphite.com/> (the original brochure
+  site this platform is replacing; preserved for content reference under
+  [`docs/oldSite/`](./docs/oldSite/) and summarised in
+  [`docs/LEGACY_CONTENT.md`](./docs/LEGACY_CONTENT.md))
+
 ## Quick start
 
 1. Copy environment file:
@@ -19,10 +27,13 @@ sellers. Built on Next.js 16 (App Router) + Supabase + Tailwind v4 + shadcn/ui.
    ```
 
 3. Provision the Supabase project:
-   - Create a project at https://supabase.com
-   - Open SQL Editor → paste the contents of
-     [`supabase/migrations/001_init.sql`](./supabase/migrations/001_init.sql)
-   - Run
+   - Create a project at <https://supabase.com>
+   - Open SQL Editor → run each migration in
+     [`supabase/migrations/`](./supabase/migrations/) **in order** (`001` → `005`)
+   - Follow [`002_seed_first_admin.sql`](./supabase/migrations/002_seed_first_admin.sql)
+     to promote the first user to `super_admin`
+   - Regenerate TS types:
+     `npx supabase gen types typescript --project-id <ref> --schema public > src/types/database.ts`
 
 4. Run the dev server:
 
@@ -36,11 +47,13 @@ sellers. Built on Next.js 16 (App Router) + Supabase + Tailwind v4 + shadcn/ui.
 
 - [`.cursorrules`](./.cursorrules) — coding rules for AI agents (start here)
 - [`AGENTS.md`](./AGENTS.md) — quick reference for any AI tool
-- [`docs/PRD.md`](./docs/PRD.md) — product requirements
-- [`docs/SCHEMA.md`](./docs/SCHEMA.md) — database schema
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — **current implemented architecture**
+- [`docs/PRD.md`](./docs/PRD.md) — product requirements (with implementation status)
+- [`docs/SCHEMA.md`](./docs/SCHEMA.md) — database schema rationale (post-005 migration)
 - [`docs/CONTRACT_TEMPLATE.md`](./docs/CONTRACT_TEMPLATE.md) — sales contract template
-- [`docs/ROADMAP.md`](./docs/ROADMAP.md) — 2-day MVP delivery plan
+- [`docs/ROADMAP.md`](./docs/ROADMAP.md) — remaining MVP gaps + Phase 2 plan
 - [`docs/LEGACY_CONTENT.md`](./docs/LEGACY_CONTENT.md) — content from old static site
+- [`docs/COPY_DRAFTS.md`](./docs/COPY_DRAFTS.md) — marketing copy drafts
 - [`docs/Requirements.md`](./docs/Requirements.md) — original requirement memo
 
 ## Project layout
@@ -64,24 +77,40 @@ src/
     contract/           HTML renderer
     email/              Resend wrapper
   types/                Database types (regenerate with supabase gen types)
-  middleware.ts         Route guards
+  proxy.ts              Route guards (Next.js 16 renamed middleware.ts → proxy.ts)
 supabase/
-  migrations/           Versioned SQL
-docs/                   PRD / schema / templates / roadmap / requirements
+  migrations/           Versioned SQL (001 → 005, run in order)
+docs/                   ARCHITECTURE / PRD / SCHEMA / ROADMAP / CONTRACT_TEMPLATE / LEGACY_CONTENT
 ```
 
 ## Status
 
-🏗️ MVP scaffold (Day 0) is complete:
+🚀 Day 1–2 MVP core features delivered and deployed to
+<https://galloisgraphite.vercel.app/>.
 
-- [x] Next.js 16 + Tailwind v4 + shadcn/ui base-nova
-- [x] All core dependencies installed
-- [x] `.cursorrules` + `.cursor/rules/*.mdc`
-- [x] PRD / SCHEMA / CONTRACT_TEMPLATE / ROADMAP / LEGACY_CONTENT
-- [x] Initial SQL migration with full schema, enums, RLS, seed data
-- [x] Supabase client/server/admin/middleware skeletons
-- [x] Server Action stubs with zod schemas
-- [x] Route group skeletons for public / auth / app / admin
-- [x] Theme tokens for graphite dark + gold accent
+Implemented:
 
-Next: follow [`docs/ROADMAP.md`](./docs/ROADMAP.md).
+- [x] Next.js 16 (App Router, `proxy.ts`) + Tailwind v4 + shadcn/ui base-nova
+- [x] Supabase Auth + Postgres + RLS (migrations 001 → 005)
+- [x] Schema alignment migration `005_align_payments_and_news.sql` (payments
+      `buyer_id` / `admin_note` / `reviewed_*`, `news.author_id`,
+      `orders.updated_at` trigger)
+- [x] Public marketing pages (Home / About / Products / News / Geopolitics /
+      Sustainability) + AI Chat (POE-backed)
+- [x] Auth flow (register / login / email verify) with role = buyer / seller
+- [x] Seller listings (create / pause / resume)
+- [x] Buyer market + inquiry → order conversion
+- [x] Order state machine (draft → completed) with timeline append
+- [x] Contract HTML rendering + manual payment review by admin
+- [x] Admin Console (users / categories / orders / payments / news)
+- [x] Audit log for all admin mutations + Resend email notifications
+- [x] Three themes (light / dark / editorial)
+
+Remaining for full MVP launch — see [`docs/ROADMAP.md`](./docs/ROADMAP.md) §A:
+
+- [ ] A2 — In-app IM (`OrderChat`, auto room creation, `/messages` list)
+- [ ] A3 — Contract signed-scan upload UI
+- [ ] A4 — Storage buckets + policies migration
+- [ ] A5 — Disputed / Cancelled trigger UI
+- [ ] A6 — KYC document upload
+- [ ] A7 — Production smoke test end-to-end

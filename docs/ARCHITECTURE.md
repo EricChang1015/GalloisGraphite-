@@ -351,7 +351,7 @@ supabase/migrations/
   002_seed_first_admin.sql      ← 指引：UPDATE profiles SET role='super_admin' WHERE email=...
   003_seed_categories.sql       ← 12 個標準 grade + Custom Grade
   004_news_schema_update.sql    ← news 加 slug / content_html / cover_image_url / created_at
-  005_align_payments_and_news.sql  ⚠️ 待新增（ROADMAP §A1）
+  005_align_payments_and_news.sql  ← payments(buyer_id/admin_note/reviewed_*) + news(author_id) + orders(updated_at trigger)
 ```
 
 ---
@@ -360,11 +360,9 @@ supabase/migrations/
 
 完整清單見 [`ROADMAP.md`](./ROADMAP.md)。重點：
 
-1. **Schema 不一致（最高優先）**：
-   - `payments.payer_id`（SQL）vs `buyer_id`（代碼 + TS types）
-   - `payments.verified_by/verified_at`（SQL）vs `reviewed_by/reviewed_at/admin_note`（代碼 + TS types）
-   - `news.author_id` 在 SQL 中缺失，但 `upsertNews` 寫入它
-   - `orders.updated_at` 在 SQL 中缺失，但 server action 寫入它
+1. ~~**Schema 不一致**~~ ✅ 已由 `005_align_payments_and_news.sql` 修正
+   （payments `buyer_id` / `admin_note` / `reviewed_*`、news `author_id`、
+   orders `updated_at` trigger）。production 部署時記得重跑 `supabase gen types`。
 2. **IM 是 placeholder**：schema 與 RLS 已就位，但 `OrderChat`、自動建房、`/messages` 都待實作
 3. **合約簽名上傳 UI 缺**：Server Action 已完成，缺前端 file input
 4. **Storage buckets / policies 未自動建立**

@@ -40,7 +40,7 @@
 
 詳見 [`ROADMAP.md` §A](./ROADMAP.md#a-mvp-補完項上線前必做)：
 
-- **A1** Schema 對齊（payments / news / orders）— ⚠️ 不修會 runtime error
+- ~~**A1** Schema 對齊（payments / news / orders）~~ ✅ 已完成（migration 005）
 - **A2** 站內 IM（schema 已就位，但 `/messages` 與 `OrderChat` 待實作）
 - **A3** 合約簽名掃描上傳 UI（Server Action 已寫好）
 - **A4** Storage buckets 與 policies 初始化
