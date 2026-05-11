@@ -2,9 +2,8 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SendHorizontal, Bot, User, LogIn } from "lucide-react";
-import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,9 +26,27 @@ function getMessageText(
 
 interface AiChatProps {
   isAuthenticated?: boolean;
+  /**
+   * Visual variant.
+   *  - "full"    — full panel for /chat page (header + footer + larger paddings)
+   *  - "compact" — embedded in floating widget (slimmer header, tighter paddings)
+   */
+  variant?: "full" | "compact";
+  /**
+   * Optional slot rendered to the right of the header title (e.g. close
+   * button when used inside the floating launcher).
+   */
+  headerActions?: React.ReactNode;
+  className?: string;
 }
 
-export function AiChat({ isAuthenticated = false }: AiChatProps) {
+export function AiChat({
+  isAuthenticated = false,
+  variant = "full",
+  headerActions,
+  className,
+}: AiChatProps) {
+  const compact = variant === "compact";
   const [input, setInput] = useState("");
 
   const { messages, sendMessage, status, error } = useChat({
@@ -59,24 +76,45 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
+    <div
+      className={cn(
+        "flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card",
+        className
+      )}
+    >
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+      <div
+        className={cn(
+          "flex items-center gap-2 border-b border-border",
+          compact ? "px-3 py-2" : "px-4 py-3"
+        )}
+      >
         <Bot className="size-4 text-[color:var(--gold)]" />
         <span className="text-sm font-medium">Mada Graphite AI</span>
         {!isAuthenticated && (
-          <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-            Guest mode
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+            Guest
           </span>
         )}
+        {headerActions ? <div className="ml-auto">{headerActions}</div> : null}
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 p-4">
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto space-y-4",
+          compact ? "p-3" : "p-4"
+        )}
+      >
         {messages.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            Ask me anything about graphite, our products, or the platform.
-          </p>
+          <div className="py-6 text-center text-xs text-muted-foreground">
+            <p>Ask me about specs, applications, or how the platform works.</p>
+            {!isAuthenticated && (
+              <p className="mt-1">
+                Pricing &amp; orders need a sign-in.
+              </p>
+            )}
+          </div>
         )}
 
         {messages.map((message) => {
@@ -92,7 +130,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
             <div
               key={message.id}
               className={cn(
-                "flex gap-3",
+                "flex gap-2",
                 message.role === "user" && "flex-row-reverse"
               )}
             >
@@ -118,11 +156,11 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                     : "bg-muted text-foreground"
                 )}
               >
-                <p className="whitespace-pre-wrap">{cleanText}</p>
+                <p className="whitespace-pre-wrap break-words">{cleanText}</p>
                 {isLoginRequired && (
                   <a
                     href="/login"
-                    className="mt-2 flex items-center gap-1.5 rounded-md bg-[color:var(--gold)] px-3 py-1.5 text-xs font-medium text-[color:var(--gold-foreground)] hover:opacity-90"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-[color:var(--gold)] px-3 py-1.5 text-xs font-medium text-[color:var(--gold-foreground)] hover:opacity-90"
                   >
                     <LogIn className="size-3" />
                     Log in to continue
@@ -134,7 +172,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
         })}
 
         {isLoading && (
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
               <Bot className="size-3.5" />
             </div>
@@ -164,7 +202,10 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
       {/* Input */}
       <form
         onSubmit={handleSend}
-        className="flex items-end gap-2 border-t border-border p-3"
+        className={cn(
+          "flex items-end gap-2 border-t border-border",
+          compact ? "p-2" : "p-3"
+        )}
       >
         <Textarea
           value={input}
@@ -172,7 +213,9 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
           placeholder={
             hasLoginPrompt && !isAuthenticated
               ? "Log in to ask about pricing and orders…"
-              : "Ask about graphite specs, applications, trade terms…"
+              : compact
+                ? "Ask about specs, prices, applications…"
+                : "Ask about graphite specs, applications, trade terms…"
           }
           disabled={isLoading}
           rows={1}
@@ -189,6 +232,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
           size="icon"
           disabled={isLoading || !input.trim()}
           className="shrink-0"
+          aria-label="Send message"
         >
           <SendHorizontal className="size-4" />
         </Button>

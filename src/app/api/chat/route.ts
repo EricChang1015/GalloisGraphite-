@@ -3,13 +3,18 @@ import { createOpenAI } from "@ai-sdk/openai";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { buildSystemPrompt } from "@/lib/ai/prompt";
+import { getMarketContext, type MarketContext } from "@/lib/ai/marketContext";
 
 /**
  * POST /api/chat  (AI SDK v6 UIMessageStream format)
  *
- * Powered by POE's OpenAI-compatible API.
- * Switch model by changing POE_MODEL in .env.local.
- * Supported: claude-3-5-sonnet, gpt-4o, gpt-4o-mini, gemini-2.0-flash, etc.
+ * Powered by POE's OpenAI-compatible API. Switch model by changing
+ * POE_MODEL in .env.local. Supported: claude-3-5-sonnet, gpt-4o,
+ * gpt-4o-mini, gemini-2.0-flash, etc.
+ *
+ * For signed-in users we additionally inject a market snapshot (active
+ * listings + recent settled orders, aggregated per category) so the model
+ * can give indicative price ranges without hallucinating.
  */
 
 const poe = createOpenAI({
@@ -45,17 +50,33 @@ export async function POST(req: Request) {
     );
   }
 
-  // Determine mode from auth state (fall back to guest if Supabase is unavailable)
-  let user = null;
+  // Resolve auth state and (when signed in) the live market snapshot.
+  // Both calls are best-effort — failures fall back to guest mode without
+  // market context so the assistant always responds.
+  let isAuthenticated = false;
+  let marketContext: MarketContext | null = null;
+
   try {
     const supabase = await createServerClient();
     const { data } = await supabase.auth.getUser();
-    user = data.user;
+    isAuthenticated = Boolean(data.user);
+
+    if (isAuthenticated) {
+      try {
+        marketContext = await getMarketContext(supabase);
+      } catch {
+        // Soft-fail: prompt will say no market context is available.
+        marketContext = null;
+      }
+    }
   } catch {
-    // Non-fatal: treat as guest when auth cannot be resolved
+    isAuthenticated = false;
   }
 
-  const system = buildSystemPrompt(user ? "user" : "guest");
+  const system = buildSystemPrompt({
+    mode: isAuthenticated ? "user" : "guest",
+    marketContext,
+  });
   const model = process.env.POE_MODEL ?? "claude-3-5-sonnet";
 
   // convertToModelMessages is async in AI SDK v6
@@ -71,6 +92,5 @@ export async function POST(req: Request) {
     temperature: 0.7,
   });
 
-  // Return UI message stream (compatible with DefaultChatTransport)
   return result.toUIMessageStreamResponse();
 }

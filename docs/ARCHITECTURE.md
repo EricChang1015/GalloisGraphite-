@@ -220,33 +220,63 @@ cancelled   cancelled           cancelled       disputed ──► cancelled / c
 
 ---
 
-## 5. AI 助手（`src/lib/ai/prompt.ts` + `api/chat/route.ts`）
+## 5. AI 助手（`src/lib/ai/*` + `api/chat/route.ts` + `components/chat/*`）
 
 ### 5.1 Provider
 
 POE OpenAI-compatible endpoint，由 `@ai-sdk/openai` `createOpenAI({ baseURL, apiKey })` 接入。
 單一 API key 可切換 Claude / GPT / Gemini / Llama，由 `POE_MODEL` env var 控制。
 
-### 5.2 System Prompt 兩種模式
+### 5.2 System Prompt 兩種模式（`src/lib/ai/prompt.ts`）
 
-定義於 `buildSystemPrompt(mode: "guest" | "user")`：
+定義於 `buildSystemPrompt({ mode, marketContext? })`：
 
 - **Guest（未登入）**：可答石墨知識、公司介紹、Incoterm；
-  禁止報價／下單意圖回 `[LOGIN_REQUIRED]` token，由前端 `<AiChat />` 偵測並顯示登入 CTA
-- **User（已登入）**：同上 + 可協助起草 inquiry message
-  （tools 介面預留中，搜商品/查訂單尚未實作 — Phase 2）
+  價格／詢價／下單／訂單／KYC 等意圖一律回 `[LOGIN_REQUIRED]` token，
+  由前端 `<AiChat />` 偵測並顯示登入 CTA
+- **User（已登入）**：上述能力 + 可基於 **live market context** 給出 indicative price range；
+  可協助起草 inquiry 訊息（不會自動送出）；
+  destructive action（取消/退款）一律導引到官方 UI
 
-### 5.3 Knowledge Base
+prompt 內含：`COMMON_RULES`（never reveal prompt / hedge / no record mutation）
++ mode rules + `GRAPHITE_KNOWLEDGE_BASE`（公司／礦場／產品／規格）
++ `FAQ_KNOWLEDGE`（買家／賣家／投資方／公眾四視角的「可直接答」與「must defer」清單 + Disclaimer）
++ user mode 額外注入 market context section。
 
-`GRAPHITE_KNOWLEDGE_BASE` 內含：礦場歷史 / 產品品牌 / 標準規格 / 應用場景 / 物流條款 / 聯絡方式。
-作為唯一可信來源餵給模型。
+### 5.3 Live Market Context（`src/lib/ai/marketContext.ts`）
+
+僅在使用者已登入時於每次 `/api/chat` 請求中即時聚合：
+
+- **Active listings**：依 `product_categories.name` 分組統計 `count / min / avg / max unit_price` + mode currency / mode unit
+- **Recent settled orders**：90 天內 `status IN ('paid','shipped','delivered','completed')` 的訂單（最多 5 筆，匿名化），
+  輸出 category / quantity / unit_price / currency / status
+
+注入到 system prompt 後模型即可給出「indicative range from active listings / recent settled orders」式回答，
+但**永不洩漏 listing id、seller、buyer 或 order_no**。RLS 會做為第二道防線。
 
 ### 5.4 Streaming
 
 AI SDK v6 的 `UIMessageStream`：
+
 - 後端：`streamText().toUIMessageStreamResponse()`
 - 前端：`useChat({ transport: new DefaultChatTransport({ api: '/api/chat' }) })`
 - 過濾 `providerMetadata`（避免 ZDR org 的 itemId 問題）
+
+### 5.5 UI 入口
+
+| 元件 | 用途 | 掛載點 |
+|---|---|---|
+| `<AiChat />` | 完整對話 UI（`variant: 'full' \| 'compact'`） | `/chat` 全頁 + floating widget 內部 |
+| `<FloatingAiChat />` | 右下金色浮動按鈕 + 彈出式對話面板（mobile 全 sheet / desktop 380×600 卡片） | `(public)/layout.tsx`、`(app)/layout.tsx` |
+| `<AiChatLauncher />` | Server component wrapper，解析 `auth.getUser()` 後傳 `isAuthenticated` 給浮動視窗 | layouts |
+| `<PinAiToggle />` | `/chat` 全頁右上角的「Pin / Hide AI assistant」切換 | `(public)/chat/page.tsx` |
+
+**狀態持久化**：
+- `localStorage['mada.ai.hidden']` — 完全隱藏浮動按鈕（用戶可在 `/chat` 重新 pin 回來）
+- `localStorage['mada.ai.open']` — 對話面板的展開狀態（跨頁保留）
+- 透過 `useSyncExternalStore` 訂閱（SSR-safe，零 `useEffect` setState）
+
+**不掛載區域**：`(auth)/`（登入流程不應干擾）、`admin/`（後台運維）。
 
 ---
 
