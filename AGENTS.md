@@ -14,12 +14,14 @@ source of truth for all AI agents (Cursor / Claude / GPT / Codex).
 
 Quick reference:
 
-- `docs/PRD.md` — product requirements
-- `docs/SCHEMA.md` — database schema rationale
+- `docs/ARCHITECTURE.md` — **current implemented architecture** (start here)
+- `docs/PRD.md` — product requirements (with implementation status)
+- `docs/SCHEMA.md` — database schema rationale (post-005 migration)
+- `docs/ROADMAP.md` — remaining MVP gaps + Phase 2 plan
 - `docs/CONTRACT_TEMPLATE.md` — graphite sales contract template
-- `docs/ROADMAP.md` — 2-day MVP delivery plan
 - `docs/LEGACY_CONTENT.md` — content migrated from old static madagraphite.com
-- `supabase/migrations/` — SQL migrations (run in Supabase SQL editor)
+- `docs/COPY_DRAFTS.md` — marketing copy drafts
+- `supabase/migrations/` — SQL migrations (run 001 → 005 in order)
 - `.env.example` — required environment variables
 
 ## Top rules (TL;DR)
