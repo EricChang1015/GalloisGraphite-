@@ -14,56 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      ai_chat_logs: {
-        Row: {
-          city: string | null
-          content: string
-          country: string | null
-          created_at: string
-          id: string
-          ip: string | null
-          region: string | null
-          role: string
-          session_id: string
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          city?: string | null
-          content: string
-          country?: string | null
-          created_at?: string
-          id?: string
-          ip?: string | null
-          region?: string | null
-          role: string
-          session_id: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          city?: string | null
-          content?: string
-          country?: string | null
-          created_at?: string
-          id?: string
-          ip?: string | null
-          region?: string | null
-          role?: string
-          session_id?: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_chat_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       audit_logs: {
         Row: {
           action: string
