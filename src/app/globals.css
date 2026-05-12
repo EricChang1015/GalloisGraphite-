@@ -206,31 +206,3 @@
   from { width: 0%; }
   to   { width: 100%; }
 }
-
-/* ───── Aurora dashboard ─────
- * Slow drifting blobs used by the AI-Native dashboard skin. */
-@keyframes aurora-drift {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(40px, -30px, 0) scale(1.08); }
-  100% { transform: translate3d(0, 0, 0) scale(1); }
-}
-@keyframes aurora-drift-2 {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(-50px, 40px, 0) scale(1.12); }
-  100% { transform: translate3d(0, 0, 0) scale(1); }
-}
-@keyframes aurora-drift-3 {
-  0%   { transform: translate3d(-50%, 0, 0) scale(1); }
-  50%  { transform: translate3d(-50%, 30px, 0) scale(1.15); }
-  100% { transform: translate3d(-50%, 0, 0) scale(1); }
-}
-
-.animate-aurora        { animation: aurora-drift-3 18s ease-in-out infinite; }
-.animate-aurora-slow   { animation: aurora-drift   22s ease-in-out infinite; }
-.animate-aurora-slower { animation: aurora-drift-2 28s ease-in-out infinite; }
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-aurora,
-  .animate-aurora-slow,
-  .animate-aurora-slower { animation: none; }
-}
