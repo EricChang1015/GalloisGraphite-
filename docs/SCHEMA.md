@@ -16,6 +16,8 @@
 | `003_seed_categories.sql` | 12 個標準 grade（MADA1/MADA2 × 6 mesh）+ Custom Grade |
 | `004_news_schema_update.sql` | `news` 加 `slug` / `content_html` / `cover_image_url` / `created_at` + 索引 |
 | `005_align_payments_and_news.sql` | 對齊實際代碼：`payments.payer_id → buyer_id`、加 `admin_note/reviewed_by/reviewed_at`、`news.author_id`、`orders.updated_at` + trigger |
+| `006_ai_chat_logs.sql` | AI chat 稽核日誌（session_id / IP / geo / user-agent + admin-only RLS） |
+| `007_oauth_profile_handling.sql` | `handle_new_user` 支援 Google OAuth：fallback meta.name；`email_confirmed_at` 已設則 status 直接 `'active'` |
 | `006_ai_chat_logs.sql` | 新增 `ai_chat_logs` audit table（session_id / IP / geo / UA / role / content）+ admin-only RLS |
 
 ---
@@ -46,7 +48,9 @@
 
 **Trigger**：
 - `on_auth_user_created` → `handle_new_user()`：新註冊自動 insert 一筆 profile
-- `on_auth_user_email_confirmed` → `handle_user_email_confirmed()`：email 驗證後 status='active'
+  - **007 後行為**：讀 `raw_user_meta_data`，`full_name` fallback 到 `name`（Google ID token 用此 key）；`company_name` / `country` 缺漏視為空字串；`role` 預設 `'buyer'`
+  - 若 `auth.users.email_confirmed_at` 已非 null（OAuth 流程），直接落 `status='active'`；否則 `'pending'` 等 email 驗證
+- `on_auth_user_email_confirmed` → `handle_user_email_confirmed()`：email 驗證後（UPDATE 觸發）status='active'。OAuth 流程因 INSERT 時 status 已 active，此 trigger 不會再觸發
 
 ## 2. 商品
 

@@ -20,7 +20,7 @@
 |---|---|---|
 | 1 | **品牌官網**：首頁 / About / Products / News / Geopolitics / Sustainability | `(public)/` |
 | 2 | **AI 助手**（訪客模式）：石墨知識/公司介紹；偵測購買意圖回 `[LOGIN_REQUIRED]` | `/chat` + `/api/chat` |
-| 3 | **註冊/登入**：Email + 驗證信，role = buyer / seller | `(auth)/{login,register,verify}` |
+| 3 | **註冊/登入**：Email + 驗證信 / Google OAuth，role = buyer / seller | `(auth)/{login,register,verify}` + `auth/callback` |
 | 4 | **超級管理員後台**：用戶凍結/解凍、品類管理、訂單瀏覽、付款審核、新聞管理 | `/admin/*` |
 | 5 | **賣家上貨**：選品類 → 規格 / 數量 / 出貨地 / 出貨時間區間 / 價格 / 幣別 / Incoterm | `/listings/new` |
 | 6 | **買家市場**：瀏覽 listings、篩選、單品詳情 | `/market` + `/market/[id]` |
@@ -74,10 +74,13 @@
 ## 4. 核心使用者流程
 
 ### 4.1 註冊
-1. 使用者填 email + 密碼 + 角色(buyer/seller) + 公司名/國家
-2. Supabase Trigger `handle_new_user` 自動建立 `profiles`（status='pending'）
-3. Supabase 寄驗證信 → 點擊驗證連結 → Trigger `handle_user_email_confirmed` 把 status 改為 active
-4. 超管可在 `/admin/users` 凍結/解凍（`status='frozen'`）
+1. **Email 註冊**：填 email + 密碼 + 角色(buyer/seller) + 公司名/國家
+   - Supabase Trigger `handle_new_user` 自動建立 `profiles`（status='pending'）
+   - Supabase 寄驗證信 → 點擊驗證連結 → Trigger `handle_user_email_confirmed` 把 status 改為 active
+2. **Google OAuth 註冊／登入**（lazy collect）：點「Continue with Google」→ Supabase 走 OAuth 2.0 → 回 `/auth/callback?code=...` → `exchangeCodeForSession` 後重導 `/dashboard`
+   - `handle_new_user` 偵測 `auth.users.email_confirmed_at` 已非 null（Google 已驗證），直接建 `profiles` 並設 `status='active'`
+   - `role` 預設 `'buyer'`、`company_name` / `country` 留空，待用戶日後在 inquiry / listing / payment 時補齊（並進入 KYC 流程，見 ROADMAP §A6）
+3. 超管可在 `/admin/users` 凍結/解凍（`status='frozen'`）
 
 ### 4.2 賣家上貨
 1. 賣家進入 `/listings/new`

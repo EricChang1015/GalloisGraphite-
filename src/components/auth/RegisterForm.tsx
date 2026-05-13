@@ -14,6 +14,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 type SignUpValues = z.infer<typeof SignUpSchema>;
 
@@ -61,6 +63,21 @@ export function RegisterForm() {
         <CardDescription>Register as buyer or seller. Email verification is required.</CardDescription>
       </CardHeader>
       <CardContent>
+        <GoogleSignInButton />
+
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          Signing in with Google creates a buyer account by default. You can
+          update your role and company details later from your dashboard.
+        </p>
+
+        <div className="my-6 flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs uppercase tracking-wider text-muted-foreground">
+            or sign up with email
+          </span>
+          <Separator className="flex-1" />
+        </div>
+
         <Form {...form}>
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <FormField

@@ -62,9 +62,10 @@
 
 | 路由 | 檔案 | 內容 |
 |---|---|---|
-| `/login` | `(auth)/login/page.tsx` | `<LoginForm />`（react-hook-form + zod） |
-| `/register` | `(auth)/register/page.tsx` | `<RegisterForm />`（含 role 選擇 buyer/seller） |
+| `/login` | `(auth)/login/page.tsx` | `<LoginForm />`（email/password）+ `<GoogleSignInButton />` |
+| `/register` | `(auth)/register/page.tsx` | `<RegisterForm />`（含 role 選擇 buyer/seller）+ `<GoogleSignInButton />` |
 | `/verify` | `(auth)/verify/page.tsx` | Email 驗證落地頁 + `<VerifyResendForm />` |
+| `/auth/callback` | `app/auth/callback/route.ts` | OAuth code → session 交換；成功重導 `next \|\| /dashboard`，失敗回 `/login?error=oauth_failed` |
 
 **Layout**：`(auth)/layout.tsx`（無 Navbar）
 
@@ -179,7 +180,8 @@ type ActionResult<T> =
 
 | 檔案 | Action | 權限檢查 | 副作用 |
 |---|---|---|---|
-| `auth.ts` | `signUp` / `signIn` / `signOut` / `resendVerification` | — | Supabase Auth |
+| `auth.ts` | `signUp` / `signIn` / `signOut` / `resendVerification` | — | Supabase Auth（email/password） |
+| `components/auth/GoogleSignInButton.tsx` | client-side `supabase.auth.signInWithOAuth({ provider:'google' })` | — | 重導 Google → `/auth/callback` |
 | `listing.ts` | `createListing` / `updateListing` / `pauseListing` / `resumeListing` | role ∈ {seller, admin}, status='active', owner | revalidate /listings, /market |
 | `inquiry.ts` | `createInquiry` | role='buyer' | Email 通知 seller, revalidate /inquiries |
 |  | `acceptInquiry` | seller_id = auth.uid() | 建立 order(draft), 更新 inquiry='converted' |
@@ -312,10 +314,21 @@ Request ──► updateSession() ──► 取得 user
             ├─ /login|/register|/verify + user 已登入 → /dashboard
             ├─ /(app|admin)/* + 未登入 → /login?next=...
             ├─ /admin/* + role ∉ {admin, super_admin} → /dashboard
+            ├─ /auth/callback → 放行（由 route handler 自行 exchangeCodeForSession）
             └─ 其它 → 放行
 ```
 
 `updateSession` 內部刷新 cookies 中的 Supabase session token。
+
+### OAuth 旁路
+
+Google OAuth 流程不走 server action，而是：
+
+1. Client `<GoogleSignInButton />` 呼叫 `supabase.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: ${origin}/auth/callback?next=... } })`
+2. 瀏覽器跳轉到 Google 同意頁
+3. Google 回呼 `https://<project-ref>.supabase.co/auth/v1/callback`，Supabase 再 302 到我們的 `/auth/callback?code=...`
+4. `app/auth/callback/route.ts` 用 server SSR client 呼 `exchangeCodeForSession(code)` 寫入 session cookies
+5. DB trigger `handle_new_user`（007 migration 後）對 `auth.users.email_confirmed_at` 已非 null 的列直接建立 `profiles.status='active'`，避開 email_confirmed trigger
 
 ---
 
@@ -405,6 +418,7 @@ supabase/migrations/
   004_news_schema_update.sql    ← news 加 slug / content_html / cover_image_url / created_at
   005_align_payments_and_news.sql  ← payments(buyer_id/admin_note/reviewed_*) + news(author_id) + orders(updated_at trigger)
   006_ai_chat_logs.sql          ← AI 助手 audit table（session_id / IP / geo / UA + admin-only RLS）
+  007_oauth_profile_handling.sql ← handle_new_user 支援 Google OAuth（fallback meta.name；email_confirmed_at 已設 → status='active'）
 ```
 
 ---

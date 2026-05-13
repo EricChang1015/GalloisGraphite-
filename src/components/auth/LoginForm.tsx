@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 type SignInValues = z.infer<typeof SignInSchema>;
 
@@ -22,6 +24,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/dashboard";
+  const oauthError = searchParams.get("error");
 
   const form = useForm<SignInValues>({
     resolver: zodResolver(SignInSchema),
@@ -58,6 +61,22 @@ export function LoginForm() {
         <CardDescription>Use your buyer or seller account to continue.</CardDescription>
       </CardHeader>
       <CardContent>
+        <GoogleSignInButton />
+
+        {oauthError ? (
+          <p className="mt-3 text-center text-sm text-destructive">
+            Google sign-in failed. Please try again or use email below.
+          </p>
+        ) : null}
+
+        <div className="my-6 flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs uppercase tracking-wider text-muted-foreground">
+            or
+          </span>
+          <Separator className="flex-1" />
+        </div>
+
         <Form {...form}>
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <FormField

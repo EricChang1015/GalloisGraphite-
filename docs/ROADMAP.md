@@ -69,13 +69,17 @@
 - [ ] Server Action 寫 `audit_logs` + `orders.timeline` event
 - [ ] Admin 在 `/admin/orders/[id]`（待新增）可從 `disputed` → `completed` / `cancelled`
 
-### A6. KYC 文件上傳（簡易版）
+### A6. KYC 文件上傳（簡易版） + Lazy-collect commercial profile
 
-PRD §2 IN SCOPE 第 11 項提到「之後可上傳企業登記/身份證件以提升 kyc_level」。
+**設計原則**：一般用戶（瀏覽 / 用 AI Chat）不需要 KYC；只有真正要做買賣／詢價的實體才需要。Google OAuth 用戶現在以 `company_name=''` / `country=''` 建立 profile，後續第一次商業動作時觸發補資料 + KYC。
 
 - [ ] `(app)/settings/kyc` 頁面 + `<KycUploadForm />`
 - [ ] 上傳到 `kyc` bucket，URL 寫入 `profiles.kyc_docs jsonb`
 - [ ] Admin 可在 `/admin/users/[id]` 檢視與升級 `kyc_level`
+- [ ] **Lazy collect prompt**：在 `createInquiry` / `createListing` / `submitPayment` 三個 server action 入口檢查
+  - 若 `profiles.company_name` 或 `country` 為空 → 回 `{ error: { code: 'PROFILE_INCOMPLETE' } }`，前端彈出 `<CommercialProfileDialog />` 收集
+  - 若 `profiles.kyc_level < 1` → 回 `{ error: { code: 'KYC_REQUIRED' } }`，前端引導至 `/settings/kyc`
+- [ ] Seller 自助升級流程：buyer → seller 的 role 切換需 admin 審核（在 admin/users 加按鈕）
 
 ### A7. 部署與煙霧測試（原 Step 9）
 

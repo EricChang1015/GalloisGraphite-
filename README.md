@@ -29,7 +29,7 @@ sellers. Built on Next.js 16 (App Router) + Supabase + Tailwind v4 + shadcn/ui.
 3. Provision the Supabase project:
    - Create a project at <https://supabase.com>
    - Open SQL Editor → run each migration in
-     [`supabase/migrations/`](./supabase/migrations/) **in order** (`001` → `005`)
+     [`supabase/migrations/`](./supabase/migrations/) **in order** (`001` → `007`)
    - Follow [`002_seed_first_admin.sql`](./supabase/migrations/002_seed_first_admin.sql)
      to promote the first user to `super_admin`
    - Regenerate TS types:
@@ -79,8 +79,9 @@ src/
     email/              Resend wrapper
   types/                Database types (regenerate with supabase gen types)
   proxy.ts              Route guards (Next.js 16 renamed middleware.ts → proxy.ts)
+  app/auth/callback/    OAuth code-exchange route handler
 supabase/
-  migrations/           Versioned SQL (001 → 005, run in order)
+  migrations/           Versioned SQL (001 → 007, run in order)
 docs/                   ARCHITECTURE / PRD / SCHEMA / ROADMAP / CONTRACT_TEMPLATE / LEGACY_CONTENT
 ```
 
@@ -92,7 +93,7 @@ docs/                   ARCHITECTURE / PRD / SCHEMA / ROADMAP / CONTRACT_TEMPLAT
 Implemented:
 
 - [x] Next.js 16 (App Router, `proxy.ts`) + Tailwind v4 + shadcn/ui base-nova
-- [x] Supabase Auth + Postgres + RLS (migrations 001 → 006)
+- [x] Supabase Auth + Postgres + RLS (migrations 001 → 007)
 - [x] Schema alignment migration `005_align_payments_and_news.sql` (payments
       `buyer_id` / `admin_note` / `reviewed_*`, `news.author_id`,
       `orders.updated_at` trigger)
@@ -103,7 +104,9 @@ Implemented:
 - [x] Floating AI assistant on every page (public + app), FAQ-aware prompt,
       multi-session browser history, and server-side audit logging
       (see [`docs/AI_PROMPT.md`](./docs/AI_PROMPT.md))
-- [x] Auth flow (register / login / email verify) with role = buyer / seller
+- [x] Auth flow with **email/password + Google OAuth** (register / login /
+      email verify); OAuth users land directly as `status='active'` with
+      `role='buyer'` (see `007_oauth_profile_handling.sql`)
 - [x] Seller listings (create / pause / resume)
 - [x] Buyer market + inquiry → order conversion
 - [x] Order state machine (draft → completed) with timeline append
