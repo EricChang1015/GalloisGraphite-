@@ -13,20 +13,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { BgGrid } from "@/components/home/BgGrid";
 import { cn } from "@/lib/utils";
-
-/**
- * China+1 / Strategic-sourcing section, redesigned as an "interactive supply
- * map".
- *
- * The map is an SVG world silhouette with:
- *   - Madagascar marker (origin) glowing in signal-cyan
- *   - Tamatave deep-water port marker (45 km away)
- *   - Animated arcs to Rotterdam, Hamburg, Yokohama, Mumbai, Houston,
- *     Sao Paulo — drawn with stroke-dashoffset transitions
- *
- * To stay under control we use a stylised, low-poly Equirectangular world
- * outline (no external GeoJSON / map library).
- */
+import {
+  COUNTRIES,
+  MADAGASCAR_ID,
+  VIEW_BOX,
+  VIEW_W,
+  pathGen,
+  project,
+} from "@/lib/maps/world";
 
 const CRITICAL_LISTS = [
   { label: "US Critical Minerals List", flag: "🇺🇸" },
@@ -59,17 +53,41 @@ const ADVANTAGES = [
   },
 ];
 
-// Lat/long roughly mapped to viewBox 0..100 / 0..50 (equirectangular, simplified).
-// Origin: Tamatave / Toamasina (~−18.15°, 49.4°)
-const ORIGIN = { x: 60.6, y: 30.5, label: "Toamasina" };
+// ─── How to add a destination port ─────────────────────────────────────────────
+//
+// 1. Look up the port's decimal longitude/latitude (Wikipedia's infobox shows it)
+//      East lon → positive,  West lon → negative
+//      North lat → positive, South lat → negative
+//
+// 2. Append one entry to DESTINATIONS below — that's it. The d3 projection
+//    handles all coordinate math; you do NOT need to compute SVG x/y yourself.
+//
+//      { id: "sgp", lon: 103.85, lat: 1.29, label: "Singapore", transitDays: "~12 days" }
+//
+// 3. If two ports sit close together and labels overlap (e.g. Rotterdam vs
+//    Hamburg), set `labelAnchor: "start"` or `"end"` to push the text aside.
+//
+// Origin: Toamasina (Tamatave) port, Madagascar — 49.4°E, 18.15°S
+const ORIGIN = { lon: 49.4, lat: -18.15, label: "Toamasina" };
 
-const DESTINATIONS = [
-  { id: "rot", x: 47, y: 13, label: "Rotterdam" },
-  { id: "ham", x: 49, y: 12.5, label: "Hamburg" },
-  { id: "yok", x: 84, y: 16, label: "Yokohama" },
-  { id: "mum", x: 65, y: 20.5, label: "Mumbai" },
-  { id: "hou", x: 22, y: 19, label: "Houston" },
-  { id: "spo", x: 32, y: 33, label: "São Paulo" },
+type Destination = {
+  id: string;
+  lon: number;
+  lat: number;
+  label: string;
+  transitDays?: string;
+  /** SVG textAnchor for the label — tune this when ports cluster together */
+  labelAnchor?: "start" | "middle" | "end";
+};
+
+const DESTINATIONS: Destination[] = [
+  { id: "rot", lon:    4.48, lat:  51.92, label: "Rotterdam",  transitDays: "~22 days", labelAnchor: "end"   },
+  { id: "ham", lon:    9.99, lat:  53.55, label: "Hamburg",    transitDays: "~24 days", labelAnchor: "start" },
+  { id: "yok", lon:  139.65, lat:  35.45, label: "Yokohama",   transitDays: "~18 days" },
+  { id: "mum", lon:   72.83, lat:  18.94, label: "Mumbai",     transitDays: "~10 days" },
+  { id: "hou", lon:  -95.30, lat:  29.75, label: "Houston",    transitDays: "~35 days" },
+  { id: "spo", lon:  -46.63, lat: -23.55, label: "São Paulo",  transitDays: "~15 days" },
+  // ↑ add more here
 ];
 
 export function SupplyMap() {
@@ -189,173 +207,282 @@ export function SupplyMap() {
 }
 
 /**
- * Stylised world map. Uses a small set of polygon paths approximating major
- * landmasses — accuracy is not a goal; visual context is. Routes draw in
- * sequentially via stroke-dashoffset transitions.
+ * Real-data world map. Continent paths are generated from Natural Earth 110m
+ * country boundaries via d3-geo's `geoNaturalEarth1` projection — the same
+ * pipeline used by The New York Times, FT, and most thematic-map publishers.
  *
- * viewBox: 100 × 50 (equirectangular projection-ish).
+ * All marker positions come from `project(lon, lat)`, so adding new ports is
+ * just appending lat/lng to the DESTINATIONS list above.
  */
 function WorldMap() {
   const [hover, setHover] = React.useState<string | null>(null);
 
+  // Pre-project once per render (cheap; ~6 ops)
+  const originXY = React.useMemo(() => project(ORIGIN.lon, ORIGIN.lat), []);
+  const destPoints = React.useMemo(
+    () => DESTINATIONS.map((d) => ({ ...d, xy: project(d.lon, d.lat) })),
+    []
+  );
+
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-card lg:col-span-8">
-      <div className="absolute inset-0 bg-grid-line opacity-20" aria-hidden />
-      {/* Latitude guides (decorative) */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 flex flex-col justify-between py-8 px-6 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50"
-      >
-        <span>60° N · Hamburg · Rotterdam</span>
-        <span>0° · Equator</span>
-        <span>23° S · Tropic of Capricorn</span>
-      </div>
-
       <svg
-        viewBox="0 0 100 50"
+        viewBox={VIEW_BOX}
         className="relative aspect-[2/1] w-full"
         role="img"
         aria-label="Madagascar to global destinations supply map"
       >
         <defs>
-          <linearGradient id="route" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="var(--signal)" stopOpacity="0.05" />
-            <stop offset="50%" stopColor="var(--signal)" stopOpacity="1" />
+          <linearGradient id="sm-route" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="var(--signal)" stopOpacity="0.05" />
+            <stop offset="50%"  stopColor="var(--signal)" stopOpacity="1" />
             <stop offset="100%" stopColor="var(--signal)" stopOpacity="0.05" />
           </linearGradient>
-          <radialGradient id="origin-glow">
-            <stop offset="0%" stopColor="var(--signal)" stopOpacity="0.7" />
+
+          <radialGradient id="sm-origin-glow">
+            <stop offset="0%"   stopColor="var(--signal)" stopOpacity="0.65" />
             <stop offset="100%" stopColor="var(--signal)" stopOpacity="0" />
           </radialGradient>
+
+          <linearGradient id="sm-ocean" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="color-mix(in oklch, var(--signal) 4%, var(--card))" />
+            <stop offset="100%" stopColor="color-mix(in oklch, var(--signal) 1%, var(--card))" />
+          </linearGradient>
         </defs>
 
-        {/* Stylised landmasses */}
+        {/* Ocean background */}
+        <rect width={VIEW_W} height="500" fill="url(#sm-ocean)" />
+
+        {/* Latitude reference lines (projected to follow the curve subtly) */}
+        <LatitudeGuides />
+
+        {/* Countries */}
         <g
-          fill="color-mix(in oklch, var(--foreground) 8%, transparent)"
-          stroke="color-mix(in oklch, var(--foreground) 16%, transparent)"
-          strokeWidth="0.18"
+          fill="color-mix(in oklch, var(--foreground) 11%, transparent)"
+          stroke="color-mix(in oklch, var(--foreground) 22%, transparent)"
+          strokeWidth="0.6"
           strokeLinejoin="round"
         >
-          {/* North America */}
-          <path d="M8,8 L14,5 L22,4 L30,7 L34,12 L32,18 L28,24 L22,26 L16,24 L11,18 L8,12 Z" />
-          {/* South America */}
-          <path d="M26,28 L32,28 L36,32 L36,42 L32,46 L28,46 L26,40 L26,34 Z" />
-          {/* Greenland */}
-          <path d="M36,4 L41,3 L43,7 L41,11 L36,11 Z" />
-          {/* Europe */}
-          <path d="M45,10 L52,8 L57,11 L57,16 L52,17 L46,16 L44,13 Z" />
-          {/* Africa */}
-          <path d="M50,18 L56,17 L60,20 L62,26 L60,32 L57,38 L52,40 L48,36 L46,30 L47,24 Z" />
-          {/* Madagascar (highlighted) */}
-          <path
-            d="M59.6,29.4 L61.4,29.6 L62,32 L60.6,33.5 L59.4,32.5 Z"
-            fill="color-mix(in oklch, var(--signal) 50%, transparent)"
-            stroke="var(--signal)"
-            strokeWidth="0.3"
-          />
-          {/* Middle East / India */}
-          <path d="M58,16 L64,15 L68,18 L66,22 L62,21 L58,18 Z" />
-          {/* Asia (huge blob) */}
-          <path d="M64,8 L82,5 L92,10 L94,16 L88,22 L80,21 L72,19 L66,16 Z" />
-          {/* SE Asia */}
-          <path d="M80,22 L86,22 L88,26 L84,28 L80,26 Z" />
-          {/* Australia */}
-          <path d="M82,33 L92,33 L94,38 L90,42 L84,42 L82,38 Z" />
+          {COUNTRIES.map((c) => {
+            const isMG = String(c.id) === MADAGASCAR_ID;
+            const d = pathGen(c);
+            if (!d) return null;
+            return (
+              <path
+                key={String(c.id)}
+                d={d}
+                fill={
+                  isMG
+                    ? "color-mix(in oklch, var(--signal) 50%, transparent)"
+                    : undefined
+                }
+                stroke={isMG ? "var(--signal)" : undefined}
+                strokeWidth={isMG ? 1.4 : undefined}
+              />
+            );
+          })}
         </g>
 
-        {/* Routes (Madagascar -> destinations) */}
-        <g fill="none" strokeLinecap="round" strokeWidth="0.18">
-          {DESTINATIONS.map((d, i) => {
-            const path = arcPath(ORIGIN.x, ORIGIN.y, d.x, d.y);
+        {/* Supply routes (animated arcs) */}
+        <g fill="none" strokeLinecap="round">
+          {destPoints.map((d, i) => {
+            const path = arcPath(originXY[0], originXY[1], d.xy[0], d.xy[1]);
             const isHover = hover === d.id;
             return (
-              <g key={d.id}>
-                <motion.path
-                  d={path}
-                  stroke="url(#route)"
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  whileInView={{ pathLength: 1, opacity: 1 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 1.4, delay: 0.2 + i * 0.18 }}
-                  style={{ filter: isHover ? "drop-shadow(0 0 1.5px var(--signal))" : undefined }}
-                />
-              </g>
+              <motion.path
+                key={d.id}
+                d={path}
+                stroke="url(#sm-route)"
+                strokeWidth={isHover ? 2.2 : 1.4}
+                initial={{ pathLength: 0, opacity: 0 }}
+                whileInView={{ pathLength: 1, opacity: 1 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 1.4, delay: 0.2 + i * 0.18 }}
+                style={{
+                  filter: isHover
+                    ? "drop-shadow(0 0 4px var(--signal))"
+                    : undefined,
+                }}
+              />
             );
           })}
         </g>
 
         {/* Destination markers */}
-        {DESTINATIONS.map((d, i) => (
-          <g
-            key={`m-${d.id}`}
-            onMouseEnter={() => setHover(d.id)}
-            onMouseLeave={() => setHover(null)}
-            className="cursor-pointer"
-          >
-            <motion.circle
-              cx={d.x}
-              cy={d.y}
-              r="0.8"
-              fill="var(--signal)"
-              initial={{ scale: 0, opacity: 0 }}
-              whileInView={{ scale: 1, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: 0.6 + i * 0.18 }}
-            />
-            <text
-              x={d.x}
-              y={d.y - 1.6}
-              fontSize="1.6"
-              fill="var(--foreground)"
-              fontFamily="var(--font-mono)"
-              textAnchor="middle"
-              opacity={hover === d.id ? 1 : 0.7}
-            >
-              {d.label}
-            </text>
-          </g>
-        ))}
+        {destPoints.map((d, i) => {
+          const isHover = hover === d.id;
+          const anchor = d.labelAnchor ?? "middle";
+          const labelOffset = anchor === "middle" ? 0 : anchor === "start" ? 10 : -10;
+          const [mx, my] = d.xy;
 
-        {/* Origin halo */}
-        <circle cx={ORIGIN.x} cy={ORIGIN.y} r="3.5" fill="url(#origin-glow)" />
+          return (
+            <g
+              key={`m-${d.id}`}
+              onMouseEnter={() => setHover(d.id)}
+              onMouseLeave={() => setHover(null)}
+              className="cursor-pointer"
+            >
+              {isHover && (
+                <circle
+                  cx={mx}
+                  cy={my}
+                  r="18"
+                  fill="none"
+                  stroke="var(--signal)"
+                  strokeWidth="1.5"
+                  opacity="0.45"
+                />
+              )}
+
+              <motion.circle
+                cx={mx}
+                cy={my}
+                r={isHover ? 8 : 6}
+                fill="var(--signal)"
+                initial={{ scale: 0, opacity: 0 }}
+                whileInView={{ scale: 1, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: 0.6 + i * 0.18 }}
+                style={{
+                  filter: isHover
+                    ? "drop-shadow(0 0 6px var(--signal))"
+                    : undefined,
+                }}
+              />
+
+              {/* Hit area for easier hover */}
+              <circle cx={mx} cy={my} r="20" fill="transparent" />
+
+              <text
+                x={mx + labelOffset}
+                y={my - 14}
+                fontSize="13"
+                fill="var(--foreground)"
+                fontFamily="var(--font-mono)"
+                textAnchor={anchor}
+                opacity={isHover ? 1 : 0.75}
+              >
+                {d.label}
+              </text>
+
+              {isHover && d.transitDays && (
+                <g pointerEvents="none">
+                  <rect
+                    x={mx - 50}
+                    y={my + 12}
+                    width="100"
+                    height="26"
+                    rx="5"
+                    fill="var(--card)"
+                    stroke="var(--signal)"
+                    strokeWidth="1.2"
+                  />
+                  <text
+                    x={mx}
+                    y={my + 30}
+                    fontSize="13"
+                    fill="var(--signal)"
+                    fontFamily="var(--font-mono)"
+                    textAnchor="middle"
+                    fontWeight="600"
+                  >
+                    {d.transitDays}
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Origin marker (Toamasina) */}
         <circle
-          cx={ORIGIN.x}
-          cy={ORIGIN.y}
-          r="1.1"
+          cx={originXY[0]}
+          cy={originXY[1]}
+          r="32"
+          fill="url(#sm-origin-glow)"
+        />
+        <circle
+          cx={originXY[0]}
+          cy={originXY[1]}
+          r="9"
           fill="var(--signal)"
           stroke="var(--background)"
-          strokeWidth="0.2"
+          strokeWidth="2"
         />
         <text
-          x={ORIGIN.x}
-          y={ORIGIN.y + 3}
-          fontSize="1.8"
+          x={originXY[0]}
+          y={originXY[1] + 28}
+          fontSize="15"
           fill="var(--signal)"
           fontFamily="var(--font-mono)"
-          fontWeight="600"
+          fontWeight="700"
           textAnchor="middle"
         >
           {ORIGIN.label} · MG
         </text>
       </svg>
 
-      {/* Legend */}
-      <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+      <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-signal animate-signal-pulse" />
+          <span className="size-1.5 animate-signal-pulse rounded-full bg-signal" />
           Origin · 45 km from Tamatave port
         </span>
-        <span>Transit · 10–60 days</span>
+        <span>Hover ports for transit time</span>
       </div>
     </div>
   );
 }
 
+/**
+ * Decorative latitude reference lines + labels. Y-positions come from the
+ * shared projection so they stay aligned even if the projection is retuned.
+ */
+function LatitudeGuides() {
+  const lats = [
+    { value: 66.5,  label: "66°N" },
+    { value: 23.5,  label: "23°N" },
+    { value: 0,     label: "0°"   },
+    { value: -23.5, label: "23°S" },
+  ];
+
+  return (
+    <g>
+      <g
+        stroke="color-mix(in oklch, var(--foreground) 7%, transparent)"
+        strokeWidth="0.8"
+        strokeDasharray="4 6"
+      >
+        {lats.map((l) => {
+          const y = project(0, l.value)[1];
+          return <line key={l.label} x1="0" y1={y} x2={VIEW_W} y2={y} />;
+        })}
+      </g>
+      <g
+        fontSize="11"
+        fontFamily="var(--font-mono)"
+        fill="color-mix(in oklch, var(--foreground) 35%, transparent)"
+        dominantBaseline="middle"
+      >
+        {lats.map((l) => {
+          const y = project(0, l.value)[1];
+          return (
+            <text key={l.label} x={6} y={y}>
+              {l.label}
+            </text>
+          );
+        })}
+      </g>
+    </g>
+  );
+}
+
+/**
+ * Quadratic-bezier arc giving a great-circle feel.
+ * Control point is lifted above the midpoint proportional to horizontal span.
+ * Tuned for the 1000×500 viewBox.
+ */
 function arcPath(x1: number, y1: number, x2: number, y2: number): string {
-  // Quadratic bezier with a control point lifted toward the top of the
-  // viewport, giving the great-circle "arc" feel without needing real
-  // spherical math.
   const cx = (x1 + x2) / 2;
-  const cy = Math.min(y1, y2) - Math.abs(x2 - x1) * 0.18 - 4;
+  const cy = Math.min(y1, y2) - Math.abs(x2 - x1) * 0.18 - 30;
   return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
 }
