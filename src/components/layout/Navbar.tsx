@@ -3,7 +3,11 @@ import Link from "next/link";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { createServerClient } from "@/lib/supabase/server";
+import {
+  getCurrentProfile,
+  getCurrentUser,
+  isAdminRole,
+} from "@/lib/auth/session";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { NavSearchTrigger } from "@/components/layout/NavSearchTrigger";
@@ -28,21 +32,10 @@ const NAV_LINKS = [
  *  - Sign-up button uses signal background as the primary CTA
  */
 export async function Navbar() {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  let isAdmin = false;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single<{ role: string }>();
-    isAdmin =
-      profile?.role === "admin" || profile?.role === "super_admin";
-  }
-
+  const user = await getCurrentUser();
+  const profile = user ? await getCurrentProfile() : null;
   const isAuthenticated = Boolean(user);
+  const isAdmin = isAdminRole(profile?.role);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
