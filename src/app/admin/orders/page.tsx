@@ -70,7 +70,7 @@ export default async function AdminOrdersPage() {
             {(orders ?? []).map((o) => (
               <TableRow key={o.id}>
                 <TableCell>
-                  <Link href={`/orders/${o.id}`} className="text-primary underline text-sm font-mono">
+                  <Link href={`/admin/orders/${o.id}`} className="text-primary underline text-sm font-mono">
                     {o.order_no}
                   </Link>
                 </TableCell>
