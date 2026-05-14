@@ -19,6 +19,10 @@
 | `006_ai_chat_logs.sql` | AI chat 稽核日誌（session_id / IP / geo / user-agent + admin-only RLS） |
 | `007_oauth_profile_handling.sql` | `handle_new_user` 支援 Google OAuth：fallback meta.name；`email_confirmed_at` 已設則 status 直接 `'active'` |
 | `006_ai_chat_logs.sql` | 新增 `ai_chat_logs` audit table（session_id / IP / geo / UA / role / content）+ admin-only RLS |
+| `006_b2b_progress_enums.sql` | **B2B 追蹤 P1**：新增 `quotation_status` / `payment_terms_type` / `document_type` enum；`order_status` rename `signed→contract_signed`、`delivered→customs_cleared` 並加 9 個新狀態；`inquiry_status` 加 `quoted/negotiating/expired` |
+| `007_b2b_progress_tables.sql` | **B2B 追蹤 P1**：新增 `quotations` / `order_documents` 表；`orders` 加運輸欄位（`bl_no` / `vessel_*` / `etd/atd/ata` / `payment_terms` / `payment_due_*`）；`contracts` 加 revision + buyer-approval 欄位；補 RLS |
+
+> ⚠️ **注意**：006/007 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，請依序執行。
 
 ---
 
@@ -119,10 +123,45 @@ MADA1 / MADA2 × {+35, +50, +80, +100, +150, -100} mesh + Custom Grade。
 | target_price | numeric(18,4) | 可空 |
 | destination | text | 目的地港/城市 |
 | message | text | |
-| status | enum `inquiry_status` | pending / accepted / rejected / converted |
+| status | enum `inquiry_status` | pending / **quoted** / **negotiating** / accepted / rejected / **expired** / converted |
 | created_at | timestamptz | |
 
 索引：`(buyer_id)`, `(seller_id)`
+
+**狀態流轉**（007 之後）：
+- `pending` → seller 第一次發 quotation → `quoted`
+- `quoted` ↔ `negotiating`（有 counter-offer 時）
+- 任意點 → buyer accept quotation → `converted`（轉為 order）
+- 任意點 → reject / expire → `rejected` / `expired`
+
+### `quotations`（007 新增）
+正式議價紀錄。一個 inquiry 可有多輪 quotations（counter-offer 樹狀結構）。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| id | uuid PK | |
+| inquiry_id | uuid FK inquiries ON DELETE CASCADE | |
+| parent_quotation_id | uuid FK quotations | 此筆為對哪一筆的 counter |
+| seller_id / buyer_id | uuid FK profiles | |
+| listing_id | uuid FK listings | |
+| unit_price | numeric(18,4) | |
+| currency | text | |
+| quantity | numeric(18,3) | |
+| unit | text | MT / KG |
+| incoterm | text | FOB / CFR / CIF |
+| origin_port / destination_port | text | |
+| validity_until | timestamptz | quotation 過期時間 |
+| specs_confirmed | jsonb | 議價確認的規格快照 |
+| shipping_window_from / to | date | 可出貨窗口 |
+| notes | text | |
+| status | enum `quotation_status` | sent / countered / accepted / rejected / expired / superseded |
+| countered_by | uuid FK profiles | counter / accept / reject 的執行者 |
+| responded_at | timestamptz | |
+| created_at | timestamptz | |
+
+索引：`(inquiry_id, status)`, `(buyer_id)`, `(seller_id)`
+
+**RLS**：select = parties + admin；insert = seller 或 buyer（counter）；update = parties + admin。
 
 ### `orders`
 核心交易實體。
@@ -144,26 +183,43 @@ MADA1 / MADA2 × {+35, +50, +80, +100, +150, -100} mesh + Custom Grade。
 | status | enum `order_status` | 見下表 |
 | timeline | jsonb | append-only 事件列表 |
 | created_at / updated_at | timestamptz | `updated_at` 由 005 加入 trigger 自動維護 |
+| **payment_terms** | enum `payment_terms_type` | 007 新增：full_prepay / net_after_arrival（簽合約時敲定） |
+| **payment_due_days** | int | 007 新增：付款窗口天數 |
+| **payment_due_date** | date | 007 新增：到港日 + payment_due_days 計算後寫入 |
+| **vessel_name / vessel_imo** | text | 007 新增 |
+| **container_numbers** | text[] | 007 新增 |
+| **bl_no / bl_date** | text / date | 007 新增：Bill of Lading |
+| **etd / atd / ata** | date | 007 新增：預計/實際 出航 + 預計/實際 到港 |
+| **customs_cleared_at** | timestamptz | 007 新增 |
+| **current_quotation_id** | uuid FK quotations | 007 新增：訂單採用的 quotation |
 
 索引：`(buyer_id, status)`, `(seller_id, status)`
 
-`order_status` 狀態機（完整定義見 `src/lib/order/stateMachine.ts`）:
+`order_status` 狀態機（完整定義見 `src/lib/order/stateMachine.ts`，分支由 `orders.payment_terms` 決定）:
+
 ```
-draft → contract_generated → signed
-  → payment_pending → paid → shipped → delivered → completed
+quotation_pending → quoted ↔ negotiating
+  → contract_pending → contract_signed
+  ├── (full_prepay)        → payment_pending → paid → in_production
+  └── (net_after_arrival)  → in_production
+  → ready_to_ship → shipped → in_transit → arrived → customs_cleared
+  ├── (full_prepay)        → completed
+  └── (net_after_arrival)  → payment_pending → paid → completed
 任何節點 → disputed / cancelled
 disputed → cancelled / completed
 ```
 
+> 註：legacy `draft` / `contract_generated` 仍保留以相容舊資料，新流程不再進入。
+
 `timeline` 事件 schema:
 ```json
 {
-  "event": "contract_generated",
+  "event": "contract_pending",
   "at": "2026-05-08T12:00:00Z",
   "by": "<user_uuid>",
-  "from": "draft",
-  "to": "contract_generated",
-  "data": { "...": "..." }
+  "from": "quoted",
+  "to": "contract_pending",
+  "revision": 1
 }
 ```
 
@@ -179,9 +235,14 @@ disputed → cancelled / completed
 | contract_no | 合約編號 e.g. `CNT-ORD-260508-abc123` |
 | content_html | 渲染好的 HTML（供列印；MVP 用 `window.print()` 出 PDF） |
 | pdf_url | 產生 PDF 後的 Storage URL（MVP 可空） |
-| buyer_signed_url / seller_signed_url | 雙方簽名掃描檔 URL（在 `contracts` bucket） |
+| buyer_signed_url / seller_signed_url | 雙方簽名掃描檔 URL（在 `order-documents` bucket） |
 | buyer_signed_at / seller_signed_at | timestamps |
 | created_at / updated_at | timestamptz |
+| **revision_no** | int default 1 | 007 新增：重新起草時 +1 |
+| **buyer_approved_at / buyer_rejected_at** | timestamptz | 007 新增：合約審核回合制 |
+| **buyer_reject_reason** | text | 007 新增 |
+| **payment_terms** | enum `payment_terms_type` | 007 新增：合約上的付款條件（與 orders 同步） |
+| **payment_due_days** | int | 007 新增 |
 
 ## 5. 付款
 
@@ -208,6 +269,44 @@ disputed → cancelled / completed
 | created_at | timestamptz | |
 
 索引：`(order_id, status)`
+
+## 5b. 訂單文件中心（007 新增）
+
+### `order_documents`
+通用訂單文件容器，所有合約掃描、發票、B/L、檢驗報告、付款憑證等均寫入此表。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| id | uuid PK | |
+| order_id | uuid FK orders ON DELETE CASCADE | |
+| type | enum `document_type` | 13 種文件分類，見下 |
+| file_url | text | Storage signed URL |
+| file_name / file_size_bytes / mime_type | | 原檔案中繼資料 |
+| uploaded_by | uuid FK profiles | |
+| uploaded_at | timestamptz | |
+| verified_by / verified_at | | admin 標記已核驗 |
+| admin_note | text | admin 補充說明 |
+| is_required | boolean | 預留旗標，UI 判斷必要文件 |
+| metadata | jsonb | 額外資訊（storage_path 等） |
+
+`document_type` enum：
+- 合約：`contract_signed_buyer`, `contract_signed_seller`
+- 發票：`proforma_invoice`, `commercial_invoice`
+- 物流：`packing_list`, `bill_of_lading`, `insurance_policy`
+- 檢驗：`coa_sgs`, `inspection_report`
+- 海關：`cert_of_origin`, `customs_declaration`
+- 付款：`payment_proof`
+- 其他：`other`
+
+索引：`(order_id, type)`
+
+**RLS**：
+- select：parties + admin
+- insert：parties（必須是 order 的 buyer / seller）+ admin
+- update：uploader 在 1 小時內可改自己的；admin 隨時可改（驗證）
+- delete：uploader 在 1 小時內且未驗證可撤回；admin 可隨時刪
+
+> **依賴**：Storage 需要新增 `order-documents` private bucket（A4 完成後一起 push policy）。
 
 ## 6. 即時通訊
 

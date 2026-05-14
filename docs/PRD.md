@@ -24,15 +24,20 @@
 | 4 | **超級管理員後台**：用戶凍結/解凍、品類管理、訂單瀏覽、付款審核、新聞管理 | `/admin/*` |
 | 5 | **賣家上貨**：選品類 → 規格 / 數量 / 出貨地 / 出貨時間區間 / 價格 / 幣別 / Incoterm | `/listings/new` |
 | 6 | **買家市場**：瀏覽 listings、篩選、單品詳情 | `/market` + `/market/[id]` |
-| 7 | **詢價流程**：買家提交 → 賣家 accept → 自動建立 order | `<InquiryDialog />` + `acceptInquiry` |
-| 8 | **訂單狀態機**：Draft → Contract Generated → Signed → Payment Pending → Paid → Shipped → Delivered → Completed | `src/lib/order/stateMachine.ts` |
-| 9 | **合約生成**：從模板渲染 HTML，可印出簽名（`window.print()`） | `src/lib/contract/template.ts` |
+| 7 | **詢價 → 報價流程**：買家提交 inquiry → 賣家發 quotation（規格/價格/Incoterm/有效期）→ 雙方可 counter 來回議價 → buyer accept → 自動建立 order | `<InquiryDialog />` + `<QuotationForm />` + `acceptQuotation` |
+| 8 | **訂單狀態機（B2B 13 階段）**：Quotation Pending → Quoted ↔ Negotiating → Contract Pending → Contract Signed → (依 payment_terms 分支) → Payment Pending / Paid / In Production / Ready to Ship / Shipped / In Transit / Arrived / Customs Cleared / Completed；Disputed / Cancelled | `src/lib/order/stateMachine.ts` |
+| 9 | **合約生成 + 回合制審核**：賣家 draftContract（含 payment_terms：full_prepay 或 net_after_arrival）→ 買家 approve / reject（可重新起草，revision_no++） → 雙方上傳簽名掃描（私有 Storage） | `src/lib/contract/template.ts` + `<ContractDraftForm />` + `<ContractApproveReject />` |
 | 10 | **付款人工審核**：buyer 提交 tx_hash / proof_url，admin 在後台 verify/reject | `/admin/payments` |
 | 11 | **訂單時間軸**：每次狀態轉換 append timeline 事件 | `appendTimeline()` |
 | 12 | **Audit log**：所有 admin 動作寫入 `audit_logs` | `writeAuditLog()` |
 | 13 | **Email 通知**：inquiry 發起、payment 提交、payment 審核、收貨確認 5 個事件點 | `src/lib/email/resend.ts` |
 | 14 | **使用者 Dashboard**：active orders + pending inquiries 快速概覽 + 角色相關快捷 | `/dashboard` |
 | 15 | **三主題 UI**：light / dark / editorial（next-themes） | `<ThemeToggle />` |
+| 16 | **訂單進度條**：依 payment_terms 動態顯示 11–13 階段，已完成綠色、進行中金色、未到灰色 | `<OrderProgressBar />` |
+| 17 | **訂單文件中心**：13 種文件類型分組（Contract / Invoice / Logistics / Inspection / Customs / Payment / Other）+ 每個 type 多檔上傳 + admin 核驗徽章 | `<OrderDocumentsTab />` + `<DocumentUploader />` |
+| 18 | **B/L + Vessel 追蹤**：賣家 markShipped 時填 B/L No、vessel name/IMO、container numbers、ETD/ATD/ETA；任一方可 markArrived（記 ATA）；買家 markCustomsCleared | `<ShipmentForm />` + `<OrderPhaseActions />` |
+| 19 | **Disputed / Cancelled UI**：所有非終止狀態都可 raiseDispute / cancelOrder，admin 收 email + audit log | `<OrderPhaseActions />` |
+| 20 | **Admin 訂單詳情 + Force Transition**：admin 可 force transition 繞過狀態機（dispute 解決用），所有強制動作寫 audit_logs | `/admin/orders/[id]` + `<AdminOrderActions />` |
 
 > 已實作但原 PRD 未列的項目（Dashboard、行銷頁 Geopolitics/Sustainability、Admin Console 統計、News slug 富文本等）見 [`ARCHITECTURE.md` §附錄 A](./ARCHITECTURE.md#附錄-a實作但-prd-未列項目)。
 
@@ -42,11 +47,12 @@
 
 - ~~**A1** Schema 對齊（payments / news / orders）~~ ✅ 已完成（migration 005）
 - **A2** 站內 IM（schema 已就位，但 `/messages` 與 `OrderChat` 待實作）
-- **A3** 合約簽名掃描上傳 UI（Server Action 已寫好）
-- **A4** Storage buckets 與 policies 初始化
-- **A5** Disputed / Cancelled UI 觸發點
+- ~~**A3** 合約簽名掃描上傳 UI~~ ✅ 已完成（007 + `<SignedScanUploader />`）
+- **A4** Storage buckets 與 policies 初始化（特別是 `order-documents` bucket — 已被 007 後 UI 預期存在）
+- ~~**A5** Disputed / Cancelled UI 觸發點~~ ✅ 已完成（007 + `<OrderPhaseActions />`）
 - **A6** KYC 文件上傳（簡易版，提升 `kyc_level`）
 - **A7** Vercel + Supabase 部署 + 端到端煙霧測試
+- ~~**B1** B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心、回合制合約）~~ ✅ 已完成（migrations 006 + 007）
 
 ### OUT OF SCOPE（此次 MVP 不做）
 

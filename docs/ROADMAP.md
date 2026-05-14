@@ -36,38 +36,39 @@
 - [ ] 訊息附件上傳到 Supabase Storage `chat` bucket（`image/*`、`application/pdf`，limit 5MB）
 - [ ] 風險備案：若 Realtime 不穩定，fallback 為 SWR 5s polling（`src/hooks/useMessages.ts`）
 
-### A3. 合約簽名掃描上傳 UI（補 Step 6）
+### A3. ✅ 合約簽名掃描上傳 UI（已完成）
 
-`uploadSignedScan` Server Action 已存在於 `src/actions/order.ts`，但訂單頁 Contract Tab 沒對應觸發 UI。
+由 `<SignedScanUploader />` 元件 + `uploadSignedScan` Server Action 提供：
 
-- [ ] 在 `(app)/orders/[id]` Contract Tab 加 `<input type="file" accept="image/*,application/pdf">`
-- [ ] 上傳到 `contracts` bucket，路徑 `{order_id}/{role}-{uuid}.{ext}`
-- [ ] 上傳成功後呼叫 `uploadSignedScan(orderId, role, signedUrl)`
-- [ ] 雙方都上傳完成 → server action 已自動把 `orders.status` 改為 `signed`
-- [ ] 顯示「等待對方上傳」狀態提示
+- [x] `(app)/orders/[id]` Contract Tab 已內建 file input
+- [x] 上傳到 `order-documents` bucket（路徑 `{order_id}/contract_signed_{role}/{uuid}.{ext}`）
+- [x] 上傳同步寫入 `order_documents` row（type=`contract_signed_buyer/seller`）
+- [x] 雙方都簽完且 buyer 已 `approveContract` → 自動推進到 `contract_signed` → 依 `payment_terms` 跳到 `payment_pending` 或 `in_production`
+- [x] UI 顯示「Waiting for buyer to approve the contract before signature uploads are unlocked.」
 
-### A4. Storage Buckets 與 Policy 初始化
+### A4. Storage Buckets 與 Policy 初始化（**部分阻塞 007 後 UI**）
 
 目前 schema 沒有自動建 bucket 與 storage policy。手動建或寫成 migration：
 
 - [ ] `avatars`（public read，self write）
 - [ ] `kyc`（private，僅 owner + admin 可讀，僅 owner 可寫）
-- [ ] `contracts`（private，僅訂單雙方 + admin 可讀）
-- [ ] `payments`（private，僅 buyer + admin 可讀）
+- [ ] **`order-documents`**（private，僅訂單雙方 + admin 可讀） — **🔥 阻塞**：007 後 `<DocumentUploader />` / `<SignedScanUploader />` 已假設此 bucket 存在；上線前必建
+- [ ] `contracts`（legacy，可考慮統一到 `order-documents`）
+- [ ] `payments`（private，僅 buyer + admin 可讀） — 也可合併到 `order-documents` `payment_proof` type
 - [ ] `listings`（public read，seller 可寫）
 - [ ] `chat`（private，僅 chat_members 可讀寫）
 
-> 建議寫成 `supabase/migrations/006_storage_buckets.sql` 或 `scripts/setup-storage.sql`，
+> 建議寫成 `supabase/migrations/008_storage_buckets.sql`，
 > 並在 `docs/ARCHITECTURE.md` §3.3 標註執行方式。
 
-### A5. Disputed / Cancelled 觸發 UI
+### A5. ✅ Disputed / Cancelled 觸發 UI（已完成）
 
-訂單狀態機支援 `disputed` 與 `cancelled`，但 UI 尚無觸發點。
+由 `<OrderPhaseActions />` 在訂單詳情頁提供：
 
-- [ ] `OrderActions` 加「Raise Dispute」按鈕（雙方任一狀態 → `disputed`）
-- [ ] `OrderActions` 加「Cancel Order」按鈕（僅 `draft / contract_generated / signed / payment_pending` 可取消）
-- [ ] Server Action 寫 `audit_logs` + `orders.timeline` event
-- [ ] Admin 在 `/admin/orders/[id]`（待新增）可從 `disputed` → `completed` / `cancelled`
+- [x] 「Raise Dispute」按鈕（任意非終止狀態） → `raiseDispute`，dialog 收集 reason
+- [x] 「Cancel Order」按鈕（pre-shipment 階段） → `cancelOrder`，dialog 收集 reason
+- [x] Server Action 寫 `audit_logs` + `orders.timeline` event
+- [x] Admin `/admin/orders/[id]` 可用 `<AdminOrderActions />` force-transition 到 `completed` / `cancelled`
 
 ### A6. KYC 文件上傳（簡易版） + Lazy-collect commercial profile
 
@@ -85,10 +86,34 @@
 
 - [ ] 推 GitHub
 - [ ] Vercel import + env（含 POE / Resend / Supabase / 平台收款資訊）
-- [ ] Supabase production 切換 + 重跑 001 → 005 migrations
-- [ ] RLS policy review（特別是 005 修改後的 payments）
+- [ ] Supabase production 切換 + 重跑 001 → 005 → **006 → 007** migrations（注意 006 / 007 必須分開執行，因為 enum add value 不能在同 transaction 內被使用）
+- [ ] RLS policy review（特別是 005 / 007 新增 / 修改的政策）
 - [ ] Resend domain DNS（或先用 `onboarding@resend.dev` 寄件）
-- [ ] 端到端 happy path：註冊 → 上貨 → 詢價 → 接受 → 合約 → 簽名 → 付款 → 審核 → 出貨 → 確認
+- [ ] **建立 `order-documents` Storage bucket**（A4） — 否則所有 contract 簽名 + 文件上傳會失敗
+- [ ] 端到端 happy path：
+  1. 註冊（buyer + seller）
+  2. 上貨
+  3. 詢價 → 賣家發 quotation → 買家 accept
+  4. 賣家 draftContract（選 full_prepay 或 net_after_arrival）
+  5. 買家 approve contract
+  6. 雙方上傳 signed scan
+  7. （full_prepay 流）submit payment → admin verify → in_production
+  8. markReadyToShip → markShipped(B/L) → markInTransit → markArrived(ATA)
+  9. 買家 markCustomsCleared → completed
+  10. （net_after_arrival 流）arrived → customs_cleared → buyer submit final payment → admin verify → completed
+  11. dispute / cancel 路徑各跑一次
+
+### A8. ✅ B2B 全流程追蹤（已完成 — 原 §B1）
+
+由 migrations 006 + 007 + 大量 server actions / UI 元件實作：
+
+- [x] `quotations` 議價表 + `order_documents` 文件中心
+- [x] 13 階段細粒度狀態機 + 雙分支（full_prepay / net_after_arrival）
+- [x] 合約回合制審核（draft → approve / reject → re-draft, revision_no++）
+- [x] B/L + vessel + container + ETD/ATD/ETA/ATA 追蹤
+- [x] OrderProgressBar UI（依 payment_terms 動態渲染）
+- [x] /inquiries/[id] 議價歷史頁
+- [x] /admin/orders/[id] + force transition
 
 ---
 
@@ -147,11 +172,12 @@
 
 - [x] A1 schema 對齊全部完成（TS types 重新生成於 A7 部署時執行）
 - [ ] A2 IM 可雙方即時對話 + 圖片附件
-- [ ] A3 簽名掃描可上傳並推進到 `signed` 狀態
-- [ ] A4 所有 buckets 建立完成
-- [ ] A5 dispute / cancel 流程可走通
+- [x] A3 簽名掃描可上傳並推進到 `contract_signed` 狀態（007 完成）
+- [ ] A4 所有 buckets 建立完成（`order-documents` 為 007 後關鍵阻塞項）
+- [x] A5 dispute / cancel 流程可走通（007 完成）
 - [ ] A6 KYC 上傳可運作（admin 可升級 level）
-- [ ] A7 部署完成，端到端 happy path 通過
+- [ ] A7 部署完成，端到端 happy path（含 quotation / contract approve / B/L / customs 全流程）通過
+- [x] A8 B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心）已完成
 - [x] 公開頁 SEO meta（title/description/og）齊全
 - [x] 所有路由都有 `loading.tsx` 與 `error.tsx` 雛形（多數已完成）
-- [ ] 沒有 console.error / TS error / lint error
+- [x] 沒有 console.error / TS error / lint error（007 加碼後 `npx tsc --noEmit` 全綠）

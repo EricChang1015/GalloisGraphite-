@@ -80,9 +80,10 @@
 | `/market/[id]` | 單一 listing 詳情 + `<InquiryDialog />` |
 | `/listings` | **My Listings**（賣家視角，建/暫停/恢復） |
 | `/listings/new` | `<ListingForm />` |
-| `/inquiries` | 兩個 Tab：**Sent**（買家視角）/ **Received**（賣家視角，含 accept/reject） |
+| `/inquiries` | 兩個 Tab：**Sent**（買家視角）/ **Received**（賣家視角，含「快速報價」） |
+| `/inquiries/[id]` | **Inquiry detail**：quotation 歷史 timeline、`<QuotationForm />`（seller）、`<QuotationActions />`（accept / counter / decline） |
 | `/orders` | 買賣雙視角訂單列表 |
-| `/orders/[id]` | 5 個 Tab：**Overview** / **Contract** / **Payment** / **Shipment** / **Timeline** |
+| `/orders/[id]` | 7 個 Tab + **OrderProgressBar**：**Overview** / **Quotation** / **Contract**（含 buyer approve/reject + signed-scan upload） / **Payment** / **Shipment**（B/L、vessel、container、ETD/ATD/ETA/ATA） / **Documents**（13 種類型分組上傳） / **Timeline** |
 | `/messages` | ⚠️ **Placeholder（A2 待補）**：將顯示房間列表 |
 
 **Layout**：`(app)/layout.tsx` → 左側 sidebar nav
@@ -96,7 +97,8 @@
 | `/admin` | 4 卡片統計（Users / Orders / Pending Payments / Active Categories）+ Priority Action 提示 |
 | `/admin/users` | 完整用戶表 + freeze/unfreeze + setRole（super_admin 才能 promote 為 admin） |
 | `/admin/categories` | CRUD + `spec_schema` jsonb 編輯（`<CategoryFormDialog />`） |
-| `/admin/orders` | 全平台訂單瀏覽（list view，無動作） |
+| `/admin/orders` | 全平台訂單瀏覽（list view） |
+| `/admin/orders/[id]` | Admin 訂單詳情：ProgressBar + **Force Transition**（繞過 state machine）+ contract 狀態 + payments + documents + audit log + timeline |
 | `/admin/payments` | ⭐ Pending Review + History 兩段，**核心人工審核流程**（`<PaymentVerifyActions />`） |
 | `/admin/news` | 新聞 CRUD（slug、content_html、cover、published toggle） |
 
@@ -128,9 +130,11 @@ provider 為 POE OpenAI-compatible endpoint，回傳 `toUIMessageStreamResponse(
 | product_categories | public（active 才公開） | admin | admin | admin |
 | listings | active 公開 / owner / admin | seller / admin | owner / admin | owner / admin |
 | inquiries | parties / admin | buyer | parties / admin | — |
+| **quotations**（007） | parties / admin | seller 或 buyer | parties / admin | — |
 | orders | parties / admin | server action | server action（service_role） | — |
 | contracts | parties / admin | server action | server action | — |
 | payments | parties / admin | buyer | admin | — |
+| **order_documents**（007） | parties / admin | parties + admin | uploader (1h window) / admin | uploader (1h, unverified) / admin |
 | chat_rooms / chat_members / messages | members / admin | members | sender | — |
 | news | published 公開 / admin | admin | admin | admin |
 | audit_logs | admin | server action | — | — |
@@ -144,7 +148,8 @@ provider 為 POE OpenAI-compatible endpoint，回傳 `toUIMessageStreamResponse(
 |---|---|---|---|
 | `avatars` | 使用者頭像 | public read, self write | ⚠️ 待建立 |
 | `kyc` | KYC 證件 | private（owner + admin） | ⚠️ 待建立 |
-| `contracts` | 合約簽名掃描 | private（訂單雙方 + admin） | ⚠️ 待建立 |
+| `contracts` | 合約簽名掃描（legacy） | private（訂單雙方 + admin） | ⚠️ 待建立 |
+| **`order-documents`** | 訂單通用文件中心（合約簽名、發票、B/L、檢驗、付款證明…） | private（訂單雙方 + admin） | ⚠️ **待建立（007 後**：`<DocumentUploader />` / `<SignedScanUploader />` 已假設此 bucket 存在） |
 | `payments` | 付款憑證圖 | private（buyer + admin） | ⚠️ 待建立 |
 | `listings` | 商品圖 | public read, seller write | ⚠️ 待建立 |
 | `chat` | 聊天室附件 | private（chat members） | ⚠️ 待建立 |
@@ -184,15 +189,31 @@ type ActionResult<T> =
 | `components/auth/GoogleSignInButton.tsx` | client-side `supabase.auth.signInWithOAuth({ provider:'google' })` | — | 重導 Google → `/auth/callback` |
 | `listing.ts` | `createListing` / `updateListing` / `pauseListing` / `resumeListing` | role ∈ {seller, admin}, status='active', owner | revalidate /listings, /market |
 | `inquiry.ts` | `createInquiry` | role='buyer' | Email 通知 seller, revalidate /inquiries |
-|  | `acceptInquiry` | seller_id = auth.uid() | 建立 order(draft), 更新 inquiry='converted' |
+|  | `acceptInquiry` | seller_id = auth.uid() | **(007 變更)** 改為自動發出預設 quotation（用 listing 條件 + 14 天 validity），inquiry='quoted'，buyer 仍需 accept quotation |
 |  | `rejectInquiry` | seller_id = auth.uid() | inquiry='rejected' |
-| `order.ts` | `generateContract` | parties only, status='draft' | render HTML, insert contract, status→'contract_generated', timeline 寫入 |
-|  | `uploadSignedScan` | role 對應 | 更新 contract URL；雙方都簽 → status→'signed' |
-|  | `updateShipment` | seller, status='paid' | status→'shipped', shipment_from/eta |
-|  | `markDelivered` | seller, status='shipped' | status→'delivered' |
-|  | `confirmReceipt` | buyer, status='delivered' | status→'completed', Email 通知 admin 放款 |
-| `payment.ts` | `submitPayment` | buyer, order.status='signed' | payment 寫入(pending), order.status→'payment_pending', Email 通知 admin |
-|  | `verifyPayment` | role ∈ {admin, super_admin} | payment.status→verified/rejected, order.status→'paid'（若 verified）, audit_logs 寫入, Email 通知 buyer |
+| **`quotation.ts`（007）** | `submitQuotation` | seller, role check | mark prior live quotations as superseded, insert quotation, inquiry='quoted', notify buyer |
+|  | `counterQuotation` | parties | parent → 'countered', insert child quotation, inquiry='negotiating' |
+|  | `acceptQuotation` | buyer only | create order(`current_quotation_id` = q.id, status='contract_pending'), q.status='accepted', inquiry='converted', notify seller |
+|  | `rejectQuotation` | parties | q.status='rejected'; if no live quotations remain on inquiry → inquiry='rejected' |
+| `order.ts` | `generateContract` | (legacy) parties | alias for `draftContract` with `full_prepay` / 5d defaults |
+|  | `draftContract` | seller, status ∈ {draft, quoted, negotiating, contract_pending} | render HTML, insert/update contract（revision_no++ 若 re-draft），同步 `orders.payment_terms`，status='contract_pending', notify buyer |
+|  | `approveContract` | buyer, status='contract_pending' | `contract.buyer_approved_at` = now |
+|  | `rejectContract` | buyer, status='contract_pending' | `contract.buyer_rejected_at`、`buyer_reject_reason`，notify seller |
+|  | `uploadSignedScan` | parties, status ∈ {contract_pending, contract_signed} | update `contract.{role}_signed_url` + 寫入 `order_documents`；雙方簽完且 buyer 已 approve → status='contract_signed' → 自動跳到 `payment_pending`（full_prepay）或 `in_production`（net_after_arrival） |
+|  | `markInProduction` / `markReadyToShip` | seller | 推進對應狀態 |
+|  | `markShipped` | seller, status='ready_to_ship' | 寫入 B/L / vessel / containers / ETD/ATD/ETA + status='shipped'，notify buyer |
+|  | `markInTransit` | seller | shipped → in_transit |
+|  | `markArrived` | parties + admin | 寫入 ATA + 計算 `payment_due_date`（net_after_arrival 才有意義），status='arrived' |
+|  | `markCustomsCleared` | buyer | 寫入 `customs_cleared_at`，status='customs_cleared'；full_prepay 自動 → completed；net_after_arrival → payment_pending |
+|  | `raiseDispute` | parties + admin | status='disputed'，audit_logs，notify admin |
+|  | `cancelOrder` | parties + admin（pre-shipment 階段） | status='cancelled'，audit_logs |
+|  | `forceTransitionOrder` | admin only | bypass state machine，audit_logs（管理員恢復用） |
+|  | `confirmReceipt` / `markDelivered` / `updateShipment` | (legacy) | 對應 `markCustomsCleared` / `markArrived` / `markShipped` 的別名，相容舊 UI |
+| `payment.ts` | `submitPayment` | buyer, status ∈ {contract_signed, payment_pending} | payment 寫入(pending), order.status→'payment_pending', notify admin |
+|  | `verifyPayment` | role ∈ {admin, super_admin} | payment.status→verified/rejected；驗證通過後依 `order.payment_terms` 自動推進：`full_prepay` → paid → in_production；`net_after_arrival` → paid → completed |
+| **`document.ts`（007）** | `uploadOrderDocument` | parties + admin | insert `order_documents` row（檔案由 client 上傳到 `order-documents` bucket），timeline append |
+|  | `verifyOrderDocument` | admin only | 標記已核驗，audit_logs |
+|  | `deleteOrderDocument` | uploader（1h, 未驗證）/ admin | delete row |
 | `admin.ts` | `freezeUser` / `unfreezeUser` | admin | profiles.status, audit_logs |
 |  | `setUserRole` | admin（promote 為 admin 需 super_admin） | profiles.role, audit_logs |
 |  | `upsertCategory` / `deleteCategory` | admin | product_categories, audit_logs |
@@ -210,15 +231,35 @@ type ActionResult<T> =
 
 ### 4.4 訂單狀態機（`src/lib/order/stateMachine.ts`）
 
+採用兩條共用前段、後段分流的狀態機（依 `orders.payment_terms` 分支）：
+
 ```
-draft ──► contract_generated ──► signed ──► payment_pending ──► paid ──► shipped ──► delivered ──► completed
-   │            │                   │              │
-   ▼            ▼                   ▼              ▼
-cancelled   cancelled           cancelled       disputed ──► cancelled / completed
+quotation_pending → quoted ↔ negotiating → contract_pending → contract_signed
+                                                                   │
+                                       ┌───────── full_prepay ─────┴──── net_after_arrival ──────┐
+                                       ▼                                                          ▼
+                              payment_pending → paid → in_production                       in_production
+                                                              │                                   │
+                                                              └────►  ready_to_ship  ◄────────────┘
+                                                                              │
+                                                                          shipped → in_transit → arrived → customs_cleared
+                                                                                                                  │
+                                  ┌─────────── full_prepay ─────────────────────────────────────────────────┴── net_after_arrival ──┐
+                                  ▼                                                                                                  ▼
+                              completed                                                                              payment_pending → paid → completed
+
+任何節點 → disputed / cancelled
+disputed → cancelled / completed
 ```
 
-`canTransition(from, to)` helper 提供型別安全的轉換驗證。
-`disputed` / `cancelled` 觸發點 ⚠️ **UI 待補（ROADMAP §A5）**。
+API:
+- `canTransition(from, to, paymentTerms?)` — 型別安全的轉換驗證（會依 payment_terms 解析分支差異）
+- `nextAfter(current, paymentTerms)` — auto-advance 用：在 contract_signed / paid / customs_cleared 三個分支點回傳對應下一狀態
+- `getProgressStages(paymentTerms)` — 給 UI ProgressBar 用的有序狀態清單
+- `getStageIndex(status, paymentTerms)` — 目前狀態在 progress bar 的位置
+- `STATUS_LABEL` — 各狀態的英文 label
+
+`disputed` / `cancelled` 由 `<OrderPhaseActions />` 觸發。`forceTransitionOrder`（admin only）可繞過狀態機（紀錄到 audit_logs）。
 
 ---
 
