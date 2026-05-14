@@ -32,14 +32,26 @@ export async function submitPayment(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, buyer_id, status")
+    .select("id, buyer_id, status, payment_terms")
     .eq("id", parsed.data.order_id)
-    .single<{ id: string; buyer_id: string; status: string }>();
+    .single<{ id: string; buyer_id: string; status: string; payment_terms: string | null }>();
 
   if (!order) return { data: null, error: { message: "Order not found." } };
   if (order.buyer_id !== user.id) return { data: null, error: { message: "Access denied." } };
-  if (order.status !== "signed") {
-    return { data: null, error: { message: "Order must be in 'signed' status to submit payment." } };
+
+  // Buyer can submit payment in two contexts:
+  //  - full_prepay: order.status must be `contract_signed` (we'll move to payment_pending)
+  //  - net_after_arrival: order.status must be `payment_pending` (after customs cleared)
+  // For backward-compatibility we also allow legacy `signed`.
+  const validForSubmit =
+    order.status === "contract_signed" ||
+    order.status === "signed" ||
+    order.status === "payment_pending";
+  if (!validForSubmit) {
+    return {
+      data: null,
+      error: { message: `Order status ${order.status} does not allow payment submission.` },
+    };
   }
 
   const admin = createAdminClient();
@@ -62,11 +74,13 @@ export async function submitPayment(
 
   if (error) return { data: null, error: { message: error.message } };
 
-  // Move order to payment_pending
-  await admin
-    .from("orders")
-    .update({ status: "payment_pending" })
-    .eq("id", parsed.data.order_id);
+  // Move order to payment_pending if it is not already there
+  if (order.status !== "payment_pending") {
+    await admin
+      .from("orders")
+      .update({ status: "payment_pending" })
+      .eq("id", parsed.data.order_id);
+  }
 
   // Notify admin
   try {
@@ -129,10 +143,70 @@ export async function verifyPayment(
   if (error) return { data: null, error: { message: error.message } };
 
   if (decision === "verified") {
+    // Look up order's payment terms to decide what state to move to.
+    const { data: orderRow } = await admin
+      .from("orders")
+      .select("payment_terms, status, timeline")
+      .eq("id", payment.order_id)
+      .single<{ payment_terms: string | null; status: string; timeline: unknown[] }>();
+
+    // payment_pending -> paid (always)
     await admin
       .from("orders")
       .update({ status: "paid" })
       .eq("id", payment.order_id);
+
+    // Append timeline event
+    const events = Array.isArray(orderRow?.timeline) ? orderRow!.timeline : [];
+    const entry = {
+      event: "paid",
+      at: new Date().toISOString(),
+      by: user.id,
+      from: "payment_pending",
+      to: "paid",
+      payment_id: paymentId,
+    };
+    await admin
+      .from("orders")
+      .update({ timeline: [...events, entry] as import("@/types/database").Json })
+      .eq("id", payment.order_id);
+
+    // For full_prepay: paid → in_production (auto)
+    // For net_after_arrival: paid → completed (auto)
+    if (orderRow?.payment_terms === "net_after_arrival") {
+      await admin
+        .from("orders")
+        .update({ status: "completed" })
+        .eq("id", payment.order_id);
+      const completedEntry = {
+        event: "completed",
+        at: new Date().toISOString(),
+        by: user.id,
+        from: "paid",
+        to: "completed",
+      };
+      await admin
+        .from("orders")
+        .update({ timeline: [...events, entry, completedEntry] as import("@/types/database").Json })
+        .eq("id", payment.order_id);
+    } else {
+      // Default to full_prepay branch: paid → in_production
+      await admin
+        .from("orders")
+        .update({ status: "in_production" })
+        .eq("id", payment.order_id);
+      const ipEntry = {
+        event: "in_production",
+        at: new Date().toISOString(),
+        by: user.id,
+        from: "paid",
+        to: "in_production",
+      };
+      await admin
+        .from("orders")
+        .update({ timeline: [...events, entry, ipEntry] as import("@/types/database").Json })
+        .eq("id", payment.order_id);
+    }
   }
 
   // Write audit log

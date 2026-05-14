@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { createServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,8 +17,11 @@ export const metadata = { title: "Inquiries — Mada Graphite" };
 
 const statusColor: Record<string, string> = {
   pending: "text-yellow-400 border-yellow-400/40",
-  accepted: "text-blue-400 border-blue-400/40",
+  quoted: "text-blue-400 border-blue-400/40",
+  negotiating: "text-purple-400 border-purple-400/40",
+  accepted: "text-cyan-400 border-cyan-400/40",
   rejected: "text-red-400 border-red-400/40",
+  expired: "text-muted-foreground border-border",
   converted: "text-green-400 border-green-400/40",
 };
 
@@ -78,7 +83,7 @@ export default async function InquiriesPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Inquiries</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Track all inquiries you've sent and received.
+          Track all inquiries you&apos;ve sent and received.
         </p>
       </div>
 
@@ -113,8 +118,12 @@ export default async function InquiriesPage() {
                 </TableHeader>
                 <TableBody>
                   {asBuyer.map((inq) => (
-                    <TableRow key={inq.id}>
-                      <TableCell className="font-medium">{inq.product_categories?.name ?? "—"}</TableCell>
+                    <TableRow key={inq.id} className="hover:bg-muted/30">
+                      <TableCell className="font-medium">
+                        <Link href={`/inquiries/${inq.id}`} className="hover:underline">
+                          {inq.product_categories?.name ?? "—"}
+                        </Link>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{inq.profiles?.company_name ?? "—"}</TableCell>
                       <TableCell className="text-right">{inq.requested_qty}</TableCell>
                       <TableCell className="text-right">{inq.target_price ?? "—"}</TableCell>
@@ -157,8 +166,12 @@ export default async function InquiriesPage() {
                   </TableHeader>
                   <TableBody>
                     {asSeller.map((inq) => (
-                      <TableRow key={inq.id}>
-                        <TableCell className="font-medium">{inq.product_categories?.name ?? "—"}</TableCell>
+                      <TableRow key={inq.id} className="hover:bg-muted/30">
+                        <TableCell className="font-medium">
+                          <Link href={`/inquiries/${inq.id}`} className="hover:underline">
+                            {inq.product_categories?.name ?? "—"}
+                          </Link>
+                        </TableCell>
                         <TableCell className="text-muted-foreground">{inq.profiles?.company_name ?? "—"}</TableCell>
                         <TableCell className="text-right">{inq.requested_qty}</TableCell>
                         <TableCell className="text-muted-foreground">{inq.destination ?? "—"}</TableCell>
@@ -171,8 +184,16 @@ export default async function InquiriesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {inq.status === "pending" && (
+                          {(inq.status === "pending" || inq.status === "negotiating") && (
                             <InquiryActions inquiryId={inq.id} />
+                          )}
+                          {(inq.status === "quoted" || inq.status === "negotiating") && (
+                            <Link
+                              href={`/inquiries/${inq.id}`}
+                              className="text-xs text-primary underline ml-2"
+                            >
+                              Review
+                            </Link>
                           )}
                         </TableCell>
                       </TableRow>

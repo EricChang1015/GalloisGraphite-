@@ -49,8 +49,12 @@ const MAX_RECENT_TRADES = 5;
 const RECENT_TRADES_WINDOW_DAYS = 90;
 const SETTLED_ORDER_STATUSES = [
   "paid",
+  "in_production",
+  "ready_to_ship",
   "shipped",
-  "delivered",
+  "in_transit",
+  "arrived",
+  "customs_cleared",
   "completed",
 ] as const;
 

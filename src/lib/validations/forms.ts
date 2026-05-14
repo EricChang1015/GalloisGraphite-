@@ -23,6 +23,48 @@ export const ShipmentUpdateSchema = z.object({
   shipment_from: z.string().min(1),
   shipment_eta: z.string(),
   note: z.string().optional(),
+  // Optional B/L + vessel details captured when seller marks shipped
+  bl_no: z.string().max(80).optional(),
+  bl_date: z.string().optional(),
+  vessel_name: z.string().max(120).optional(),
+  vessel_imo: z.string().max(20).optional(),
+  container_numbers: z.array(z.string().max(40)).optional(),
+  etd: z.string().optional(),
+  atd: z.string().optional(),
+});
+
+export const DraftContractSchema = z.object({
+  order_id: z.string().uuid(),
+  payment_terms: z.enum(["full_prepay", "net_after_arrival"]),
+  payment_due_days: z.number().int().min(0).max(180),
+});
+
+export type DraftContractInput = z.infer<typeof DraftContractSchema>;
+
+export const RejectContractSchema = z.object({
+  order_id: z.string().uuid(),
+  reason: z.string().min(1).max(1000),
+});
+
+export const MarkArrivedSchema = z.object({
+  order_id: z.string().uuid(),
+  ata: z.string(), // ISO date
+  note: z.string().max(500).optional(),
+});
+
+export const MarkInTransitSchema = z.object({
+  order_id: z.string().uuid(),
+  note: z.string().max(500).optional(),
+});
+
+export const RaiseDisputeSchema = z.object({
+  order_id: z.string().uuid(),
+  reason: z.string().min(10).max(2000),
+});
+
+export const CancelOrderSchema = z.object({
+  order_id: z.string().uuid(),
+  reason: z.string().min(1).max(1000),
 });
 
 export const ListingInputSchema = z.object({

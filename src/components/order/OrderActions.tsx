@@ -68,13 +68,21 @@ export function OrderActions({ orderId, status, role, totalAmount, currency }: O
     });
   }
 
+  // Buyer's payment triggers:
+  //  - full_prepay flow: order.status === "contract_signed" (legacy "signed")
+  //  - net_after_arrival flow: order.status === "payment_pending" (after customs cleared)
+  const showPayment =
+    role === "buyer" &&
+    (status === "signed" || status === "contract_signed" || status === "payment_pending");
+
   return (
     <div className="space-y-6">
       {status === "draft" && (
         <div className="rounded-lg border p-4 space-y-2">
           <p className="text-sm font-medium">Generate Contract</p>
           <p className="text-xs text-muted-foreground">
-            Generate the sales contract PDF for both parties to review and sign.
+            Generate a default sales contract (full prepay, 5-day window). For richer
+            terms, use the Contract tab&apos;s draft form.
           </p>
           <Button onClick={handleGenerateContract} disabled={isPending} size="sm">
             Generate Contract
@@ -82,10 +90,13 @@ export function OrderActions({ orderId, status, role, totalAmount, currency }: O
         </div>
       )}
 
-      {status === "signed" && role === "buyer" && (
+      {showPayment && (
         <PaymentForm orderId={orderId} amount={totalAmount} currency={currency} />
       )}
 
+      {/* Legacy fallback only — new shipment UI lives in <ShipmentForm /> on the
+         Shipment tab. Kept here for any orders still on the old "paid → shipped"
+         shortcut. */}
       {status === "paid" && role === "seller" && (
         <ShipmentForm orderId={orderId} />
       )}
@@ -94,7 +105,7 @@ export function OrderActions({ orderId, status, role, totalAmount, currency }: O
         <div className="rounded-lg border p-4 space-y-2">
           <p className="text-sm font-medium">Confirm Receipt</p>
           <p className="text-xs text-muted-foreground">
-            Confirm you have received the goods. This will release payment to the seller.
+            Confirm you have received the goods. This will complete the order.
           </p>
           <Button onClick={handleConfirmReceipt} disabled={isPending} size="sm">
             Confirm Receipt

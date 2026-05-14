@@ -79,14 +79,26 @@ export async function createInquiry(
   return { data: { id: data.id }, error: null };
 }
 
-export async function acceptInquiry(id: string): Promise<ActionResult<{ orderId: string }>> {
+/**
+ * Seller "shortcut accepts" an inquiry — synthesises a default quotation
+ * using the listing's posted price/currency/incoterm and qty from the
+ * inquiry. Buyer must still accept the quotation before an order is
+ * created (handled by `acceptQuotation`).
+ *
+ * For richer offers (custom price / different incoterm / specific
+ * shipping window), seller should call `submitQuotation` directly via
+ * the inquiry detail UI.
+ */
+export async function acceptInquiry(
+  id: string
+): Promise<ActionResult<{ inquiryId: string; quotationId: string }>> {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { data: null, error: { message: "Not authenticated." } };
 
   const { data: inquiry } = await supabase
     .from("inquiries")
-    .select("*, listings(unit_price, currency, title)")
+    .select("*, listings(unit_price, currency, title, incoterm, origin_location, available_to)")
     .eq("id", id)
     .eq("seller_id", user.id)
     .single<{
@@ -99,52 +111,87 @@ export async function acceptInquiry(id: string): Promise<ActionResult<{ orderId:
       target_price: number | null;
       destination: string | null;
       status: string;
-      listings: { unit_price: number; currency: string; title: string } | null;
+      listings: {
+        unit_price: number;
+        currency: string;
+        title: string;
+        incoterm: string;
+        origin_location: string;
+        available_to: string | null;
+      } | null;
     }>();
 
   if (!inquiry) return { data: null, error: { message: "Inquiry not found." } };
-  if (inquiry.status !== "pending") {
-    return { data: null, error: { message: "Inquiry is no longer pending." } };
+  if (inquiry.status !== "pending" && inquiry.status !== "negotiating") {
+    return { data: null, error: { message: `Inquiry is ${inquiry.status}.` } };
+  }
+  if (!inquiry.listing_id || !inquiry.listings) {
+    return { data: null, error: { message: "Inquiry must reference a listing to send a quotation." } };
   }
 
-  const unit_price = inquiry.target_price ?? inquiry.listings?.unit_price ?? 0;
-  const total_amount = unit_price * inquiry.requested_qty;
+  // Build a default quotation valid for 14 days
+  const validity = new Date();
+  validity.setDate(validity.getDate() + 14);
 
-  if (!inquiry.listing_id) {
-    return { data: null, error: { message: "Inquiry must reference a listing to create an order." } };
-  }
+  // Re-use submitQuotation logic via direct insert (avoids circular import)
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
 
-  // Create order
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
+  // Mark prior live quotations as superseded
+  await admin
+    .from("quotations")
+    .update({ status: "superseded" })
+    .eq("inquiry_id", id)
+    .in("status", ["sent", "countered"]);
+
+  const { data: quotation, error: qErr } = await admin
+    .from("quotations")
     .insert({
-      buyer_id: inquiry.buyer_id,
-      seller_id: user.id,
-      listing_id: inquiry.listing_id,
       inquiry_id: id,
+      seller_id: user.id,
+      buyer_id: inquiry.buyer_id,
+      listing_id: inquiry.listing_id,
+      unit_price: inquiry.target_price ?? inquiry.listings.unit_price,
+      currency: inquiry.listings.currency,
       quantity: inquiry.requested_qty,
-      unit_price,
-      total_amount,
-      currency: inquiry.listings?.currency ?? "USDT",
-      destination: inquiry.destination,
-      status: "draft",
-      timeline: [{ event: "order_created", at: new Date().toISOString(), by: user.id }],
+      unit: "MT",
+      incoterm: inquiry.listings.incoterm,
+      origin_port: inquiry.listings.origin_location,
+      destination_port: inquiry.destination,
+      validity_until: validity.toISOString(),
+      status: "sent",
     })
     .select("id")
     .single<{ id: string }>();
 
-  if (orderError) return { data: null, error: { message: orderError.message } };
+  if (qErr) return { data: null, error: { message: qErr.message } };
 
-  // Update inquiry status
-  await supabase
-    .from("inquiries")
-    .update({ status: "converted" })
-    .eq("id", id);
+  await admin.from("inquiries").update({ status: "quoted" }).eq("id", id);
 
+  // Notify buyer
+  try {
+    const { data: buyer } = await admin
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", inquiry.buyer_id)
+      .single<{ email: string; full_name: string }>();
+    if (buyer?.email) {
+      await sendEmail({
+        to: buyer.email,
+        subject: "Quotation received — Mada Graphite",
+        html: `
+          <p>Hi ${buyer.full_name || "Buyer"},</p>
+          <p>The seller has sent a quotation for your inquiry.</p>
+          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/inquiries/${id}">Review quotation</a></p>
+        `,
+      });
+    }
+  } catch (_) {}
+
+  revalidatePath(`/inquiries/${id}`);
   revalidatePath("/inquiries");
-  revalidatePath("/orders");
 
-  return { data: { orderId: order.id }, error: null };
+  return { data: { inquiryId: id, quotationId: quotation.id }, error: null };
 }
 
 export async function rejectInquiry(id: string): Promise<ActionResult<true>> {

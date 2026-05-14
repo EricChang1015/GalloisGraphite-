@@ -166,6 +166,9 @@ export type Database = {
       }
       contracts: {
         Row: {
+          buyer_approved_at: string | null
+          buyer_rejected_at: string | null
+          buyer_reject_reason: string | null
           buyer_signed_at: string | null
           buyer_signed_url: string | null
           content_html: string | null
@@ -173,12 +176,18 @@ export type Database = {
           created_at: string
           id: string
           order_id: string
+          payment_due_days: number | null
+          payment_terms: Database["public"]["Enums"]["payment_terms_type"] | null
           pdf_url: string | null
+          revision_no: number
           seller_signed_at: string | null
           seller_signed_url: string | null
           updated_at: string
         }
         Insert: {
+          buyer_approved_at?: string | null
+          buyer_rejected_at?: string | null
+          buyer_reject_reason?: string | null
           buyer_signed_at?: string | null
           buyer_signed_url?: string | null
           content_html?: string | null
@@ -186,12 +195,18 @@ export type Database = {
           created_at?: string
           id?: string
           order_id: string
+          payment_due_days?: number | null
+          payment_terms?: Database["public"]["Enums"]["payment_terms_type"] | null
           pdf_url?: string | null
+          revision_no?: number
           seller_signed_at?: string | null
           seller_signed_url?: string | null
           updated_at?: string
         }
         Update: {
+          buyer_approved_at?: string | null
+          buyer_rejected_at?: string | null
+          buyer_reject_reason?: string | null
           buyer_signed_at?: string | null
           buyer_signed_url?: string | null
           content_html?: string | null
@@ -199,7 +214,10 @@ export type Database = {
           created_at?: string
           id?: string
           order_id?: string
+          payment_due_days?: number | null
+          payment_terms?: Database["public"]["Enums"]["payment_terms_type"] | null
           pdf_url?: string | null
+          revision_no?: number
           seller_signed_at?: string | null
           seller_signed_url?: string | null
           updated_at?: string
@@ -458,16 +476,100 @@ export type Database = {
           },
         ]
       }
+      order_documents: {
+        Row: {
+          admin_note: string | null
+          file_name: string | null
+          file_size_bytes: number | null
+          file_url: string
+          id: string
+          is_required: boolean
+          metadata: Json
+          mime_type: string | null
+          order_id: string
+          type: Database["public"]["Enums"]["document_type"]
+          uploaded_at: string
+          uploaded_by: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_url: string
+          id?: string
+          is_required?: boolean
+          metadata?: Json
+          mime_type?: string | null
+          order_id: string
+          type: Database["public"]["Enums"]["document_type"]
+          uploaded_at?: string
+          uploaded_by: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_url?: string
+          id?: string
+          is_required?: boolean
+          metadata?: Json
+          mime_type?: string | null
+          order_id?: string
+          type?: Database["public"]["Enums"]["document_type"]
+          uploaded_at?: string
+          uploaded_by?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_documents_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_documents_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
+          ata: string | null
+          atd: string | null
+          bl_date: string | null
+          bl_no: string | null
           buyer_id: string
+          container_numbers: string[] | null
           created_at: string
           currency: string
+          current_quotation_id: string | null
+          customs_cleared_at: string | null
           destination: string | null
+          etd: string | null
           id: string
           inquiry_id: string | null
           listing_id: string
           order_no: string
+          payment_due_date: string | null
+          payment_due_days: number | null
+          payment_terms: Database["public"]["Enums"]["payment_terms_type"] | null
           quantity: number
           seller_id: string
           shipment_eta: string | null
@@ -477,16 +579,29 @@ export type Database = {
           total_amount: number
           unit_price: number
           updated_at: string
+          vessel_imo: string | null
+          vessel_name: string | null
         }
         Insert: {
+          ata?: string | null
+          atd?: string | null
+          bl_date?: string | null
+          bl_no?: string | null
           buyer_id: string
+          container_numbers?: string[] | null
           created_at?: string
           currency: string
+          current_quotation_id?: string | null
+          customs_cleared_at?: string | null
           destination?: string | null
+          etd?: string | null
           id?: string
           inquiry_id?: string | null
           listing_id: string
           order_no?: string
+          payment_due_date?: string | null
+          payment_due_days?: number | null
+          payment_terms?: Database["public"]["Enums"]["payment_terms_type"] | null
           quantity: number
           seller_id: string
           shipment_eta?: string | null
@@ -496,16 +611,29 @@ export type Database = {
           total_amount: number
           unit_price: number
           updated_at?: string
+          vessel_imo?: string | null
+          vessel_name?: string | null
         }
         Update: {
+          ata?: string | null
+          atd?: string | null
+          bl_date?: string | null
+          bl_no?: string | null
           buyer_id?: string
+          container_numbers?: string[] | null
           created_at?: string
           currency?: string
+          current_quotation_id?: string | null
+          customs_cleared_at?: string | null
           destination?: string | null
+          etd?: string | null
           id?: string
           inquiry_id?: string | null
           listing_id?: string
           order_no?: string
+          payment_due_date?: string | null
+          payment_due_days?: number | null
+          payment_terms?: Database["public"]["Enums"]["payment_terms_type"] | null
           quantity?: number
           seller_id?: string
           shipment_eta?: string | null
@@ -515,6 +643,8 @@ export type Database = {
           total_amount?: number
           unit_price?: number
           updated_at?: string
+          vessel_imo?: string | null
+          vessel_name?: string | null
         }
         Relationships: [
           {
@@ -522,6 +652,13 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_current_quotation_id_fkey"
+            columns: ["current_quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
             referencedColumns: ["id"]
           },
           {
@@ -660,6 +797,124 @@ export type Database = {
         }
         Relationships: []
       }
+      quotations: {
+        Row: {
+          buyer_id: string
+          countered_by: string | null
+          created_at: string
+          currency: string
+          destination_port: string | null
+          id: string
+          incoterm: string
+          inquiry_id: string | null
+          listing_id: string | null
+          notes: string | null
+          origin_port: string | null
+          parent_quotation_id: string | null
+          quantity: number
+          responded_at: string | null
+          seller_id: string
+          shipping_window_from: string | null
+          shipping_window_to: string | null
+          specs_confirmed: Json
+          status: Database["public"]["Enums"]["quotation_status"]
+          unit: string
+          unit_price: number
+          validity_until: string
+        }
+        Insert: {
+          buyer_id: string
+          countered_by?: string | null
+          created_at?: string
+          currency: string
+          destination_port?: string | null
+          id?: string
+          incoterm: string
+          inquiry_id?: string | null
+          listing_id?: string | null
+          notes?: string | null
+          origin_port?: string | null
+          parent_quotation_id?: string | null
+          quantity: number
+          responded_at?: string | null
+          seller_id: string
+          shipping_window_from?: string | null
+          shipping_window_to?: string | null
+          specs_confirmed?: Json
+          status?: Database["public"]["Enums"]["quotation_status"]
+          unit?: string
+          unit_price: number
+          validity_until: string
+        }
+        Update: {
+          buyer_id?: string
+          countered_by?: string | null
+          created_at?: string
+          currency?: string
+          destination_port?: string | null
+          id?: string
+          incoterm?: string
+          inquiry_id?: string | null
+          listing_id?: string | null
+          notes?: string | null
+          origin_port?: string | null
+          parent_quotation_id?: string | null
+          quantity?: number
+          responded_at?: string | null
+          seller_id?: string
+          shipping_window_from?: string | null
+          shipping_window_to?: string | null
+          specs_confirmed?: Json
+          status?: Database["public"]["Enums"]["quotation_status"]
+          unit?: string
+          unit_price?: number
+          validity_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_countered_by_fkey"
+            columns: ["countered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_parent_quotation_id_fkey"
+            columns: ["parent_quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_name: string | null
@@ -717,16 +972,45 @@ export type Database = {
     }
     Enums: {
       chat_type: "order" | "support" | "ai"
-      inquiry_status: "pending" | "accepted" | "rejected" | "converted"
+      document_type:
+        | "contract_signed_buyer"
+        | "contract_signed_seller"
+        | "proforma_invoice"
+        | "commercial_invoice"
+        | "packing_list"
+        | "bill_of_lading"
+        | "coa_sgs"
+        | "cert_of_origin"
+        | "insurance_policy"
+        | "customs_declaration"
+        | "payment_proof"
+        | "inspection_report"
+        | "other"
+      inquiry_status:
+        | "pending"
+        | "quoted"
+        | "negotiating"
+        | "accepted"
+        | "rejected"
+        | "expired"
+        | "converted"
       listing_status: "active" | "paused" | "sold_out"
       order_status:
+        | "quotation_pending"
         | "draft"
+        | "quoted"
+        | "negotiating"
+        | "contract_pending"
         | "contract_generated"
-        | "signed"
+        | "contract_signed"
         | "payment_pending"
         | "paid"
+        | "in_production"
+        | "ready_to_ship"
         | "shipped"
-        | "delivered"
+        | "in_transit"
+        | "arrived"
+        | "customs_cleared"
         | "completed"
         | "disputed"
         | "cancelled"
@@ -737,6 +1021,14 @@ export type Database = {
         | "mup"
         | "bank_transfer"
       payment_status: "pending" | "verified" | "rejected"
+      payment_terms_type: "full_prepay" | "net_after_arrival"
+      quotation_status:
+        | "sent"
+        | "countered"
+        | "accepted"
+        | "rejected"
+        | "expired"
+        | "superseded"
       user_role: "buyer" | "seller" | "admin" | "super_admin"
       user_status: "pending" | "active" | "frozen"
     }
@@ -867,16 +1159,47 @@ export const Constants = {
   public: {
     Enums: {
       chat_type: ["order", "support", "ai"],
-      inquiry_status: ["pending", "accepted", "rejected", "converted"],
+      document_type: [
+        "contract_signed_buyer",
+        "contract_signed_seller",
+        "proforma_invoice",
+        "commercial_invoice",
+        "packing_list",
+        "bill_of_lading",
+        "coa_sgs",
+        "cert_of_origin",
+        "insurance_policy",
+        "customs_declaration",
+        "payment_proof",
+        "inspection_report",
+        "other",
+      ],
+      inquiry_status: [
+        "pending",
+        "quoted",
+        "negotiating",
+        "accepted",
+        "rejected",
+        "expired",
+        "converted",
+      ],
       listing_status: ["active", "paused", "sold_out"],
       order_status: [
+        "quotation_pending",
         "draft",
+        "quoted",
+        "negotiating",
+        "contract_pending",
         "contract_generated",
-        "signed",
+        "contract_signed",
         "payment_pending",
         "paid",
+        "in_production",
+        "ready_to_ship",
         "shipped",
-        "delivered",
+        "in_transit",
+        "arrived",
+        "customs_cleared",
         "completed",
         "disputed",
         "cancelled",
@@ -889,6 +1212,15 @@ export const Constants = {
         "bank_transfer",
       ],
       payment_status: ["pending", "verified", "rejected"],
+      payment_terms_type: ["full_prepay", "net_after_arrival"],
+      quotation_status: [
+        "sent",
+        "countered",
+        "accepted",
+        "rejected",
+        "expired",
+        "superseded",
+      ],
       user_role: ["buyer", "seller", "admin", "super_admin"],
       user_status: ["pending", "active", "frozen"],
     },

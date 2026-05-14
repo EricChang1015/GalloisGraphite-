@@ -19,8 +19,8 @@ export function InquiryActions({ inquiryId }: { inquiryId: string }) {
         toast.error(result.error.message);
         return;
       }
-      toast.success("Inquiry accepted. Order created!");
-      router.push(`/orders/${result.data.orderId}`);
+      toast.success("Default quotation sent. Buyer can accept, counter or decline.");
+      router.push(`/inquiries/${inquiryId}`);
     });
   }
 
