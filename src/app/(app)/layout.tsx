@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AiChatLauncher } from "@/components/chat/AiChatLauncher";
 
 const NAV = [
+  { href: "/", label: "Home" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/market", label: "Market" },
   { href: "/listings", label: "My Listings" },

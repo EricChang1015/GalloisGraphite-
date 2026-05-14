@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { createServerClient } from "@/lib/supabase/server";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { NavSearchTrigger } from "@/components/layout/NavSearchTrigger";
@@ -25,7 +27,23 @@ const NAV_LINKS = [
  *  - Hover underline using signal accent
  *  - Sign-up button uses signal background as the primary CTA
  */
-export function Navbar() {
+export async function Navbar() {
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single<{ role: string }>();
+    isAdmin =
+      profile?.role === "admin" || profile?.role === "super_admin";
+  }
+
+  const isAuthenticated = Boolean(user);
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 text-foreground sm:px-6">
@@ -68,22 +86,62 @@ export function Navbar() {
         <div className="flex items-center gap-1.5 shrink-0">
           <NavSearchTrigger />
           <ThemeToggle />
-          <div className="hidden md:flex items-center gap-2">
-            <Link
-              href="/login"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-            >
-              Log in
-            </Link>
-            <Button
-              render={<Link href="/register" />}
-              size="sm"
-              className="bg-signal text-signal-foreground hover:bg-signal/90"
-            >
-              Sign up
-            </Button>
+          <div className="hidden md:flex items-center gap-1">
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "sm" })
+                  )}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/messages"
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "sm" })
+                  )}
+                >
+                  Messages
+                </Link>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className={cn(
+                      buttonVariants({ variant: "ghost", size: "sm" })
+                    )}
+                  >
+                    Admin
+                  </Link>
+                )}
+                <LogoutButton />
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "sm" })
+                  )}
+                >
+                  Log in
+                </Link>
+                <Button
+                  render={<Link href="/register" />}
+                  size="sm"
+                  className="bg-signal text-signal-foreground hover:bg-signal/90"
+                >
+                  Sign up
+                </Button>
+              </>
+            )}
           </div>
-          <MobileNav links={NAV_LINKS} />
+          <MobileNav
+            links={NAV_LINKS}
+            isAuthenticated={isAuthenticated}
+            isAdmin={isAdmin}
+          />
         </div>
       </div>
     </header>

@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { MenuIcon } from "lucide-react";
 
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,7 +19,15 @@ import { cn } from "@/lib/utils";
 
 type NavLink = { href: string; label: string };
 
-export function MobileNav({ links }: { links: readonly NavLink[] }) {
+export function MobileNav({
+  links,
+  isAuthenticated,
+  isAdmin,
+}: {
+  links: readonly NavLink[];
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+}) {
   const [open, setOpen] = React.useState(false);
 
   const close = () => setOpen(false);
@@ -67,31 +76,83 @@ export function MobileNav({ links }: { links: readonly NavLink[] }) {
         </nav>
 
         <div className="mt-auto flex flex-col gap-2 border-t border-border p-4">
-          <SheetClose
-            render={
-              <Link
-                href="/login"
-                onClick={close}
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "lg" }),
-                  "w-full"
-                )}
-              />
-            }
-          >
-            Log in
-          </SheetClose>
-          <SheetClose
-            render={
-              <Link
-                href="/register"
-                onClick={close}
-                className={cn(buttonVariants({ size: "lg" }), "w-full")}
-              />
-            }
-          >
-            Sign up
-          </SheetClose>
+          {isAuthenticated ? (
+            <>
+              <SheetClose
+                render={
+                  <Link
+                    href="/dashboard"
+                    onClick={close}
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "lg" }),
+                      "w-full"
+                    )}
+                  />
+                }
+              >
+                Dashboard
+              </SheetClose>
+              <SheetClose
+                render={
+                  <Link
+                    href="/messages"
+                    onClick={close}
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "lg" }),
+                      "w-full"
+                    )}
+                  />
+                }
+              >
+                Messages
+              </SheetClose>
+              {isAdmin && (
+                <SheetClose
+                  render={
+                    <Link
+                      href="/admin"
+                      onClick={close}
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "lg" }),
+                        "w-full"
+                      )}
+                    />
+                  }
+                >
+                  Admin
+                </SheetClose>
+              )}
+              <LogoutButton variant="outline" size="lg" />
+            </>
+          ) : (
+            <>
+              <SheetClose
+                render={
+                  <Link
+                    href="/login"
+                    onClick={close}
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "lg" }),
+                      "w-full"
+                    )}
+                  />
+                }
+              >
+                Log in
+              </SheetClose>
+              <SheetClose
+                render={
+                  <Link
+                    href="/register"
+                    onClick={close}
+                    className={cn(buttonVariants({ size: "lg" }), "w-full")}
+                  />
+                }
+              >
+                Sign up
+              </SheetClose>
+            </>
+          )}
         </div>
       </SheetContent>
     </Sheet>
