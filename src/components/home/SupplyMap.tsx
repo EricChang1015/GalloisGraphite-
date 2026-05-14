@@ -81,14 +81,28 @@ type Destination = {
 };
 
 const DESTINATIONS: Destination[] = [
-  { id: "rot", lon:    4.48, lat:  51.92, label: "Rotterdam",  transitDays: "~22 days", labelAnchor: "end"   },
-  { id: "ham", lon:    9.99, lat:  53.55, label: "Hamburg",    transitDays: "~24 days", labelAnchor: "start" },
-  { id: "yok", lon:  139.65, lat:  35.45, label: "Yokohama",   transitDays: "~18 days" },
-  { id: "mum", lon:   72.83, lat:  18.94, label: "Mumbai",     transitDays: "~10 days" },
-  { id: "hou", lon:  -95.30, lat:  29.75, label: "Houston",    transitDays: "~35 days" },
-  { id: "spo", lon:  -46.63, lat: -23.55, label: "São Paulo",  transitDays: "~15 days" },
-  // ↑ add more here
+  // --- 您原本的港口（優化坐標至精確港口位置，並修正實際轉運航期） ---
+  { id: "rot", lon:    4.11, lat:  51.95, label: "Rotterdam",  transitDays: "~35 days", labelAnchor: "end"   }, // 荷蘭：歐洲最大石墨分銷中心
+  { id: "ham", lon:    9.93, lat:  53.54, label: "Hamburg",    transitDays: "~37 days", labelAnchor: "start" }, // 德國：傳統工業與碳素產品進口港
+  { id: "yok", lon:  139.68, lat:  35.45, label: "Yokohama",   transitDays: "~32 days" },                       // 日本：東日本核心港口，鄰近部分碳素加工廠
+  { id: "mum", lon:   72.95, lat:  18.95, label: "Mumbai (JNPT)", transitDays: "~12 days" },                    // 印度：西岸最大貨櫃港，最快航期
+  { id: "hou", lon:  -94.98, lat:  29.68, label: "Houston",    transitDays: "~42 days" },                       // 美國：墨西哥灣傳統工業與耐火材料市場
+  { id: "spo", lon:  -46.33, lat: -23.93, label: "Santos (São Paulo)", transitDays: "~18 days" },               // 巴西：桑托斯港（聖保羅外港）
+
+  // --- 🆕 亞洲關鍵石墨與電池材料核心港口 ---
+  { id: "sha", lon:  121.61, lat:  31.37, label: "Shanghai",   transitDays: "~28 days" },                       // 中國：全球最大石墨加工與負極材料市場入口
+  { id: "pus", lon:  129.08, lat:  35.10, label: "Busan",      transitDays: "~30 days" },                       // 韓國：三大電池廠（LG、SK、Samsung）戰略進口港
+  { id: "osa", lon:  135.42, lat:  34.64, label: "Osaka",      transitDays: "~34 days" },                       // 日本：關西工業區，鄰近多家日系負極與碳素大廠
+  { id: "hcm", lon:  106.77, lat:  10.76, label: "Ho Chi Minh (Cat Lai)", transitDays: "~25 days" },            // 越南：新興電子與加工供應鏈核心港
+  { id: "mun", lon:   76.69, lat:  22.84, label: "Mundra",     transitDays: "~14 days" },                       // 印度：古吉拉特邦，西北部工業區重要石墨門戶
+
+  // --- 🆕 歐美關鍵石墨與耐火材料核心港口 ---
+  { id: "sav", lon:  -81.14, lat:  32.12, label: "Savannah",   transitDays: "~40 days" },                       // 美國：東岸最大貨櫃港，主供美東汽車與電池供應鏈
+  { id: "det", lon:  -83.04, lat:  42.33, label: "Detroit",    transitDays: "~46 days" },                       // 美國：五大湖傳統五金/五大車廠（多經加拿大或東岸內陸轉運）
+  { id: "ant", lon:    4.33, lat:  51.27, label: "Antwerp",    transitDays: "~34 days" },                       // 比利時：歐洲第二大港，耐火材料與化工核心
+  { id: "光陽", lon:  127.69, lat:  34.91, label: "Gwangyang",  transitDays: "~29 days" },                       // 韓國：光陽港，POSCO Future M（韓國核心負極廠）所在地
 ];
+
 
 export function SupplyMap() {
   return (
