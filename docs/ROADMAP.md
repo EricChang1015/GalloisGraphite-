@@ -46,20 +46,16 @@
 - [x] 雙方都簽完且 buyer 已 `approveContract` → 自動推進到 `contract_signed` → 依 `payment_terms` 跳到 `payment_pending` 或 `in_production`
 - [x] UI 顯示「Waiting for buyer to approve the contract before signature uploads are unlocked.」
 
-### A4. Storage Buckets 與 Policy 初始化（**部分阻塞 007 後 UI**）
+### A4. Storage Buckets 與 Policy 初始化
 
-目前 schema 沒有自動建 bucket 與 storage policy。手動建或寫成 migration：
-
+- [x] **`order-documents`**（private，owner + 訂單雙方 + admin 可讀，登入用戶可寫，uploader/admin 可覆蓋） — 由 [`010_storage_order_documents.sql`](../supabase/migrations/010_storage_order_documents.sql) 建立；合約簽名掃描、付款證明、發票 / B/L 等所有訂單檔案統一存到這顆 bucket，依路徑前綴歸類
 - [ ] `avatars`（public read，self write）
 - [ ] `kyc`（private，僅 owner + admin 可讀，僅 owner 可寫）
-- [ ] **`order-documents`**（private，僅訂單雙方 + admin 可讀） — **🔥 阻塞**：007 後 `<DocumentUploader />` / `<SignedScanUploader />` 已假設此 bucket 存在；上線前必建
-- [ ] `contracts`（legacy，可考慮統一到 `order-documents`）
-- [ ] `payments`（private，僅 buyer + admin 可讀） — 也可合併到 `order-documents` `payment_proof` type
 - [ ] `listings`（public read，seller 可寫）
 - [ ] `chat`（private，僅 chat_members 可讀寫）
 
-> 建議寫成 `supabase/migrations/008_storage_buckets.sql`，
-> 並在 `docs/ARCHITECTURE.md` §3.3 標註執行方式。
+> `contracts` / `payments` 兩顆 legacy bucket 不再規劃 — `order-documents` 已涵蓋。
+> 其餘 bucket 可於對應功能（avatar 上傳、KYC、商品圖、IM 附件）實作時補上。
 
 ### A5. ✅ Disputed / Cancelled 觸發 UI（已完成）
 
@@ -89,23 +85,25 @@
 
 - [x] 推 GitHub
 - [x] Vercel import + env（含 POE / Resend / Supabase / 平台收款資訊）
-- [x] Supabase production schema：所有 9 個 migrations（001 → 009）都已透過 `scripts/apply-migrations.mjs` 套用，並由 `_agent_migrations` 追蹤表記錄
+- [x] Supabase production schema：所有 10 個 migrations（001 → 010）都已透過 `scripts/apply-migrations.mjs` 套用，並由 `_agent_migrations` 追蹤表記錄
   > 注意：未來如增量 migration，**enum add value 與使用該值必須分檔**（007/009 是現有範例：007 加 enum value、009 才使用）
-- [ ] RLS policy review（特別是 005 / 009 新增 / 修改的政策）
+- [ ] RLS policy review（特別是 005 / 009 / 010 新增 / 修改的政策）
 - [ ] Resend domain DNS（或先用 `onboarding@resend.dev` 寄件）
-- [ ] **建立 `order-documents` Storage bucket + policy**（A4） — 🔥 否則所有 contract 簽名 + 文件上傳會 500
-- [ ] 端到端 happy path：
-  1. 註冊（buyer + seller）— Email 驗證 + Google OAuth 各跑一次
-  2. 上貨
-  3. 詢價 → 賣家發 quotation → 買家 accept（順便測一次 counter-offer 來回）
-  4. 賣家 draftContract（選 full_prepay 或 net_after_arrival）
-  5. 買家 approve contract（順便測一次 reject + re-draft，revision_no 會 ++）
-  6. 雙方上傳 signed scan → 自動推進到 `contract_signed`
-  7. **（full_prepay 流）** submit payment → admin verify → `paid` → `in_production`
-  8. `markReadyToShip` → `markShipped`(B/L + vessel + container) → `markInTransit` → `markArrived`(ATA)
-  9. 買家 `markCustomsCleared` → 自動 `completed`
-  10. **（net_after_arrival 流）** `contract_signed` 直接 → `in_production` → ... → `arrived` → `customs_cleared` → buyer submit final payment → admin verify → `completed`
-  11. `disputed` / `cancelled` 路徑各跑一次（含 admin force-transition 解 dispute）
+- [x] **建立 `order-documents` Storage bucket + policy**（A4） — `010_storage_order_documents.sql` 已建立
+- 端到端 happy path：
+  1. [x] 註冊（buyer + seller）— Email 登入已驗證；Google OAuth 路徑已實作但 production smoke 走測待補
+  2. [x] 上貨
+  3. [x] 詢價 → 賣家發 quotation → 買家 accept（含 counter-offer 來回測試）
+  4. [x] 賣家 draftContract（`full_prepay`） — `net_after_arrival` 待補測一次
+  5. [x] 買家 approve contract + redraft 來回
+  6. [x] 雙方上傳 signed scan → 自動推進到 `contract_signed`，簽名掃描已能嵌入合約預覽下載
+  7. [x] **（full_prepay 流）** submit payment → admin verify → `paid` → `in_production`（含付款證明上傳）
+  8. [x] `markReadyToShip` → `markShipped`(B/L + vessel + container) → `markInTransit` → `markArrived`(ATA)
+  9. [x] 買家 `markCustomsCleared` → 自動 `completed`（2026-05-15 走完）
+  10. [ ] **（net_after_arrival 流）** `contract_signed` 直接 → `in_production` → ... → `arrived` → `customs_cleared` → buyer submit final payment → admin verify → `completed`
+  11. [ ] `disputed` / `cancelled` 路徑各跑一次（含 admin force-transition 解 dispute）
+
+> 詳細測試帳號與走測腳本見 [`TESTING.md`](./TESTING.md)。
 
 ### A8. ✅ B2B 全流程追蹤（已完成 — 原 §B1）
 
@@ -189,12 +187,13 @@ server actions / UI 元件實作：
 
 - [x] A1 schema 對齊全部完成（TS types 由 `npm run db:types` 重新生成）
 - [ ] A2 IM 可雙方即時對話 + 圖片附件
-- [x] A3 簽名掃描可上傳並推進到 `contract_signed` 狀態（009 完成）
-- [ ] A4 所有 buckets 建立完成（**`order-documents` 為當前最後阻塞項**）
+- [x] A3 簽名掃描可上傳並推進到 `contract_signed` 狀態（009 完成）+ 雙方簽名嵌入 PDF 預覽（commit 1620d8e）
+- [x] A4 **`order-documents`** bucket 建立完成（`010_storage_order_documents.sql`）；avatars/kyc/listings/chat 依需要時補
 - [x] A5 dispute / cancel 流程可走通（009 完成）
 - [ ] A6 KYC 上傳可運作（admin 可升級 level）
-- [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，9 個 migration 已套用
-- [ ] A7 端到端 happy path（含 quotation / contract approve / B/L / customs 全流程，full_prepay + net_after_arrival 雙分支）通過
+- [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，10 個 migration 已套用
+- [x] A7 full_prepay 端到端 happy path 通過（2026-05-15 走測 `ORD-TEST-MP6PL7MZ`）
+- [ ] A7 net_after_arrival 端到端 happy path 通過 + dispute / cancel / force-transition 走測
 - [x] A8 B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心）已完成
 - [x] A9 Migration 自動套用 runner 完成（`npm run db:migrate`）
 - [x] 公開頁 SEO meta（title/description/og）齊全

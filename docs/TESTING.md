@@ -122,14 +122,43 @@ C1 起選 `net_after_arrival` + Days 30，後面：
 
 ## 5. 已知阻塞
 
-1. 🔥 **`order-documents` Storage bucket 尚未建立** — Phase C3（簽名掃描上傳）會 500
+1. ✅ ~~**`order-documents` Storage bucket 尚未建立**~~ — 已由 `010_storage_order_documents.sql` 建立
 2. ⚠️ **Resend domain DNS 未驗證** — 通知信不會實際寄達（業務流程不受影響）
 3. ⚠️ **A2 站內 IM 未實作** — 訂單 Tab 沒有 chat 欄位
+4. ⚠️ **`(app)` layout sidebar 缺 Logout 按鈕** — 登入後頁面要回首頁才能登出；UX 待改善
+5. ⚠️ **net_after_arrival 走測尚未完成** — 路徑與 actions 與 full_prepay 共用，但分支跳轉時點不同，需各跑一次
 
 ---
 
-## 6. 變更歷史
+## 6. 走測紀錄
+
+### 2026-05-15 — Full prepay flow 端到端通過
+
+`ORD-TEST-MP6PL7MZ` 從 `negotiating` 一路推到 `completed`，每個階段的 timeline event 都正確記錄：
+
+| 階段 | 操作者 | 動作 | 結果 |
+|---|---|---|---|
+| `quotation_pending → quoted` | Seller | `<QuotationForm />` 報價 | `inquiries.status='quoted'` |
+| `quoted → negotiating` | Buyer | counter-offer | parent quotation 變 `countered` |
+| `negotiating → contract_pending` | Buyer | `acceptQuotation` | order insert |
+| `contract_pending → contract_pending` (redraft) | Seller | `<ContractDraftForm />` 選 `full_prepay` / 5d | `contracts.revision_no=1` |
+| Buyer approve + 雙方上傳簽名掃描 | Both | `<SignedScanUploader />` | `contract_signed` → 自動 `payment_pending`，預覽自動嵌入簽名 |
+| `payment_pending → paid` | Buyer / Admin | `submitPayment` (`bank_transfer`+proof) → `verifyPayment` | `paid → in_production` 自動推 |
+| `in_production → ready_to_ship → shipped` | Seller | `markReadyToShip` + `<ShipmentForm />`（B/L MAEU260515E2E、vessel MAERSK SOUTH） | 全部欄位寫入 |
+| `shipped → in_transit → arrived` | Seller | `markInTransit` + `markArrived` (ATA 2026-05-15) | `orders.ata` 寫入 |
+| `arrived → customs_cleared → completed` | Buyer | `markCustomsCleared` | `customs_cleared_at` 寫入，自動進 `completed` |
+
+驗證項目：
+- ✅ Buyer 列表頁訂單顯示 `completed` 徽章
+- ✅ Timeline tab 完整顯示 15 筆 transition events
+- ✅ OrderProgressBar 第 14 階段顯示為綠色「Done」
+- ✅ `npm run build` exit 0、無 lint error、無新 console error
+
+---
+
+## 7. 變更歷史
 
 | 日期 | 變更 |
 |---|---|
 | 2026-05-15 | 初版：3 個測試帳號、full_prepay / net_after_arrival 走測腳本、dispute/cancel 旁支 |
+| 2026-05-15 | Full prepay 端到端走測通過；`order-documents` bucket 建好（010） |

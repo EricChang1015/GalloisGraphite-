@@ -148,13 +148,17 @@ provider 為 POE OpenAI-compatible endpoint，回傳 `toUIMessageStreamResponse(
 |---|---|---|---|
 | `avatars` | 使用者頭像 | public read, self write | ⚠️ 待建立 |
 | `kyc` | KYC 證件 | private（owner + admin） | ⚠️ 待建立 |
-| `contracts` | 合約簽名掃描（legacy） | private（訂單雙方 + admin） | ⚠️ 待建立 |
-| **`order-documents`** | 訂單通用文件中心（合約簽名、發票、B/L、檢驗、付款證明…） | private（訂單雙方 + admin） | ⚠️ **待建立（007 後**：`<DocumentUploader />` / `<SignedScanUploader />` 已假設此 bucket 存在） |
-| `payments` | 付款憑證圖 | private（buyer + admin） | ⚠️ 待建立 |
+| `contracts` | 合約簽名掃描（legacy） | private（訂單雙方 + admin） | ⚠️ 待建立（已被 `order-documents` 取代） |
+| **`order-documents`** | 訂單通用文件中心（合約簽名、發票、B/L、檢驗、付款證明…） | private（owner / 訂單雙方 / admin） | ✅ 已建立 — `010_storage_order_documents.sql` |
+| `payments` | 付款憑證圖 | private（buyer + admin） | ✅ 由 `order-documents` 內 `payment_proof` 路徑覆蓋（單一 bucket，路徑命名分類） |
 | `listings` | 商品圖 | public read, seller write | ⚠️ 待建立 |
 | `chat` | 聊天室附件 | private（chat members） | ⚠️ 待建立 |
 
-> Buckets 與 storage policy 尚未寫成 migration，請參考 [`ROADMAP.md` §A4](./ROADMAP.md)。
+> 剩餘 buckets（avatars / kyc / listings / chat）待寫成 migration，請參考 [`ROADMAP.md` §A4](./ROADMAP.md)。
+> `010_storage_order_documents.sql` 已建立 `order-documents` bucket（private）並設好 RLS：
+> - SELECT：路徑首段為 `orders/<order_id>/...` 時，訂單雙方 / admin 可讀；其它路徑以上傳者 + admin 可讀
+> - INSERT：登入用戶可上傳，並由 server action 寫對應的 `order_documents` row
+> - UPDATE：上傳者本人 + admin（用於覆蓋）
 
 ### 3.4 Realtime
 
@@ -472,6 +476,7 @@ supabase/migrations/
   007_b2b_progress_enums.sql       ← order_status 擴充（quotation_pending/quoted/negotiating/in_production/in_transit/arrived...）+ rename signed→contract_signed / delivered→customs_cleared；inquiry_status 擴充
   008_oauth_profile_handling.sql   ← handle_new_user 支援 Google OAuth（fallback meta.name；email_confirmed_at 已設 → status='active'）
   009_b2b_progress_tables.sql      ← quotations / order_documents 表 + orders/contracts 運輸與合約審核欄位擴充 + RLS
+  010_storage_order_documents.sql  ← Storage：建立 `order-documents` bucket + RLS（解除合約簽名 / 付款證明 / 文件上傳的阻塞）
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）
@@ -505,10 +510,15 @@ npm run db:types             # 重新生成 src/types/database.ts
 | 3 | 合約簽名掃描上傳 UI（A3） | ✅ 已完成 | `<SignedScanUploader />` + `uploadSignedScan` server action |
 | 4 | Disputed / Cancelled 觸發 UI（A5） | ✅ 已完成 | `<OrderPhaseActions />` + `<AdminOrderActions />` |
 | 5 | Migration 自動套用 runner | ✅ 已完成 | `scripts/apply-migrations.mjs` + `npm run db:migrate` |
-| 6 | 站內 IM（A2） | ⚠️ 待實作 | schema 已就位（`chat_rooms` / `chat_members` / `messages`）；`OrderChat` 元件、自動建房、`/messages` 列表頁都未做 |
-| 7 | Storage buckets / policies（A4） | ⚠️ **🔥 上線阻塞** | `<DocumentUploader />` / `<SignedScanUploader />` 已假設 `order-documents` bucket 存在，但尚未寫成 migration |
-| 8 | KYC 上傳 + lazy-collect commercial profile（A6） | ⚠️ 待實作 | OAuth 用戶以 `company_name=''` 進站，缺 `<CommercialProfileDialog />` 與 `<KycUploadForm />` |
-| 9 | A7 端到端煙霧測試 | ⚠️ 待執行 | 站台已部署到 <https://galloisgraphite.vercel.app/>，但雙分支（full_prepay / net_after_arrival）的完整 happy path 尚未走過 |
+| 6 | `order-documents` Storage bucket + RLS | ✅ 已完成 | `010_storage_order_documents.sql` |
+| 7 | 簽名合約預覽嵌入買賣雙方簽名 + 下載 | ✅ 已完成 | `<ContractPreview />` 內嵌雙方 signed scan（image/PDF），可下載合併 PDF |
+| 8 | 付款證明上傳（非加密貨幣方式） | ✅ 已完成 | `<PaymentForm />` 對 `bank_transfer / usdi / mup` 顯示檔案上傳 input，存到 `order-documents` |
+| 9 | Full-prepay 端到端流程煙霧測試 | ✅ 已驗證 | 2026-05-15 走測 `ORD-TEST-MP6PL7MZ`：quotation → contract draft/approve/sign → payment submit/verify → ready/shipped/in_transit/arrived → customs_cleared → completed |
+| 10 | Net-after-arrival 端到端流程煙霧測試 | ⚠️ 待執行 | UI / actions 路徑相同，僅分支跳轉時點不同；需要實際走一次驗證 |
+| 11 | 站內 IM（A2） | ⚠️ 待實作 | schema 已就位（`chat_rooms` / `chat_members` / `messages`）；`OrderChat` 元件、自動建房、`/messages` 列表頁都未做 |
+| 12 | 其餘 Storage buckets（avatars / kyc / listings / chat） | ⚠️ 待實作 | 用到該功能時補上 |
+| 13 | KYC 上傳 + lazy-collect commercial profile（A6） | ⚠️ 待實作 | OAuth 用戶以 `company_name=''` 進站，缺 `<CommercialProfileDialog />` 與 `<KycUploadForm />` |
+| 14 | `(app)` layout sidebar 缺 Logout 按鈕 | ⚠️ 待補 | 目前 `<LogoutButton />` 只掛在 `(public)/` Navbar，登入後頁面需回首頁才能登出 |
 
 ---
 

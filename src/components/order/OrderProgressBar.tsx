@@ -43,6 +43,10 @@ export function OrderProgressBar({
 
   const stages = getProgressStages(paymentTerms);
   const currentIdx = getStageIndex(status, paymentTerms);
+  // When the order is `completed`, treat ALL stages (including "Completed")
+  // as done so the bar reads as fully green instead of leaving the last
+  // step in a "current" state.
+  const isFullyDone = status === "completed";
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -61,8 +65,13 @@ export function OrderProgressBar({
       {/* Desktop horizontal */}
       <ol className="hidden md:flex items-start gap-1">
         {stages.map((stage, idx) => {
-          const state =
-            idx < currentIdx ? "done" : idx === currentIdx ? "current" : "future";
+          const state = isFullyDone
+            ? "done"
+            : idx < currentIdx
+              ? "done"
+              : idx === currentIdx
+                ? "current"
+                : "future";
           return (
             <li key={stage} className="flex-1 min-w-0">
               <div className="flex items-center">
@@ -110,8 +119,13 @@ export function OrderProgressBar({
       {/* Mobile vertical */}
       <ol className="md:hidden space-y-2">
         {stages.map((stage, idx) => {
-          const state =
-            idx < currentIdx ? "done" : idx === currentIdx ? "current" : "future";
+          const state = isFullyDone
+            ? "done"
+            : idx < currentIdx
+              ? "done"
+              : idx === currentIdx
+                ? "current"
+                : "future";
           return (
             <li key={stage} className="flex items-center gap-3">
               <div
@@ -124,6 +138,8 @@ export function OrderProgressBar({
               >
                 {state === "done" ? (
                   <Check className="size-3" />
+                ) : state === "current" ? (
+                  <Circle className="size-2 fill-current" />
                 ) : (
                   <span className="text-[10px]">{idx + 1}</span>
                 )}

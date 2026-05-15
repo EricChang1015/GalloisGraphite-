@@ -47,12 +47,12 @@
 
 - ~~**A1** Schema 對齊（payments / news / orders）~~ ✅ 已完成（migration 005）
 - **A2** 站內 IM（schema 已就位，但 `/messages` 與 `OrderChat` 待實作）
-- ~~**A3** 合約簽名掃描上傳 UI~~ ✅ 已完成（007 + `<SignedScanUploader />`）
-- **A4** Storage buckets 與 policies 初始化（特別是 `order-documents` bucket — 已被 007 後 UI 預期存在）
-- ~~**A5** Disputed / Cancelled UI 觸發點~~ ✅ 已完成（007 + `<OrderPhaseActions />`）
+- ~~**A3** 合約簽名掃描上傳 UI~~ ✅ 已完成（009 + `<SignedScanUploader />`，並可嵌入簽名後 PDF 預覽下載）
+- ~~**A4** `order-documents` Storage bucket + RLS~~ ✅ 已完成（migration 010）；其餘 buckets（avatars / kyc / listings / chat）依需要時補
+- ~~**A5** Disputed / Cancelled UI 觸發點~~ ✅ 已完成（009 + `<OrderPhaseActions />`）
 - **A6** KYC 文件上傳（簡易版，提升 `kyc_level`）
-- **A7** Vercel + Supabase 部署 + 端到端煙霧測試
-- ~~**B1** B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心、回合制合約）~~ ✅ 已完成（migrations 006 + 007）
+- **A7** 部署 ✅；full_prepay 端到端煙霧測試 ✅（2026-05-15）；net_after_arrival 走測待補
+- ~~**B1** B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心、回合制合約）~~ ✅ 已完成（migrations 007 + 009）
 
 ### OUT OF SCOPE（此次 MVP 不做）
 
