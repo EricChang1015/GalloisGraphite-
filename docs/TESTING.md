@@ -1,0 +1,135 @@
+# Testing Accounts & End-to-End Walkthrough
+
+> 本文件記錄 production / staging Supabase 的測試帳號與完整 happy-path
+> 走測腳本。請勿把帳號改成真實 email 發信目的地——
+> 這些 email 是 Gmail alias（`+suffix` 形式），只在 Supabase 留登入紀錄用。
+
+---
+
+## 1. 測試帳號（production: `galloisgraphite.vercel.app`）
+
+| 角色 | Email | Password | 備註 |
+|---|---|---|---|
+| **Admin (super_admin)** | `eric.chang.1015+admin@gmail.com` | `a1234567` | 可進 `/admin/*`、人工審核付款 |
+| **Seller** | `eric.chang.1015+seller@gmail.com` | `a1234567` | 可上架 listings、發 quotations、起草合約 |
+| **Buyer** | `eric.chang.1015+buyer@gmail.com` | `a1234567` | 詢價、議價、簽合約、付款 |
+
+**所有帳號都是 Gmail alias**：`+admin` / `+seller` / `+buyer` 三個地址實際上都會
+進到 `eric.chang.1015@gmail.com` 同一個收件夾，但 Supabase Auth 視為三個獨立帳號。
+
+> ⚠️ 不要對這些 email 做「是否收到信」的驗證 — 它們唯一的用途是在 Supabase
+> auth.users 留下登入紀錄。Transactional emails（inquiry 通知、payment 通知等）
+> 因 Resend domain DNS 未驗證可能不會實際寄達，但業務流程不受影響。
+
+### 1.1 切換登入
+
+Chrome 推薦做法：開三個 **incognito profile** 或用 **Profiles**（左上角 avatar）
+建立 Seller / Buyer / Admin 三個 profile，互不干擾 cookie。或者用 Edge + Firefox
++ Chrome 三個瀏覽器各登一個角色。
+
+### 1.2 升級為 super_admin
+
+第一次部署後，admin 帳號的 `profiles.role` 預設是 `buyer`。需要手動 SQL 升級：
+
+```sql
+update public.profiles
+set role = 'super_admin'
+where email = 'eric.chang.1015+admin@gmail.com';
+```
+
+可以透過 `scripts/apply-migrations.mjs` 的 query helper 跑（見
+[`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc#helper-queries)）。
+
+### 1.3 切換 buyer ↔ seller
+
+`/admin/users` 提供 role picker（super_admin 才能 promote 為 admin / super_admin）。
+測試 seller 需要先在 admin 後台把 `eric.chang.1015+seller@gmail.com` 從預設的
+`buyer` 改成 `seller`。
+
+---
+
+## 2. End-to-End Happy Path 腳本（full_prepay 分支）
+
+下面這條路徑會走過 13-stage state machine 的主要節點。每一步預期看到的畫面
+與資料庫狀態都列在右側。
+
+### Phase A — 上架（Seller）
+
+| # | 動作 | 預期結果 |
+|---|---|---|
+| A1 | 登入 Seller 帳號 → `/listings/new` | 進入上架表單 |
+| A2 | 選 category（e.g. `MADA1 — +80 Mesh`）、qty 50 MT、price 4500 USD、CFR、origin Tamatave | 表單通過 zod 驗證 |
+| A3 | Submit | listings.status='active'，跳轉 `/listings`，新 listing 出現在 `/market` |
+
+### Phase B — 詢價 + 議價（Buyer ↔ Seller）
+
+| # | 動作 | 預期結果 |
+|---|---|---|
+| B1 | Buyer 登入 → `/market` → 點 listing → `<InquiryDialog />` 填 requested_qty / target_price / destination / message | `inquiries.status='pending'`，seller 收 email |
+| B2 | Seller → `/inquiries` Received tab → `<QuotationForm />` 開報價（price/incoterm/validity） | `quotations.status='sent'`，`inquiries.status='quoted'` |
+| B3 | Buyer → `/inquiries/[id]` → `<QuotationActions />` 「Counter」回一個新價 | parent quotation `'countered'`，新 quotation `'sent'`，`inquiries.status='negotiating'` |
+| B4 | Seller 再 counter 一次 → Buyer 最終 「Accept」 | `quotations.status='accepted'`，**`orders` insert (`status='contract_pending'`, `current_quotation_id=q.id`)**，`inquiries.status='converted'` |
+
+### Phase C — 合約（Seller draft → Buyer review → 簽名）
+
+| # | 動作 | 預期結果 |
+|---|---|---|
+| C1 | Seller → `/orders/[id]` → Contract Tab → `<ContractDraftForm />` 選 `full_prepay` + Days 5 → 「Draft Contract」 | `contracts.revision_no=1`，`contracts.content_html` 有渲染好的 HTML，`orders.payment_terms='full_prepay'`，order 維持 `contract_pending`，timeline append `contract_redrafted` |
+| C2 | Buyer 切到 Contract Tab → 看 `<ContractPreview />` → 「Approve Contract」 | `contracts.buyer_approved_at` 寫入；UI 顯示「You have approved this contract.」 |
+| C3 | Seller 與 Buyer 各自上傳簽名掃描（任意 PNG / PDF） | 兩份都齊 + buyer approved → **自動 `contract_signed` → 再自動 `payment_pending`**（full_prepay 分支），timeline 連續記錄 |
+
+### Phase D — 付款 + 出貨（full_prepay 流）
+
+| # | 動作 | 預期結果 |
+|---|---|---|
+| D1 | Buyer → Payment Tab → 填 method=`usdt_trc20` + amount + tx_hash + note → Submit | `payments.status='pending'`，admin 收 email |
+| D2 | Admin → `/admin/payments` → 「Verify」（可填 admin_note） | `payments.status='verified'`，**`orders.status` 自動：`paid` → `in_production`**（full_prepay 分支），timeline 兩筆 |
+| D3 | Seller → `/orders/[id]` → 「Mark Ready to Ship」 | status → `ready_to_ship` |
+| D4 | Seller → `<ShipmentForm />` 填 B/L No、vessel_name、container_numbers、ETD/ATD/ETA → Submit | status → `shipped`，buyer 收 email |
+| D5 | Seller → 「Mark In Transit」 | status → `in_transit` |
+| D6 | Seller / Buyer / Admin → `<MarkArrived />` 填 ATA | status → `arrived`，net_after_arrival 流會計算 `payment_due_date` |
+
+### Phase E — 結案
+
+| # | 動作 | 預期結果 |
+|---|---|---|
+| E1 | Buyer → 「Customs Cleared」 | full_prepay 流：status → `customs_cleared` → 自動 `completed`，admin 收 email |
+| E2 | 切回 Admin → `/admin/orders/[id]` 看 Timeline | 13+ 筆事件，狀態欄 `Completed` |
+
+---
+
+## 3. Net-after-arrival 分支差異
+
+C1 起選 `net_after_arrival` + Days 30，後面：
+
+- C3 雙方簽完 + buyer approved → **直接 `contract_signed` → `in_production`**（跳過 `payment_pending` / `paid`）
+- D1–D2 跳過
+- E1 Buyer 確認通關 → 直接 → `payment_pending`（**不是 completed**），UI 顯示 `payment_due_date`
+- E2 Buyer 補做 D1（submit payment）
+- E3 Admin verify → **`paid` → `completed`**（**不再進 `in_production`**）
+
+---
+
+## 4. Dispute / Cancel 旁支
+
+| 動作 | 觸發者 | 結果 |
+|---|---|---|
+| Raise Dispute | 任一方（非終止狀態） | status → `disputed`，admin 收 email，audit_logs |
+| Cancel Order | 任一方（pre-shipment 階段） | status → `cancelled` |
+| Admin Force Transition | super_admin / admin | 從 `disputed` 強推回 `completed` / `cancelled` / 任意目標；audit_logs metadata 記錄 from/to/reason |
+
+---
+
+## 5. 已知阻塞
+
+1. 🔥 **`order-documents` Storage bucket 尚未建立** — Phase C3（簽名掃描上傳）會 500
+2. ⚠️ **Resend domain DNS 未驗證** — 通知信不會實際寄達（業務流程不受影響）
+3. ⚠️ **A2 站內 IM 未實作** — 訂單 Tab 沒有 chat 欄位
+
+---
+
+## 6. 變更歷史
+
+| 日期 | 變更 |
+|---|---|
+| 2026-05-15 | 初版：3 個測試帳號、full_prepay / net_after_arrival 走測腳本、dispute/cancel 旁支 |

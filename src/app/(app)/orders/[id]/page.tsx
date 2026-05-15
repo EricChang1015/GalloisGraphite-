@@ -117,6 +117,13 @@ export default async function OrderDetailPage({ params }: PageProps) {
         incoterm: string;
         product_categories: { name: string } | null;
       } | null;
+      // PostgREST returns the embedded `contracts` row as a single
+      // object (not an array) because `contracts.order_id` carries both
+      // a foreign key and a UNIQUE constraint — i.e. a one-to-one
+      // relationship. Treating it as an array silently broke the
+      // contract preview / signature panes (every contract looked like
+      // "No contract drafted yet" no matter how many times the seller
+      // re-drafted it).
       contracts: {
         id: string;
         contract_no: string;
@@ -131,7 +138,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
         payment_terms: PaymentTermsType | null;
         payment_due_days: number | null;
         revision_no: number;
-      }[] | null;
+      } | null;
       payments: {
         id: string;
         method: string;
@@ -168,7 +175,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
     : isSeller
     ? "seller"
     : "admin";
-  const contract = order.contracts?.[0] ?? null;
+  const contract = order.contracts ?? null;
   const payments = order.payments ?? [];
 
   // Fetch documents

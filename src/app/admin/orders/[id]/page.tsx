@@ -86,6 +86,9 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         incoterm: string;
         product_categories: { name: string } | null;
       } | null;
+      // PostgREST returns this as a single object (not an array)
+      // because `contracts.order_id` has a UNIQUE constraint —
+      // see (app)/orders/[id]/page.tsx for the same fix.
       contracts: {
         id: string;
         contract_no: string;
@@ -97,7 +100,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         payment_terms: PaymentTermsType | null;
         payment_due_days: number | null;
         revision_no: number;
-      }[] | null;
+      } | null;
       payments: {
         id: string;
         method: string;
@@ -138,7 +141,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
       created_at: string;
     }[]>();
 
-  const contract = order.contracts?.[0] ?? null;
+  const contract = order.contracts ?? null;
 
   return (
     <div className="space-y-6">
