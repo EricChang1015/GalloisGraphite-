@@ -8,9 +8,6 @@ import { sendEmail } from "@/lib/email/resend";
 import { InquiryInputSchema, type InquiryInput } from "@/lib/validations/inquiry";
 import type { ActionResult } from "./auth";
 
-export { InquiryInputSchema };
-export type { InquiryInput } from "@/lib/validations/inquiry";
-
 export async function createInquiry(
   input: InquiryInput
 ): Promise<ActionResult<{ id: string }>> {

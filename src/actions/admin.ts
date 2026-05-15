@@ -13,8 +13,6 @@ import {
 } from "@/lib/validations/admin";
 import type { ActionResult } from "./auth";
 
-export { FreezeUserSchema, SetUserRoleSchema, CategoryInputSchema, NewsInputSchema };
-
 async function requireAdmin() {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();

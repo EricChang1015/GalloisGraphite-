@@ -13,8 +13,6 @@ import {
 import type { ActionResult } from "./auth";
 import type { Json } from "@/types/database";
 
-export { DocumentUploadSchema, VerifyDocumentSchema };
-
 /**
  * Record an order document. The actual file upload to Supabase Storage is
  * performed client-side; this action only persists the metadata row.

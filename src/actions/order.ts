@@ -23,19 +23,9 @@ import type { Database, Json } from "@/types/database";
 type OrderStatus = Database["public"]["Enums"]["order_status"];
 type PaymentTermsType = Database["public"]["Enums"]["payment_terms_type"];
 
-export {
-  ShipmentUpdateSchema,
-  DraftContractSchema,
-  RejectContractSchema,
-  MarkArrivedSchema,
-  MarkInTransitSchema,
-  RaiseDisputeSchema,
-  CancelOrderSchema,
-};
-
-export const ConfirmReceiptSchema = z.object({
-  order_id: z.string().uuid(),
-});
+// NOTE: Next.js 16 forbids non-async-function exports from `"use server"`
+// modules. Schemas live in `@/lib/validations/*`; import them directly
+// from forms / components rather than re-exporting them here.
 
 // =====================================================================
 // Helpers

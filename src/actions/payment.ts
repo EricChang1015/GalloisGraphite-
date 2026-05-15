@@ -9,9 +9,6 @@ import { sendEmail } from "@/lib/email/resend";
 import { SubmitPaymentSchema, type SubmitPaymentInput } from "@/lib/validations/forms";
 import type { ActionResult } from "./auth";
 
-export { SubmitPaymentSchema };
-export type { SubmitPaymentInput } from "@/lib/validations/forms";
-
 export async function submitPayment(
   input: SubmitPaymentInput
 ): Promise<ActionResult<{ paymentId: string }>> {
