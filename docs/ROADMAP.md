@@ -82,30 +82,35 @@
   - 若 `profiles.kyc_level < 1` → 回 `{ error: { code: 'KYC_REQUIRED' } }`，前端引導至 `/settings/kyc`
 - [ ] Seller 自助升級流程：buyer → seller 的 role 切換需 admin 審核（在 admin/users 加按鈕）
 
-### A7. 部署與煙霧測試（原 Step 9）
+### A7. 部署與端到端煙霧測試（原 Step 9）
 
-- [ ] 推 GitHub
-- [ ] Vercel import + env（含 POE / Resend / Supabase / 平台收款資訊）
-- [ ] Supabase production 切換 + 重跑 001 → 005 → **006 → 007** migrations（注意 006 / 007 必須分開執行，因為 enum add value 不能在同 transaction 內被使用）
-- [ ] RLS policy review（特別是 005 / 007 新增 / 修改的政策）
+> 🚀 **站台已部署**到 <https://galloisgraphite.vercel.app/>（commit 2c38ddf 之後）。
+> 剩餘工作為 production 環境的 schema sync + storage bucket 建立 + 完整 happy path 走測。
+
+- [x] 推 GitHub
+- [x] Vercel import + env（含 POE / Resend / Supabase / 平台收款資訊）
+- [x] Supabase production schema：所有 9 個 migrations（001 → 009）都已透過 `scripts/apply-migrations.mjs` 套用，並由 `_agent_migrations` 追蹤表記錄
+  > 注意：未來如增量 migration，**enum add value 與使用該值必須分檔**（007/009 是現有範例：007 加 enum value、009 才使用）
+- [ ] RLS policy review（特別是 005 / 009 新增 / 修改的政策）
 - [ ] Resend domain DNS（或先用 `onboarding@resend.dev` 寄件）
-- [ ] **建立 `order-documents` Storage bucket**（A4） — 否則所有 contract 簽名 + 文件上傳會失敗
+- [ ] **建立 `order-documents` Storage bucket + policy**（A4） — 🔥 否則所有 contract 簽名 + 文件上傳會 500
 - [ ] 端到端 happy path：
-  1. 註冊（buyer + seller）
+  1. 註冊（buyer + seller）— Email 驗證 + Google OAuth 各跑一次
   2. 上貨
-  3. 詢價 → 賣家發 quotation → 買家 accept
+  3. 詢價 → 賣家發 quotation → 買家 accept（順便測一次 counter-offer 來回）
   4. 賣家 draftContract（選 full_prepay 或 net_after_arrival）
-  5. 買家 approve contract
-  6. 雙方上傳 signed scan
-  7. （full_prepay 流）submit payment → admin verify → in_production
-  8. markReadyToShip → markShipped(B/L) → markInTransit → markArrived(ATA)
-  9. 買家 markCustomsCleared → completed
-  10. （net_after_arrival 流）arrived → customs_cleared → buyer submit final payment → admin verify → completed
-  11. dispute / cancel 路徑各跑一次
+  5. 買家 approve contract（順便測一次 reject + re-draft，revision_no 會 ++）
+  6. 雙方上傳 signed scan → 自動推進到 `contract_signed`
+  7. **（full_prepay 流）** submit payment → admin verify → `paid` → `in_production`
+  8. `markReadyToShip` → `markShipped`(B/L + vessel + container) → `markInTransit` → `markArrived`(ATA)
+  9. 買家 `markCustomsCleared` → 自動 `completed`
+  10. **（net_after_arrival 流）** `contract_signed` 直接 → `in_production` → ... → `arrived` → `customs_cleared` → buyer submit final payment → admin verify → `completed`
+  11. `disputed` / `cancelled` 路徑各跑一次（含 admin force-transition 解 dispute）
 
 ### A8. ✅ B2B 全流程追蹤（已完成 — 原 §B1）
 
-由 migrations 006 + 007 + 大量 server actions / UI 元件實作：
+由 migrations `007_b2b_progress_enums.sql` + `009_b2b_progress_tables.sql` + 大量
+server actions / UI 元件實作：
 
 - [x] `quotations` 議價表 + `order_documents` 文件中心
 - [x] 13 階段細粒度狀態機 + 雙分支（full_prepay / net_after_arrival）
@@ -114,6 +119,18 @@
 - [x] OrderProgressBar UI（依 payment_terms 動態渲染）
 - [x] /inquiries/[id] 議價歷史頁
 - [x] /admin/orders/[id] + force transition
+
+### A9. ✅ Migration 自動套用 runner（已完成）
+
+由 [`scripts/apply-migrations.mjs`](../scripts/apply-migrations.mjs) +
+[`scripts/gen-types.mjs`](../scripts/gen-types.mjs) + npm script 實作（commit 2c38ddf）：
+
+- [x] 透過 Supabase Management API（`POST /v1/projects/{ref}/database/query`）執行 SQL，無需 DB password
+- [x] 追蹤表 `public._agent_migrations(name PK, checksum, applied_at, bootstrap)`，SHA-256 偵測 drift
+- [x] CLI flags：`--status` / `--bootstrap` / `--dry-run` / `--all` / `--force <name>`
+- [x] 同步 npm scripts：`db:migrate` / `db:migrate:status` / `db:migrate:bootstrap` / `db:migrate:dry` / `db:types`
+- [x] AI agent 撰寫規範：[`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc)（檔名規則、idempotency、enum 拆檔、RLS 覆蓋、failure handling）
+- [x] 解決舊版重複 prefix：`006_b2b_progress_enums` → `007_b2b_progress_enums`、`007_oauth_profile_handling` → `008_oauth_profile_handling`、`007_b2b_progress_tables` → `009_b2b_progress_tables`
 
 ---
 
@@ -170,14 +187,16 @@
 
 ## D. Definition of Done（MVP 上線版）
 
-- [x] A1 schema 對齊全部完成（TS types 重新生成於 A7 部署時執行）
+- [x] A1 schema 對齊全部完成（TS types 由 `npm run db:types` 重新生成）
 - [ ] A2 IM 可雙方即時對話 + 圖片附件
-- [x] A3 簽名掃描可上傳並推進到 `contract_signed` 狀態（007 完成）
-- [ ] A4 所有 buckets 建立完成（`order-documents` 為 007 後關鍵阻塞項）
-- [x] A5 dispute / cancel 流程可走通（007 完成）
+- [x] A3 簽名掃描可上傳並推進到 `contract_signed` 狀態（009 完成）
+- [ ] A4 所有 buckets 建立完成（**`order-documents` 為當前最後阻塞項**）
+- [x] A5 dispute / cancel 流程可走通（009 完成）
 - [ ] A6 KYC 上傳可運作（admin 可升級 level）
-- [ ] A7 部署完成，端到端 happy path（含 quotation / contract approve / B/L / customs 全流程）通過
+- [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，9 個 migration 已套用
+- [ ] A7 端到端 happy path（含 quotation / contract approve / B/L / customs 全流程，full_prepay + net_after_arrival 雙分支）通過
 - [x] A8 B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心）已完成
+- [x] A9 Migration 自動套用 runner 完成（`npm run db:migrate`）
 - [x] 公開頁 SEO meta（title/description/og）齊全
 - [x] 所有路由都有 `loading.tsx` 與 `error.tsx` 雛形（多數已完成）
-- [x] 沒有 console.error / TS error / lint error（007 加碼後 `npx tsc --noEmit` 全綠）
+- [x] 沒有 console.error / TS error / lint error（`npm run build` 在每個 commit 前都跑過）

@@ -395,13 +395,23 @@ src/components/
   ui/           shadcn 自動生成（avatar / badge / button / card / dialog / dropdown-menu /
                 form / input / label / select / separator / sheet / skeleton / sonner /
                 table / tabs / textarea）
-  layout/       Navbar / Footer / MobileNav
-  home/         HeroNarrative / GeopoliticsSection / SustainabilitySection
-  auth/         LoginForm / RegisterForm / VerifyResendForm
-  listing/      ListingForm / InquiryDialog / InquiryActions
-  order/        OrderActions（含 PaymentForm / ShipmentForm 子組件）
-  admin/        UserActions / CategoryActions / NewsActions / PaymentVerifyActions
-  chat/         AiChat
+  layout/       Navbar / NavSearchTrigger / MobileNav / Footer
+  home/         Hero / KpiStrip / LiveTicker / MineIntro / MinePhotosStrip /
+                ProductsBento / ApplicationsGrid / SupplyMap / PartnersMarquee /
+                SustainabilityDashboard / AiPreview / ClosingCta /
+                CommandPalette / CommandPaletteHost / BgGrid
+  auth/         LoginForm / RegisterForm / VerifyResendForm /
+                GoogleSignInButton / LogoutButton
+  listing/      ListingForm / InquiryDialog / InquiryActions /
+                QuotationForm / QuotationActions
+  order/        OrderActions / OrderProgressBar / OrderPhaseActions /
+                ContractDraftForm / ContractApproveReject / ContractPreview /
+                SignedScanUploader / ShipmentForm /
+                OrderDocumentsTab / DocumentUploader / DocumentVerifyButton
+  admin/        UserActions / CategoryActions / NewsActions /
+                PaymentVerifyActions / AdminOrderActions
+  chat/         AiChat / AiChatLauncher / FloatingAiChat /
+                ChatHistorySidebar / ChatPageBody / PinAiToggle
   theme/        ThemeProvider / ThemeToggle
 ```
 
@@ -488,14 +498,17 @@ npm run db:types             # 重新生成 src/types/database.ts
 
 完整清單見 [`ROADMAP.md`](./ROADMAP.md)。重點：
 
-1. ~~**Schema 不一致**~~ ✅ 已由 `005_align_payments_and_news.sql` 修正
-   （payments `buyer_id` / `admin_note` / `reviewed_*`、news `author_id`、
-   orders `updated_at` trigger）。production 部署時記得重跑 `supabase gen types`。
-2. **IM 是 placeholder**：schema 與 RLS 已就位，但 `OrderChat`、自動建房、`/messages` 都待實作
-3. **合約簽名上傳 UI 缺**：Server Action 已完成，缺前端 file input
-4. **Storage buckets / policies 未自動建立**
-5. **Disputed / Cancelled UI 缺**
-6. **KYC 上傳功能未實作**
+| # | 項目 | 狀態 | 備註 |
+|---|---|---|---|
+| 1 | Schema 對齊（payments / news / orders） | ✅ 已完成 | `005_align_payments_and_news.sql` |
+| 2 | B2B 全流程追蹤（13 階段、quotation、document hub、合約回合審核） | ✅ 已完成 | `007_b2b_progress_enums.sql` + `009_b2b_progress_tables.sql` + 大量 server actions / UI 元件 |
+| 3 | 合約簽名掃描上傳 UI（A3） | ✅ 已完成 | `<SignedScanUploader />` + `uploadSignedScan` server action |
+| 4 | Disputed / Cancelled 觸發 UI（A5） | ✅ 已完成 | `<OrderPhaseActions />` + `<AdminOrderActions />` |
+| 5 | Migration 自動套用 runner | ✅ 已完成 | `scripts/apply-migrations.mjs` + `npm run db:migrate` |
+| 6 | 站內 IM（A2） | ⚠️ 待實作 | schema 已就位（`chat_rooms` / `chat_members` / `messages`）；`OrderChat` 元件、自動建房、`/messages` 列表頁都未做 |
+| 7 | Storage buckets / policies（A4） | ⚠️ **🔥 上線阻塞** | `<DocumentUploader />` / `<SignedScanUploader />` 已假設 `order-documents` bucket 存在，但尚未寫成 migration |
+| 8 | KYC 上傳 + lazy-collect commercial profile（A6） | ⚠️ 待實作 | OAuth 用戶以 `company_name=''` 進站，缺 `<CommercialProfileDialog />` 與 `<KycUploadForm />` |
+| 9 | A7 端到端煙霧測試 | ⚠️ 待執行 | 站台已部署到 <https://galloisgraphite.vercel.app/>，但雙分支（full_prepay / net_after_arrival）的完整 happy path 尚未走過 |
 
 ---
 

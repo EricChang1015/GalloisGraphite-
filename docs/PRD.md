@@ -100,25 +100,34 @@
 3. 賣家收到 Email 通知 + 在 `/inquiries` Received Tab 看到
 4. 賣家「Accept」 → 自動建立 `orders.status='draft'`，inquiry.status='converted'，導向訂單頁
 
-### 4.4 訂單核心流程
-```
-draft
-  └─ seller / buyer 任一方點「Generate Contract」 → contract_generated
-       └─ 雙方上傳簽名掃描（A3 待補 UI） → signed
-            └─ 買家提交付款資訊（method / amount / tx_hash / proof） → payment_pending
-                 └─ admin 在 /admin/payments 審核通過 → paid
-                      └─ 賣家更新出貨資訊（shipment_from / eta） → shipped
-                           └─ 賣家標記實際送達 → delivered
-                                └─ 買家確認收貨 → completed
-                                     └─ admin 收到 Email 通知，平台外放款給賣家
-```
-任何節點可進入 `disputed` 或 `cancelled`（A5 待補 UI；雙方 + admin 可觸發）。
+### 4.4 訂單核心流程（B2B 13 階段，分支由 `payment_terms` 決定）
 
-### 4.5 付款（MVP 簡化）
+```
+quotation_pending → quoted ↔ negotiating
+  └─ buyer accept quotation
+       └─ contract_pending  ←─────── 賣家可重新起草（revision_no++）─┐
+            └─ buyer approve + 雙方上傳簽名掃描                      │
+                 └─ contract_signed                                  │
+                      ├── (full_prepay)        → payment_pending → paid → in_production
+                      └── (net_after_arrival)                       → in_production
+                          → ready_to_ship → shipped → in_transit → arrived → customs_cleared
+                              ├── (full_prepay)        → completed
+                              └── (net_after_arrival)  → payment_pending → paid → completed
+```
+
+任何非終止狀態都可進入 `disputed` 或 `cancelled`（雙方 + admin 可觸發；admin 另可
+`forceTransitionOrder` 繞過狀態機，全程寫 `audit_logs`）。完整定義見
+[`src/lib/order/stateMachine.ts`](../src/lib/order/stateMachine.ts) 與
+[`ARCHITECTURE.md`](./ARCHITECTURE.md) §4.4「訂單狀態機」。
+
+### 4.5 付款（MVP 簡化 — 雙分支）
+
 - 平台顯示自有錢包/帳戶資訊（USDT TRC20/ERC20、USDI、MUP、銀行）
 - 買家在訂單頁 Payment Tab 提交：method / amount / currency / tx_hash / proof_url / note
 - `payments.status='pending'` → `orders.status='payment_pending'` → 寄信通知 admin
-- admin 在 `/admin/payments` 審核 → verified → `orders.status='paid'`
+- admin 在 `/admin/payments` 審核 → verified；驗證通過後依 `orders.payment_terms` 自動推進：
+  - `full_prepay`：`payment_pending → paid → in_production`（之後賣家走出貨流程）
+  - `net_after_arrival`：`payment_pending → paid → completed`（在到港 + 通關之後才會進入此分支）
 - 寄信通知 buyer，並寫 `audit_logs`
 
 ### 4.6 站內 IM ⚠️ 待實作（A2）
@@ -131,11 +140,12 @@ draft
 
 | 類別 | 要求 | 現況 |
 |---|---|---|
-| 部署 | Vercel（前端 + Server Actions），Supabase（Postgres / Auth / Storage / Realtime） | ⚠️ 待 A7 |
+| 部署 | Vercel（前端 + Server Actions），Supabase（Postgres / Auth / Storage / Realtime） | ✅ 已部署 <https://galloisgraphite.vercel.app/>；端到端煙霧測試列為 ROADMAP §A7 |
 | 效能 | 公開頁 SSG/ISR；市場頁 SSR + RSC；首屏 LCP < 2.5s（WiFi） | ✅ 公開頁 ISR、SSR 已實作 |
 | 安全 | 全表 RLS、service_role key 永不入 client、輸入用 zod | ✅ |
-| 可觀測性 | `audit_logs` 表記錄 admin 動作；Vercel Logs；後續可接 Sentry | ✅ audit_logs；Sentry 為 Phase 2 |
+| 可觀測性 | `audit_logs` + `ai_chat_logs` 記錄；Vercel Logs；後續可接 Sentry | ✅ audit/AI logs；Sentry 為 Phase 2 |
 | 國際化 | i18n 結構預留（next-intl key），MVP 僅 en；合約必須英文版 | ⚠️ key 未抽，僅英文寫死 |
+| Migration 自動化 | 所有 schema 變更可由 AI agent 透過 Supabase Management API 直接套用，不需 DB password | ✅ `npm run db:migrate` 走 Personal Access Token；追蹤表 `_agent_migrations` |
 
 ## 6. 內容資產
 
@@ -157,3 +167,6 @@ draft
 | 日期 | 變更 |
 |---|---|
 | 2026-05-11 | 對齊實際代碼：標記 IN SCOPE 1–13 已完成；新增 14 (Dashboard) / 15 (三主題)；補非功能需求現況欄；OUT OF SCOPE 補 payouts；新增 §2.2 待補完項 reference ROADMAP §A |
+| 2026-05-13 | feat(order) 76e40c2：導入 13 階段 B2B 訂單狀態機 + quotation 議價 + order_documents 文件中心；migrations 改名 006/007 → 007/009（保留 006_ai_chat_logs / 008_oauth_profile_handling） |
+| 2026-05-14 | feat(admin) 3f9c8d2：新增 `/admin/orders/[id]` 與 `<AdminOrderActions />` force-transition 控制台；docs 15a21f5：同步 SCHEMA / ARCHITECTURE / PRD / ROADMAP |
+| 2026-05-15 | feat(db) 2c38ddf：`scripts/apply-migrations.mjs` 與 `scripts/gen-types.mjs` 透過 Supabase Management API 自動套用 migration（不需 DB password）；新增 `.cursor/rules/migrations.mdc` 規範 AI agent 撰寫 migration；本次 PRD §4.4/4.5/§5/§8 對齊 13 階段 B2B 流程 |

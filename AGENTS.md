@@ -16,12 +16,14 @@ Quick reference:
 
 - `docs/ARCHITECTURE.md` — **current implemented architecture** (start here)
 - `docs/PRD.md` — product requirements (with implementation status)
-- `docs/SCHEMA.md` — database schema rationale (post-005 migration)
+- `docs/SCHEMA.md` — database schema rationale (post-009 migration)
+- `docs/AI_PROMPT.md` — AI assistant prompt & FAQ maintenance guide
 - `docs/ROADMAP.md` — remaining MVP gaps + Phase 2 plan
 - `docs/CONTRACT_TEMPLATE.md` — graphite sales contract template
 - `docs/LEGACY_CONTENT.md` — content migrated from old static madagraphite.com
 - `docs/COPY_DRAFTS.md` — marketing copy drafts
-- `supabase/migrations/` — SQL migrations (run 001 → 005 in order)
+- `supabase/migrations/` — SQL migrations (currently 001 → 009)
+- `.cursor/rules/migrations.mdc` — **migration authoring rules** (read before writing SQL)
 - `.env.example` — required environment variables
 
 ## Top rules (TL;DR)
@@ -33,3 +35,9 @@ Quick reference:
 5. Tailwind v4 + shadcn (style: `base-nova`, base library: `@base-ui/react`).
 6. No blockchain / wallet SDKs — payments are manually verified by admins.
 7. Never expose `SUPABASE_SERVICE_ROLE_KEY` outside server-only modules.
+8. **Schema changes** must go through `supabase/migrations/NNN_*.sql` and be
+   applied with `npm run db:migrate` (Supabase Management API, no DB password).
+   Never instruct the user to copy/paste SQL into the Dashboard. See
+   [`.cursor/rules/migrations.mdc`](./.cursor/rules/migrations.mdc).
+9. **Build gate**: `npm run build` must exit 0 before every `git commit`. See
+   [`.cursor/rules/git.mdc`](./.cursor/rules/git.mdc).
