@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,10 +15,12 @@ import {
 import { submitPayment } from "@/actions/payment";
 import { ShipmentUpdateSchema } from "@/lib/validations/forms";
 import { SubmitPaymentSchema } from "@/lib/validations/forms";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -28,6 +30,20 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+
+const BUCKET = "order-documents";
+/** Payment methods that always need a proof image (no on-chain hash). */
+const PROOF_REQUIRED_METHODS = new Set(["bank_transfer", "usdi", "mup"]);
+/** Payment methods that go through public blockchains where a tx hash
+ *  is the canonical receipt. */
+const HASH_REQUIRED_METHODS = new Set(["usdt_trc20", "usdt_erc20"]);
+const METHOD_LABEL: Record<string, string> = {
+  usdt_trc20: "USDT (TRC20)",
+  usdt_erc20: "USDT (ERC20)",
+  usdi: "USDI",
+  mup: "MUP",
+  bank_transfer: "Bank Transfer",
+};
 
 type ShipmentInput = z.infer<typeof ShipmentUpdateSchema>;
 type PaymentInput = z.infer<typeof SubmitPaymentSchema>;
@@ -127,6 +143,9 @@ function PaymentForm({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [proofUrl, setProofUrl] = useState<string>("");
 
   const form = useForm<PaymentInput>({
     resolver: zodResolver(SubmitPaymentSchema),
@@ -136,11 +155,57 @@ function PaymentForm({
       amount,
       currency,
       tx_hash: "",
+      proof_url: undefined,
       note: "",
     },
   });
 
+  const method = form.watch("method");
+  const needsProof = PROOF_REQUIRED_METHODS.has(method);
+  const needsHash = HASH_REQUIRED_METHODS.has(method);
+
+  async function handleUploadProof() {
+    if (!proofFile) return;
+    setIsUploading(true);
+    try {
+      const supabase = createClient();
+      const ext = proofFile.name.split(".").pop() ?? "bin";
+      const path = `${orderId}/payment_proof/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET)
+        .upload(path, proofFile, { cacheControl: "3600", upsert: false });
+      if (upErr) {
+        toast.error(`Upload failed: ${upErr.message}`);
+        return;
+      }
+      const { data: signed, error: signErr } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signErr || !signed?.signedUrl) {
+        toast.error("Could not generate signed URL.");
+        return;
+      }
+      setProofUrl(signed.signedUrl);
+      form.setValue("proof_url", signed.signedUrl, { shouldValidate: true });
+      toast.success("Proof uploaded.");
+    } catch (err) {
+      const m = err instanceof Error ? err.message : "Upload error.";
+      toast.error(m);
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
   function onSubmit(values: PaymentInput) {
+    // Guard rails the schema can't express on its own.
+    if (needsHash && !values.tx_hash) {
+      form.setError("tx_hash", { message: "Transaction hash is required for on-chain payments." });
+      return;
+    }
+    if (needsProof && !values.proof_url) {
+      toast.error("Please upload a remittance proof before submitting.");
+      return;
+    }
     startTransition(async () => {
       const result = await submitPayment(values);
       if (result.error) {
@@ -154,7 +219,13 @@ function PaymentForm({
 
   return (
     <div className="rounded-lg border p-4 space-y-4">
-      <p className="text-sm font-medium">Submit Payment</p>
+      <div>
+        <p className="text-sm font-medium">Submit Payment</p>
+        <p className="text-xs text-muted-foreground">
+          On-chain payments are verified via the transaction hash. Bank transfer, USDI
+          and MUP also require a scanned remittance receipt.
+        </p>
+      </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -163,10 +234,14 @@ function PaymentForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Payment Method</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {(value) =>
+                          METHOD_LABEL[value as string] ?? "Select a method"
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -214,19 +289,67 @@ function PaymentForm({
               )}
             />
           </div>
-          <FormField
-            control={form.control}
-            name="tx_hash"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Transaction Hash</FormLabel>
-                <FormControl>
-                  <Input placeholder="0x..." {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {needsHash && (
+            <FormField
+              control={form.control}
+              name="tx_hash"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Transaction Hash</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0x..." {...field} />
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    Paste the on-chain transaction hash (the admin will verify it on a
+                    block explorer).
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+          {needsProof && (
+            <FormItem>
+              <FormLabel>Remittance Proof</FormLabel>
+              <FormDescription className="text-xs">
+                Upload the bank wire / remittance slip (PDF or image, ≤ 20 MB). The
+                admin will compare it against the contracted amount.
+              </FormDescription>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                  className="text-xs flex-1 min-w-[180px]"
+                  disabled={isUploading}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleUploadProof}
+                  disabled={!proofFile || isUploading}
+                >
+                  {isUploading ? "Uploading…" : proofUrl ? "Replace" : "Upload"}
+                </Button>
+              </div>
+              {proofUrl && (
+                <p className="text-xs text-emerald-400">
+                  Proof attached.{" "}
+                  <a
+                    href={proofUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    Preview
+                  </a>
+                </p>
+              )}
+              {/* keep the form value mirrored even though the input is not a FormField */}
+              <input type="hidden" {...form.register("proof_url")} />
+            </FormItem>
+          )}
           <FormField
             control={form.control}
             name="note"

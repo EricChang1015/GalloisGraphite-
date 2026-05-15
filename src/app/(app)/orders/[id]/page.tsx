@@ -377,42 +377,48 @@ export default async function OrderDetailPage({ params }: PageProps) {
                 contractNo={contract.contract_no}
                 revision={contract.revision_no}
                 contentHtml={contract.content_html}
+                buyerSignedUrl={contract.buyer_signed_url}
+                sellerSignedUrl={contract.seller_signed_url}
+                buyerSignedAt={contract.buyer_signed_at}
+                sellerSignedAt={contract.seller_signed_at}
               />
 
-              <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                <div className="rounded border p-3 space-y-2">
-                  <p className="text-xs text-muted-foreground">Buyer Signature</p>
-                  {contract.buyer_signed_url ? (
-                    <a href={contract.buyer_signed_url} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">
-                      View scan
-                    </a>
-                  ) : isBuyer ? (
-                    <SignedScanUploader
-                      orderId={order.id}
-                      role="buyer"
-                      blockedNeedApproval={!contract.buyer_approved_at}
-                    />
-                  ) : (
-                    <p className="text-muted-foreground text-xs">Not uploaded</p>
+              {(!contract.buyer_signed_url || !contract.seller_signed_url) && (
+                <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                  {!contract.buyer_signed_url && (
+                    <div className="rounded border p-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">Upload Buyer Signature</p>
+                      {isBuyer ? (
+                        <SignedScanUploader
+                          orderId={order.id}
+                          role="buyer"
+                          blockedNeedApproval={!contract.buyer_approved_at}
+                        />
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          Waiting for the buyer to upload a signed scan.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {!contract.seller_signed_url && (
+                    <div className="rounded border p-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">Upload Seller Signature</p>
+                      {isSeller ? (
+                        <SignedScanUploader
+                          orderId={order.id}
+                          role="seller"
+                          blockedNeedApproval={!contract.buyer_approved_at}
+                        />
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          Waiting for the seller to upload a signed scan.
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-                <div className="rounded border p-3 space-y-2">
-                  <p className="text-xs text-muted-foreground">Seller Signature</p>
-                  {contract.seller_signed_url ? (
-                    <a href={contract.seller_signed_url} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">
-                      View scan
-                    </a>
-                  ) : isSeller ? (
-                    <SignedScanUploader
-                      orderId={order.id}
-                      role="seller"
-                      blockedNeedApproval={!contract.buyer_approved_at}
-                    />
-                  ) : (
-                    <p className="text-muted-foreground text-xs">Not uploaded</p>
-                  )}
-                </div>
-              </div>
+              )}
             </>
           )}
         </TabsContent>

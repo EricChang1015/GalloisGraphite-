@@ -16,10 +16,16 @@ export const metadata = { title: "Admin · Payments" };
 export default async function AdminPaymentsPage() {
   const admin = createAdminClient();
 
-  const { data: payments } = await admin
+  // NOTE: the FK on `payments.buyer_id -> profiles.id` is named
+  // `payments_payer_id_fkey` (legacy schema name from before the
+  // `payer_id` -> `buyer_id` rename). Using the wrong hint silently
+  // fails the JOIN and returns no rows, which is why the admin
+  // dashboard could simultaneously show "1 Action needed" and an
+  // empty list.
+  const { data: payments, error: paymentsError } = await admin
     .from("payments")
     .select(
-      "id, method, amount, currency, tx_hash, proof_url, status, admin_note, created_at, order_id, buyer_id, profiles!payments_buyer_id_fkey(company_name, email)"
+      "id, method, amount, currency, tx_hash, proof_url, note, status, admin_note, created_at, order_id, buyer_id, profiles!payments_payer_id_fkey(company_name, email, full_name)"
     )
     .order("created_at", { ascending: false })
     .returns<{
@@ -29,12 +35,17 @@ export default async function AdminPaymentsPage() {
       currency: string;
       tx_hash: string | null;
       proof_url: string | null;
+      note: string | null;
       status: string;
       admin_note: string | null;
       created_at: string;
       order_id: string;
       buyer_id: string;
-      profiles: { company_name: string; email: string } | null;
+      profiles: {
+        company_name: string | null;
+        email: string | null;
+        full_name: string | null;
+      } | null;
     }[]>();
 
   const pending = payments?.filter((p) => p.status === "pending") ?? [];
@@ -54,6 +65,15 @@ export default async function AdminPaymentsPage() {
           ⭐ Core workflow: review pending payments and mark them verified or rejected.
         </p>
       </div>
+
+      {paymentsError && (
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+          <p className="font-medium">Failed to load payments.</p>
+          <p className="text-xs opacity-80 mt-1 break-all">
+            {paymentsError.message}
+          </p>
+        </div>
+      )}
 
       <section>
         <h2 className="text-base font-semibold mb-3">
@@ -86,8 +106,12 @@ export default async function AdminPaymentsPage() {
                 {pending.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell>
-                      <div className="text-sm font-medium">{p.profiles?.company_name ?? "—"}</div>
-                      <div className="text-xs text-muted-foreground">{p.profiles?.email}</div>
+                      <div className="text-sm font-medium">
+                        {p.profiles?.company_name ?? p.profiles?.full_name ?? "—"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {p.profiles?.email ?? "—"}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Link href={`/orders/${p.order_id}`} className="text-primary text-xs underline">
@@ -98,9 +122,12 @@ export default async function AdminPaymentsPage() {
                     <TableCell className="text-right font-semibold">
                       {p.amount} {p.currency}
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-xs space-y-1">
                       {p.tx_hash && (
-                        <span className="font-mono text-muted-foreground truncate block max-w-[140px]">
+                        <span
+                          className="font-mono text-muted-foreground truncate block max-w-[180px]"
+                          title={p.tx_hash}
+                        >
                           {p.tx_hash}
                         </span>
                       )}
@@ -109,11 +136,20 @@ export default async function AdminPaymentsPage() {
                           href={p.proof_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary underline"
+                          className="text-primary underline block"
                         >
                           View proof
                         </a>
                       )}
+                      {p.note && (
+                        <span
+                          className="text-muted-foreground block max-w-[200px] truncate"
+                          title={p.note}
+                        >
+                          {p.note}
+                        </span>
+                      )}
+                      {!p.tx_hash && !p.proof_url && !p.note && "—"}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {new Date(p.created_at).toLocaleString()}
@@ -151,7 +187,9 @@ export default async function AdminPaymentsPage() {
               <TableBody>
                 {reviewed.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="text-sm">{p.profiles?.company_name ?? "—"}</TableCell>
+                    <TableCell className="text-sm">
+                      {p.profiles?.company_name ?? p.profiles?.full_name ?? "—"}
+                    </TableCell>
                     <TableCell>
                       <Link href={`/orders/${p.order_id}`} className="text-primary text-xs underline">
                         {p.order_id.slice(0, 8)}…
