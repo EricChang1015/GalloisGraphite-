@@ -90,17 +90,19 @@ const DESTINATIONS: Destination[] = [
   { id: "spo", lon:  -46.33, lat: -23.93, label: "Santos (São Paulo)", transitDays: "~18 days" },               // 巴西：桑托斯港（聖保羅外港）
 
   // --- 🆕 亞洲關鍵石墨與電池材料核心港口 ---
-  { id: "sha", lon:  121.61, lat:  31.37, label: "Shanghai",   transitDays: "~28 days" },                       // 中國：全球最大石墨加工與負極材料市場入口
+//  { id: "sha", lon:  121.61, lat:  31.37, label: "Shanghai",   transitDays: "~28 days" },                       // 中國：全球最大石墨加工與負極材料市場入口
   { id: "pus", lon:  129.08, lat:  35.10, label: "Busan",      transitDays: "~30 days" },                       // 韓國：三大電池廠（LG、SK、Samsung）戰略進口港
-  { id: "osa", lon:  135.42, lat:  34.64, label: "Osaka",      transitDays: "~34 days" },                       // 日本：關西工業區，鄰近多家日系負極與碳素大廠
+  //{ id: "osa", lon:  135.42, lat:  34.64, label: "Osaka",      transitDays: "~34 days" },                       // 日本：關西工業區，鄰近多家日系負極與碳素大廠
   { id: "hcm", lon:  106.77, lat:  10.76, label: "Ho Chi Minh (Cat Lai)", transitDays: "~25 days" },            // 越南：新興電子與加工供應鏈核心港
-  { id: "mun", lon:   76.69, lat:  22.84, label: "Mundra",     transitDays: "~14 days" },                       // 印度：古吉拉特邦，西北部工業區重要石墨門戶
+  //{ id: "mun", lon:   76.69, lat:  22.84, label: "Mundra",     transitDays: "~14 days" },                       // 印度：古吉拉特邦，西北部工業區重要石墨門戶
+    // 新加坡
+  { id: "sgp", lon: 103.85, lat:   1.29, label: "Singapore", transitDays: "~12 days" },                       // 新加坡：東南亞最大轉運中心，航線密集且頻次高
 
   // --- 🆕 歐美關鍵石墨與耐火材料核心港口 ---
   { id: "sav", lon:  -81.14, lat:  32.12, label: "Savannah",   transitDays: "~40 days" },                       // 美國：東岸最大貨櫃港，主供美東汽車與電池供應鏈
   { id: "det", lon:  -83.04, lat:  42.33, label: "Detroit",    transitDays: "~46 days" },                       // 美國：五大湖傳統五金/五大車廠（多經加拿大或東岸內陸轉運）
-  { id: "ant", lon:    4.33, lat:  51.27, label: "Antwerp",    transitDays: "~34 days" },                       // 比利時：歐洲第二大港，耐火材料與化工核心
-  { id: "光陽", lon:  127.69, lat:  34.91, label: "Gwangyang",  transitDays: "~29 days" },                       // 韓國：光陽港，POSCO Future M（韓國核心負極廠）所在地
+  //{ id: "ant", lon:    4.33, lat:  51.27, label: "Antwerp",    transitDays: "~34 days" },                       // 比利時：歐洲第二大港，耐火材料與化工核心
+  //{ id: "光陽", lon:  127.69, lat:  34.91, label: "Gwangyang",  transitDays: "~29 days" },                       // 韓國：光陽港，POSCO Future M（韓國核心負極廠）所在地
 ];
 
 
@@ -277,13 +279,13 @@ function WorldMap() {
           strokeWidth="0.6"
           strokeLinejoin="round"
         >
-          {COUNTRIES.map((c) => {
+          {COUNTRIES.map((c, i) => {
             const isMG = String(c.id) === MADAGASCAR_ID;
             const d = pathGen(c);
             if (!d) return null;
             return (
               <path
-                key={String(c.id)}
+                key={c.id !== undefined ? String(c.id) : `country-${i}`}
                 d={d}
                 fill={
                   isMG
