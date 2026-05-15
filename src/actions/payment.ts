@@ -99,6 +99,9 @@ export async function submitPayment(
 
   revalidatePath(`/orders/${parsed.data.order_id}`);
   revalidatePath("/admin/payments");
+  // Bump the dashboard counter too so it shows "Action needed" the moment
+  // the buyer submits a new payment.
+  revalidatePath("/admin");
 
   return { data: { paymentId: payment.id }, error: null };
 }
@@ -237,6 +240,10 @@ export async function verifyPayment(
   } catch (_) {}
 
   revalidatePath("/admin/payments");
+  // The admin dashboard renders the pending-payments count card and was
+  // showing a stale "1 Action needed" badge after the last pending row
+  // had been verified. Force a refresh of that card too.
+  revalidatePath("/admin");
   revalidatePath(`/orders/${payment.order_id}`);
 
   return { data: true, error: null };

@@ -12,6 +12,8 @@ import {
 import { PaymentVerifyActions } from "@/components/admin/PaymentVerifyActions";
 
 export const metadata = { title: "Admin · Payments" };
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function AdminPaymentsPage() {
   const admin = createAdminClient();

@@ -6,6 +6,12 @@ import { UsersIcon, PackageIcon, CreditCardIcon, NewspaperIcon } from "lucide-re
 
 export const metadata = { title: "Admin Dashboard — Mada Graphite" };
 
+// The dashboard renders live action-required counters; never serve a stale
+// static copy. (Verifying a payment from /admin/payments revalidates /admin,
+// but we also need to make sure the very first load isn't cached.)
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AdminDashboard() {
   const admin = createAdminClient();
 
