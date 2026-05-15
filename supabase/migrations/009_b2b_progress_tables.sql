@@ -1,7 +1,7 @@
 -- =====================================================================
--- 007_b2b_progress_tables.sql
+-- 009_b2b_progress_tables.sql
 --
--- 接續 006_b2b_progress_enums.sql：建立 quotations / order_documents
+-- 接續 007_b2b_progress_enums.sql：建立 quotations / order_documents
 -- 表，擴充 orders / contracts 欄位，補上 RLS 政策。
 --
 -- 本檔案 idempotent，可重跑。

@@ -1,5 +1,5 @@
 -- =====================================================================
--- 007_oauth_profile_handling.sql
+-- 008_oauth_profile_handling.sql
 --
 -- 讓 handle_new_user() 同時支援：
 --   1. 既有 email/password 註冊（meta 內含 full_name / company_name /

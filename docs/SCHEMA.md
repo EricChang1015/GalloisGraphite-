@@ -17,12 +17,13 @@
 | `004_news_schema_update.sql` | `news` 加 `slug` / `content_html` / `cover_image_url` / `created_at` + 索引 |
 | `005_align_payments_and_news.sql` | 對齊實際代碼：`payments.payer_id → buyer_id`、加 `admin_note/reviewed_by/reviewed_at`、`news.author_id`、`orders.updated_at` + trigger |
 | `006_ai_chat_logs.sql` | AI chat 稽核日誌（session_id / IP / geo / user-agent + admin-only RLS） |
-| `007_oauth_profile_handling.sql` | `handle_new_user` 支援 Google OAuth：fallback meta.name；`email_confirmed_at` 已設則 status 直接 `'active'` |
-| `006_ai_chat_logs.sql` | 新增 `ai_chat_logs` audit table（session_id / IP / geo / UA / role / content）+ admin-only RLS |
-| `006_b2b_progress_enums.sql` | **B2B 追蹤 P1**：新增 `quotation_status` / `payment_terms_type` / `document_type` enum；`order_status` rename `signed→contract_signed`、`delivered→customs_cleared` 並加 9 個新狀態；`inquiry_status` 加 `quoted/negotiating/expired` |
-| `007_b2b_progress_tables.sql` | **B2B 追蹤 P1**：新增 `quotations` / `order_documents` 表；`orders` 加運輸欄位（`bl_no` / `vessel_*` / `etd/atd/ata` / `payment_terms` / `payment_due_*`）；`contracts` 加 revision + buyer-approval 欄位；補 RLS |
+| `007_b2b_progress_enums.sql` | **B2B 追蹤 P1**：新增 `quotation_status` / `payment_terms_type` / `document_type` enum；`order_status` rename `signed→contract_signed`、`delivered→customs_cleared` 並加 9 個新狀態；`inquiry_status` 加 `quoted/negotiating/expired` |
+| `008_oauth_profile_handling.sql` | `handle_new_user` 支援 Google OAuth：fallback meta.name；`email_confirmed_at` 已設則 status 直接 `'active'` |
+| `009_b2b_progress_tables.sql` | **B2B 追蹤 P1**：新增 `quotations` / `order_documents` 表；`orders` 加運輸欄位（`bl_no` / `vessel_*` / `etd/atd/ata` / `payment_terms` / `payment_due_*`）；`contracts` 加 revision + buyer-approval 欄位；補 RLS |
 
-> ⚠️ **注意**：006/007 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，請依序執行。
+> ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
+>
+> **執行方式**：用 `npm run db:migrate`（Supabase Management API，免 DB password）。詳見 [`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc) 與 [`scripts/apply-migrations.mjs`](../scripts/apply-migrations.mjs)。
 
 ---
 

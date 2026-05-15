@@ -1,7 +1,7 @@
 -- =====================================================================
--- 006_b2b_progress_enums.sql
+-- 007_b2b_progress_enums.sql
 --
--- 純 enum 變更，必須與 007_b2b_progress_tables.sql 分開 commit。
+-- 純 enum 變更，必須與 009_b2b_progress_tables.sql 分開 commit。
 -- 原因：PostgreSQL `alter type ... add value` 可以放在 transaction 內，
 -- 但同一 transaction 內無法立即使用新值，否則會 error
 -- "unsafe use of new value of enum type"。
@@ -91,5 +91,5 @@ alter type inquiry_status add value if not exists 'expired' after 'rejected';
 
 
 -- =====================================================================
--- 完成。請接著執行 007_b2b_progress_tables.sql
+-- 完成。請接著執行 009_b2b_progress_tables.sql
 -- =====================================================================

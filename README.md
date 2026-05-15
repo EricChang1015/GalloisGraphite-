@@ -26,14 +26,41 @@ sellers. Built on Next.js 16 (App Router) + Supabase + Tailwind v4 + shadcn/ui.
    npm install
    ```
 
-3. Provision the Supabase project:
+3. Provision the Supabase project (the runner uses
+   [Supabase Management API](https://api.supabase.com) — no DB password
+   needed):
    - Create a project at <https://supabase.com>
-   - Open SQL Editor → run each migration in
-     [`supabase/migrations/`](./supabase/migrations/) **in order** (`001` → `007`)
+   - Get a Personal Access Token at
+     <https://supabase.com/dashboard/account/tokens> and put it in
+     `.env.local` as `SUPABASE_ACCESS_TOKEN=sbp_xxx`
+   - Make sure `NEXT_PUBLIC_SUPABASE_URL` is also set in `.env.local`
+   - For a **fresh DB** — run all migrations:
+
+     ```powershell
+     npm run db:migrate
+     ```
+
+   - For an **existing DB** that was already migrated outside the runner
+     (e.g. via Supabase Dashboard SQL Editor) — register the current files
+     as applied without re-executing them:
+
+     ```powershell
+     npm run db:migrate:bootstrap
+     ```
+
+   - Inspect tracking state any time with:
+
+     ```powershell
+     npm run db:migrate:status
+     ```
+
    - Follow [`002_seed_first_admin.sql`](./supabase/migrations/002_seed_first_admin.sql)
      to promote the first user to `super_admin`
-   - Regenerate TS types:
-     `npx supabase gen types typescript --project-id <ref> --schema public > src/types/database.ts`
+   - Regenerate TS types after schema changes:
+
+     ```powershell
+     npm run db:types
+     ```
 
 4. Run the dev server:
 
@@ -80,8 +107,11 @@ src/
   types/                Database types (regenerate with supabase gen types)
   proxy.ts              Route guards (Next.js 16 renamed middleware.ts → proxy.ts)
   app/auth/callback/    OAuth code-exchange route handler
+scripts/
+  apply-migrations.mjs  Auto-apply Supabase migrations via Management API
+  gen-types.mjs         Regenerate src/types/database.ts
 supabase/
-  migrations/           Versioned SQL (001 → 007, run in order)
+  migrations/           Versioned SQL (001 → 009, run via `npm run db:migrate`)
 docs/                   ARCHITECTURE / PRD / SCHEMA / ROADMAP / CONTRACT_TEMPLATE / LEGACY_CONTENT
 ```
 
@@ -93,12 +123,19 @@ docs/                   ARCHITECTURE / PRD / SCHEMA / ROADMAP / CONTRACT_TEMPLAT
 Implemented:
 
 - [x] Next.js 16 (App Router, `proxy.ts`) + Tailwind v4 + shadcn/ui base-nova
-- [x] Supabase Auth + Postgres + RLS (migrations 001 → 007)
+- [x] Supabase Auth + Postgres + RLS (migrations 001 → 009)
+- [x] Auto-apply migration runner via Supabase Management API
+      (`npm run db:migrate`) — see
+      [`.cursor/rules/migrations.mdc`](./.cursor/rules/migrations.mdc)
 - [x] Schema alignment migration `005_align_payments_and_news.sql` (payments
       `buyer_id` / `admin_note` / `reviewed_*`, `news.author_id`,
       `orders.updated_at` trigger)
 - [x] AI chat audit log `006_ai_chat_logs.sql` (session_id / IP / geo /
       User-Agent + admin-only RLS)
+- [x] B2B trade workflow tables: `quotations`, `order_documents`, payment
+      terms / vessel-tracking columns on `orders`, contract revision
+      tracking on `contracts` (`007_b2b_progress_enums.sql` +
+      `009_b2b_progress_tables.sql`)
 - [x] Public marketing pages (Home / About / Products / News / Geopolitics /
       Sustainability) + AI Chat (POE-backed)
 - [x] Floating AI assistant on every page (public + app), FAQ-aware prompt,
@@ -106,7 +143,7 @@ Implemented:
       (see [`docs/AI_PROMPT.md`](./docs/AI_PROMPT.md))
 - [x] Auth flow with **email/password + Google OAuth** (register / login /
       email verify); OAuth users land directly as `status='active'` with
-      `role='buyer'` (see `007_oauth_profile_handling.sql`)
+      `role='buyer'` (see `008_oauth_profile_handling.sql`)
 - [x] Seller listings (create / pause / resume)
 - [x] Buyer market + inquiry → order conversion
 - [x] Order state machine (draft → completed) with timeline append

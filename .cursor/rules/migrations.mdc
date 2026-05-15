@@ -1,0 +1,162 @@
+---
+description: Supabase migration authoring + auto-apply rules for AI agents
+globs: supabase/migrations/**/*.sql,scripts/apply-migrations.mjs,scripts/gen-types.mjs
+alwaysApply: false
+---
+
+# Database migrations — authoring + auto-apply
+
+Agents must be able to **author and apply** Supabase migrations end-to-end
+without bouncing the user back to the Supabase Dashboard. The runner
+[`scripts/apply-migrations.mjs`](mdc:scripts/apply-migrations.mjs) calls the
+Supabase Management API with `SUPABASE_ACCESS_TOKEN` from `.env.local`, so no
+DB password is needed.
+
+## When to write a migration
+
+Write a new file under `supabase/migrations/` whenever you need to:
+
+- create, alter, or drop a table / enum / function / trigger / policy
+- add an index
+- backfill data that must run on every environment
+- adjust RLS
+
+Code-only changes (TS / Server Actions / UI) **never** require a migration.
+
+## File naming
+
+```
+supabase/migrations/NNN_snake_case_purpose.sql
+```
+
+- `NNN` is a zero-padded 3-digit prefix that monotonically increases.
+- **Prefix MUST be unique.** The runner refuses to start if it sees two files
+  with the same prefix.
+- New file's prefix = highest current prefix + 1. If you find a conflict
+  during a rebase, rename one with `git mv` to the next free prefix and
+  update any cross-references inside the SQL comment headers.
+
+Current ceiling: `009_b2b_progress_tables.sql`. Next file → `010_*.sql`.
+
+## Idempotency (REQUIRED)
+
+Every migration must be safely rerunnable. Patterns:
+
+| Object | Pattern |
+|---|---|
+| table | `create table if not exists ...` |
+| column | `alter table X add column if not exists ...` |
+| index | `create index if not exists ...` |
+| policy | `drop policy if exists "name" on X; create policy "name" ...` |
+| function | `create or replace function ...` |
+| trigger | `drop trigger if exists ...; create trigger ...` |
+| enum type | `do $$ begin create type X as enum (...); exception when duplicate_object then null; end $$;` |
+| enum value | `alter type X add value if not exists 'Y' [before/after 'Z'];` |
+| enum rename | wrap in `do $$ ... if exists ... then alter type X rename value 'old' to 'new'; end if; end $$;` |
+
+## Transaction boundary trap (enums)
+
+PostgreSQL forbids using a newly-added enum value **in the same transaction**
+that added it (`unsafe use of new value of enum type`). The runner wraps each
+migration file as a single transaction.
+
+→ When you add an enum value AND want to use it (build a column with that
+default, etc.), split it into **two files**:
+1. `NNN_..._enums.sql` — only `alter type ... add value`
+2. `NNN+1_..._tables.sql` — uses the new values
+
+`007_b2b_progress_enums.sql` + `009_b2b_progress_tables.sql` is the canonical
+example.
+
+## RLS coverage
+
+For any new user-data table:
+
+```sql
+alter table public.X enable row level security;
+```
+
+…then add at minimum a `select` and one of `insert / update / delete` policy
+matching the access pattern. Service-role writes bypass RLS by design (used
+by Server Actions through `src/lib/supabase/admin.ts`).
+
+## After-write workflow (DO THIS, don't ask the user)
+
+1. **Status check** first:
+
+   ```powershell
+   npm run db:migrate:status
+   ```
+
+   Confirms the new file is `pending` and prior ones are `applied`.
+
+2. **Dry run** to print the plan:
+
+   ```powershell
+   npm run db:migrate:dry
+   ```
+
+3. **Apply**:
+
+   ```powershell
+   npm run db:migrate
+   ```
+
+4. If the migration changed schema (new table / column / enum), regenerate
+   TypeScript types:
+
+   ```powershell
+   npm run db:types
+   ```
+
+5. Update the migration ledger inside [`docs/ARCHITECTURE.md` §10](mdc:docs/ARCHITECTURE.md)
+   so the architecture doc stays in sync with the file list.
+
+## Modifying an existing migration that has already been applied
+
+DON'T. Once a migration has run on any environment, treat it as immutable:
+
+- Need a fix? Write a **new** migration that corrects the prior one.
+- The runner detects content drift via SHA-256 checksum and warns; do not use
+  `--force` to silently rerun unless you have a very good reason and the
+  user has been informed.
+
+## Bootstrap (only first time per environment)
+
+If a fresh / partially-migrated DB is being onboarded to the runner, use:
+
+```powershell
+npm run db:migrate:bootstrap   # marks all current files as applied without running them
+```
+
+Use this when production already has the schema but the `_agent_migrations`
+tracking table doesn't exist yet.
+
+## Failure handling
+
+If a migration fails halfway:
+
+1. The runner prints the SQL error and stops; later migrations are skipped.
+2. Read the error, identify the offending statement, and either:
+   - patch the migration file (only if it has not yet been recorded as
+     applied for any other environment), then rerun, OR
+   - write a new migration that compensates.
+3. Never edit `_agent_migrations` rows by hand to "skip" failures.
+
+## Helper queries
+
+Quick ad-hoc query against production from any agent shell:
+
+```powershell
+node -e "
+  const t='YOUR_PAT'; const r='ihobyifetbctlqvknxem';
+  fetch('https://api.supabase.com/v1/projects/'+r+'/database/query',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},
+    body: JSON.stringify({query: 'select count(*) from public.profiles'})
+  }).then(r=>r.json()).then(console.log)
+"
+```
+
+For repeatable inspection prefer adding a `--query` flag to the runner rather
+than scattering ad-hoc shell scripts.

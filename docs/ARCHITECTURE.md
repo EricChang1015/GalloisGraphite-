@@ -458,9 +458,29 @@ supabase/migrations/
   003_seed_categories.sql       ← 12 個標準 grade + Custom Grade
   004_news_schema_update.sql    ← news 加 slug / content_html / cover_image_url / created_at
   005_align_payments_and_news.sql  ← payments(buyer_id/admin_note/reviewed_*) + news(author_id) + orders(updated_at trigger)
-  006_ai_chat_logs.sql          ← AI 助手 audit table（session_id / IP / geo / UA + admin-only RLS）
-  007_oauth_profile_handling.sql ← handle_new_user 支援 Google OAuth（fallback meta.name；email_confirmed_at 已設 → status='active'）
+  006_ai_chat_logs.sql             ← AI 助手 audit table（session_id / IP / geo / UA + admin-only RLS）
+  007_b2b_progress_enums.sql       ← order_status 擴充（quotation_pending/quoted/negotiating/in_production/in_transit/arrived...）+ rename signed→contract_signed / delivered→customs_cleared；inquiry_status 擴充
+  008_oauth_profile_handling.sql   ← handle_new_user 支援 Google OAuth（fallback meta.name；email_confirmed_at 已設 → status='active'）
+  009_b2b_progress_tables.sql      ← quotations / order_documents 表 + orders/contracts 運輸與合約審核欄位擴充 + RLS
 ```
+
+### 自動執行（取代手動進 Dashboard SQL Editor）
+
+由於 `.env.local` 已有 `SUPABASE_ACCESS_TOKEN`（Personal Access Token），
+所有 migration 都改用 [`scripts/apply-migrations.mjs`](../scripts/apply-migrations.mjs)
+透過 [Supabase Management API](https://api.supabase.com)
+（`POST /v1/projects/{ref}/database/query`）執行，**不需 DB password**。
+
+```powershell
+npm run db:migrate           # 跑所有未執行的 migration
+npm run db:migrate:status    # 顯示已/未執行清單
+npm run db:migrate:bootstrap # 首次：把現有全部 mark as applied 但不執行
+npm run db:migrate:dry       # 列印計畫但不實際跑
+npm run db:types             # 重新生成 src/types/database.ts
+```
+
+追蹤表：`public._agent_migrations(name PK, checksum, applied_at, bootstrap)`。
+作者規則見 [`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc)。
 
 ---
 
