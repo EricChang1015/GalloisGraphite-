@@ -3,19 +3,28 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 
 /**
- * OAuth callback handler.
+ * Auth callback handler.
  *
- * Supabase redirects the browser here with `?code=...` after a successful
- * provider sign-in (Google, etc.). We exchange the code for a session,
- * which writes the auth cookies via the SSR client, then redirect to the
- * intended destination (`next` query param, defaulting to /dashboard).
+ * Handles two flows that both arrive with `?code=...`:
+ *  1. OAuth sign-in (Google) — redirect to `next` (default /dashboard).
+ *  2. Password recovery (`?type=recovery`) — redirect to /reset-password so
+ *     the user can choose a new password using the just-established session.
  *
- * On error we send the user back to /login with an error hint.
+ * In either case we call `exchangeCodeForSession` first, which sets the
+ * Supabase auth cookies on this response via the SSR client.
+ *
+ * On failure: OAuth → /login?error=oauth_failed; recovery → /forgot-password
+ * with an error hint so the user can request a new email.
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") ?? "/dashboard";
+  const type = url.searchParams.get("type");
+  const nextParam = url.searchParams.get("next");
+
+  const isRecovery = type === "recovery";
+  const fallbackNext = isRecovery ? "/reset-password" : "/dashboard";
+  const next = nextParam ?? fallbackNext;
 
   if (code) {
     const supabase = await createServerClient();
@@ -26,6 +35,11 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.redirect(
-    new URL("/login?error=oauth_failed", url.origin)
+    new URL(
+      isRecovery
+        ? "/forgot-password?error=recovery_failed"
+        : "/login?error=oauth_failed",
+      url.origin
+    )
   );
 }

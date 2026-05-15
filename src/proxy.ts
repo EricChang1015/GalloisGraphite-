@@ -17,10 +17,14 @@ export async function proxy(request: NextRequest) {
   const { response, user, supabase } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
+  // Pages that should redirect already-authed users away to /dashboard.
+  // /reset-password is intentionally EXCLUDED — recovery flow lands here
+  // with a freshly-established session and must be allowed through.
   const isAuthRoute =
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
-    pathname.startsWith("/verify");
+    pathname.startsWith("/verify") ||
+    pathname.startsWith("/forgot-password");
 
   const isAppRoute =
     pathname.startsWith("/dashboard") ||
