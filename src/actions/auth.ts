@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 
+import { getAppUrl, getAuthCallbackUrl } from "@/lib/app-url";
 import { createServerClient } from "@/lib/supabase/server";
 import {
   SignUpSchema,
@@ -32,8 +33,24 @@ function validationError(error: z.ZodError): { message: string; fieldErrors?: Re
   };
 }
 
-function appUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+/** Map Supabase Auth API errors to clearer user-facing copy (Traditional Chinese). */
+function formatAuthError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("email rate limit") || lower.includes("rate limit exceeded")) {
+    return (
+      "驗證信寄送頻率已達 Supabase 上限（內建 SMTP 免費方案約每小時 2 封）。請稍後再試（通常 1 小時內恢復），" +
+      "或改用「Continue with Google」註冊；若需大量測試，請在 Supabase Dashboard → Authentication → Rate Limits 調高限制，" +
+      "或設定自訂 SMTP（Authentication → Emails → SMTP Settings）。"
+    );
+  }
+  if (lower.includes("error sending confirmation email") || lower.includes("error sending email")) {
+    return (
+      "無法寄出驗證信（Supabase 自訂 SMTP 連線或寄信被拒）。請檢查：① Host 應為 email-smtp.us-west-2.amazonaws.com（不是 mail-smtp）；" +
+      "② Password 須為 AWS SES「SMTP credentials」專用密碼，不是 IAM Secret Key；③ Sender test@aspectgaming.com 須在 SES 已驗證；" +
+      "④ 若 SES 仍在 Sandbox，收件人信箱也須先驗證，或申請 production access。"
+    );
+  }
+  return message;
 }
 
 export async function signUp(
@@ -50,13 +67,13 @@ export async function signUp(
     email,
     password,
     options: {
-      emailRedirectTo: `${appUrl()}/verify`,
+      emailRedirectTo: getAuthCallbackUrl("/dashboard"),
       data: { full_name, company_name, country, role },
     },
   });
 
   if (error) {
-    return { data: null, error: { message: error.message } };
+    return { data: null, error: { message: formatAuthError(error.message) } };
   }
 
   // Supabase obfuscates "email already exists" by returning a fake success
@@ -110,12 +127,12 @@ export async function resendVerification(
     type: "signup",
     email: parsed.data.email,
     options: {
-      emailRedirectTo: `${appUrl()}/verify`,
+      emailRedirectTo: getAuthCallbackUrl("/dashboard"),
     },
   });
 
   if (error) {
-    return { data: null, error: { message: error.message } };
+    return { data: null, error: { message: formatAuthError(error.message) } };
   }
 
   return { data: true, error: null };
@@ -152,7 +169,7 @@ export async function requestPasswordReset(
 
   const supabase = await createServerClient();
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${appUrl()}/auth/callback?type=recovery&next=/reset-password`,
+    redirectTo: `${getAppUrl()}/auth/callback?type=recovery&next=/reset-password`,
   });
 
   if (error) {
