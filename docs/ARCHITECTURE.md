@@ -77,7 +77,7 @@
 
 | 路由 | 內容 |
 |---|---|
-| `/dashboard` | 歡迎詞 + 角色 badge + 快捷卡片（market/orders/inquiries/new listing for seller）+ Active Orders + Pending Inquiries |
+| `/dashboard` | 歡迎詞 + 角色 badge + commercial-profile incomplete banner（若有缺欄） + 快捷卡片（market/orders/inquiries/new listing for seller，**Orders/Inquiries 卡片右側顯示金色 action-needed badge**） + **Priority Actions**（最多 5 筆，混合 orders-needing-my-action 與 inquiries-needing-my-response，按時間排序） + Active Orders（每列額外顯示「Your turn」/「Disputed」 hint）+ Inquiries needing your response（角色感知：seller 看 `pending`+`negotiating`，buyer 看 `quoted`+`negotiating`） |
 | `/market` | 公開可瀏覽的 active listings 卡片網格 |
 | `/market/[id]` | 單一 listing 詳情 + `<InquiryDialog />` |
 | `/listings` | **My Listings**（賣家視角，建/暫停/恢復） |
@@ -89,7 +89,7 @@
 | `/messages` | ⚠️ **Placeholder（A2 待補）**：將顯示房間列表 |
 | `/settings` | 帳戶設定：commercial profile（full_name / company_name / country / phone）+ role/status/kyc badges +「Change password」連結；若 `?prompt=incomplete` 或 `profiles.{company_name,country}` 為空，最上方顯示黃色提示 banner |
 
-**Layout**：`(app)/layout.tsx` → 左側 sidebar nav
+**Layout**：`(app)/layout.tsx` → 左側 sidebar nav；側欄項目從 `src/lib/notifications/counts.ts` 取 `getUserActionCounts()`，於 Inquiries / Orders 顯示金色數字 badge（`inquiriesNeedingMyResponse` / `ordersNeedingMyAction`），Orders 額外在有 disputed 時補上紅色「!」badge，Settings 在 commercial profile 缺欄時顯示紅點。Counter helper 用 `React.cache()` per-request 記憶化，所以 sidebar + dashboard 共用一次查詢。
 
 ### 2.4 `admin/` — Admin Console
 
@@ -97,7 +97,7 @@
 
 | 路由 | 內容 |
 |---|---|
-| `/admin` | 4 卡片統計（Users / Orders / Pending Payments / Active Categories）+ Priority Action 提示 |
+| `/admin` | 4 卡片統計（Users / Total Orders / **Disputed Orders** / Payments Pending；後兩者在 >0 時顯示紅 / 金 Action-needed badge）+ **動態 Priority Actions 區塊**（依 `getAdminActionCounts()` 列出 disputed orders 與 pending payments 的進入點；全部歸零時顯示「All caught up」） |
 | `/admin/users` | 完整用戶表 + freeze/unfreeze + setRole（super_admin 才能 promote 為 admin） |
 | `/admin/categories` | CRUD + `spec_schema` jsonb 編輯（`<CategoryFormDialog />`） |
 | `/admin/orders` | 全平台訂單瀏覽（list view） |
@@ -105,7 +105,7 @@
 | `/admin/payments` | ⭐ Pending Review + History 兩段，**核心人工審核流程**（`<PaymentVerifyActions />`） |
 | `/admin/news` | 新聞 CRUD（slug、content_html、cover、published toggle） |
 
-**Layout**：`admin/layout.tsx` → 左側 Admin Console nav
+**Layout**：`admin/layout.tsx` → 左側 Admin Console nav；Payments / Orders 兩個項目從 `getAdminActionCounts()` 抓 `paymentsPending` / `ordersDisputed` 並顯示 badge（金 / 紅），與 `/admin` 卡片數字一致。
 
 ### 2.5 `api/chat` — AI Streaming
 
@@ -436,7 +436,9 @@ src/components/
 
 ---
 
-## 8. 通知系統（`src/lib/email/resend.ts`）
+## 8. 通知系統
+
+### 8.1 Email（`src/lib/email/resend.ts`）
 
 | 觸發點 | 對象 | 內容 |
 |---|---|---|
@@ -447,6 +449,29 @@ src/components/
 | `confirmReceipt` | admin | 「Buyer confirmed receipt — release funds」 |
 
 Email 失敗為 non-blocking（包在 try/catch，不阻擋業務流程）。
+
+### 8.2 In-app 待辦徽章（`src/lib/notifications/counts.ts`）
+
+Server-only module 集中計算 sidebar / dashboard 上的 action-needed 數字，
+所有 helper 都用 `React.cache()` 包過，因此 layout + page 在同一個 request 共用查詢結果。
+
+| Helper | 輸入 | 輸出 | 用在 |
+|---|---|---|---|
+| `getUserActionCounts(userId, role)` | 當前使用者 | `{ inquiriesNeedingMyResponse, ordersNeedingMyAction, ordersDisputed, profileIncomplete }` | `(app)/layout.tsx` sidebar badges、`dashboard/page.tsx` 卡片副標 + Priority Actions |
+| `getAdminActionCounts()` | — | `{ paymentsPending, ordersDisputed }` | `admin/layout.tsx` sidebar badges、`admin/page.tsx` 卡片 + Priority Actions |
+| `getOrderActionOwner(status)` | 訂單狀態 | `'buyer' \| 'seller' \| 'admin' \| 'none'` | 判斷某個 row 是否「我的回合」 |
+| `describeOrderAction(status, myRole)` | 狀態 + 我方角色 | 短句 hint（e.g.「Submit payment」） | dashboard Priority Actions 顯示文案 |
+
+定義口徑（v1 簡化版，必要時可改用 quotations.countered_by 做更細的判斷）：
+
+- **Inquiries needing my response**：
+  - seller：`status IN ('pending','negotiating')` AND `seller_id=me`
+  - buyer：`status IN ('quoted','negotiating')` AND `buyer_id=me`
+- **Orders needing my action**：用 `getOrderActionOwner(status)` 判斷
+  - buyer 行為：`contract_pending`（review/sign） / `payment_pending`（pay） / `arrived`（confirm customs cleared）
+  - seller 行為：`paid`（mark in production） / `in_production` / `ready_to_ship` / `shipped` / `in_transit`
+  - admin 行為：`disputed`
+- **profileIncomplete**：呼叫 `findCommercialProfileGaps(userId)`，缺 `company_name` / `country` 任一即視為未完成。
 
 ---
 
@@ -528,6 +553,7 @@ npm run db:types             # 重新生成 src/types/database.ts
 | 12 | 其餘 Storage buckets（avatars / kyc / listings / chat） | ⚠️ 待實作 | 用到該功能時補上 |
 | 13 | KYC 上傳 + lazy-collect commercial profile（A6） | 🟡 部分完成 | Commercial profile gate（`createInquiry` / `createListing` / `submitPayment` 缺欄位時回 `error.code='PROFILE_INCOMPLETE'`）、`/settings` 編輯頁、`<CommercialProfileForm />`、client toast 帶 "Open Settings" action 已完成；KYC 文件上傳 + admin 升級 kyc_level 仍待 |
 | 14 | `(app)` / `admin` layout 缺 Logout 按鈕 | ✅ 已完成 | `(app)/layout.tsx` 與 `admin/layout.tsx` 已掛上 `<Navbar />`，desktop 有 LogoutButton 在右上、mobile 有 `<MobileNav />` 抽屜 |
+| 15 | Dashboard 待辦通知不完整（要進 Inquiries 才知道有待處理項） | ✅ 已完成 | `src/lib/notifications/counts.ts` 統一計算 sidebar / dashboard 上的 action-needed 數字；`(app)/layout.tsx` 與 `admin/layout.tsx` 顯示金 / 紅 badge，dashboard 加上 incomplete-profile banner + Priority Actions 區塊 + Active Orders「Your turn」/「Disputed」hint |
 
 ---
 
@@ -535,8 +561,8 @@ npm run db:types             # 重新生成 src/types/database.ts
 
 下列功能已在程式碼中實作，未來如有對外文件需引用，請以本文件為準：
 
-1. `/dashboard` — 登入後預設首頁，顯示 active orders 與 pending inquiries
-2. `/admin` — 4 卡片統計 + Priority Action 提示
+1. `/dashboard` — 登入後預設首頁：incomplete-profile banner、4 張快捷卡片（Inquiries / Orders 帶 action-needed badge）、Priority Actions 區塊、Active Orders 與 Inquiries needing your response 兩塊
+2. `/admin` — 4 卡片統計（含 Disputed Orders）+ 動態 Priority Actions 區塊
 3. `/admin/orders` — 平台訂單瀏覽
 4. `(public)/geopolitics` — China+1 sourcing case 行銷頁
 5. `(public)/sustainability` — ESG roadmap 行銷頁

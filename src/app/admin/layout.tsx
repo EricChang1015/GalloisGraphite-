@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { Navbar } from "@/components/layout/Navbar";
+import { Badge } from "@/components/ui/badge";
+import { getAdminActionCounts } from "@/lib/notifications/counts";
 
 const ADMIN_NAV = [
   { href: "/admin/users", label: "Users" },
@@ -10,11 +12,39 @@ const ADMIN_NAV = [
   { href: "/admin/news", label: "News" },
 ];
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const counts = await getAdminActionCounts();
+
+  const badgeFor = (href: string): React.ReactNode => {
+    if (href === "/admin/payments" && counts.paymentsPending > 0) {
+      return (
+        <Badge
+          variant="outline"
+          className="ml-auto h-5 min-w-5 px-1.5 border-[color:var(--gold)]/40 text-[color:var(--gold)]"
+          title="Payments awaiting review"
+        >
+          {counts.paymentsPending}
+        </Badge>
+      );
+    }
+    if (href === "/admin/orders" && counts.ordersDisputed > 0) {
+      return (
+        <Badge
+          variant="destructive"
+          className="ml-auto h-5 min-w-5 px-1.5"
+          title="Disputed orders"
+        >
+          {counts.ordersDisputed}
+        </Badge>
+      );
+    }
+    return null;
+  };
+
   return (
     <>
       <Navbar />
@@ -41,9 +71,10 @@ export default function AdminLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-md px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="flex items-center rounded-md px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
-                {item.label}
+                <span>{item.label}</span>
+                {badgeFor(item.href)}
               </Link>
             ))}
           </nav>

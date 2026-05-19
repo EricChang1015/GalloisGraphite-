@@ -2,8 +2,14 @@ import Link from "next/link";
 
 import { AiChatLauncher } from "@/components/chat/AiChatLauncher";
 import { Navbar } from "@/components/layout/Navbar";
+import { Badge } from "@/components/ui/badge";
+import { getCurrentProfile, getCurrentUser } from "@/lib/auth/session";
+import {
+  getUserActionCounts,
+  type UserActionCounts,
+} from "@/lib/notifications/counts";
 
-const NAV = [
+const NAV: { href: string; label: string }[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/market", label: "Market" },
   { href: "/listings", label: "My Listings" },
@@ -13,11 +19,76 @@ const NAV = [
   { href: "/settings", label: "Settings" },
 ];
 
-export default function AppLayout({
+// User counts can change after any server-action mutation that calls
+// `revalidatePath('/dashboard')` (or similar). The layout itself doesn't
+// pin a revalidation target, but Next.js will re-render on each request
+// because the count helpers read auth cookies via the SSR client.
+function badgeFor(
+  href: string,
+  counts: UserActionCounts | null
+): React.ReactNode {
+  if (!counts) return null;
+  switch (href) {
+    case "/inquiries":
+      return counts.inquiriesNeedingMyResponse > 0 ? (
+        <Badge
+          variant="outline"
+          className="ml-auto h-5 min-w-5 px-1.5 border-[color:var(--gold)]/40 text-[color:var(--gold)]"
+        >
+          {counts.inquiriesNeedingMyResponse}
+        </Badge>
+      ) : null;
+    case "/orders":
+      return counts.ordersNeedingMyAction > 0 || counts.ordersDisputed > 0 ? (
+        <span className="ml-auto inline-flex items-center gap-1">
+          {counts.ordersNeedingMyAction > 0 && (
+            <Badge
+              variant="outline"
+              className="h-5 min-w-5 px-1.5 border-[color:var(--gold)]/40 text-[color:var(--gold)]"
+            >
+              {counts.ordersNeedingMyAction}
+            </Badge>
+          )}
+          {counts.ordersDisputed > 0 && (
+            <Badge
+              variant="destructive"
+              className="h-5 min-w-5 px-1.5"
+              title="Disputed orders need attention"
+            >
+              !
+            </Badge>
+          )}
+        </span>
+      ) : null;
+    case "/settings":
+      return counts.profileIncomplete ? (
+        <span
+          className="ml-auto inline-block size-2 rounded-full bg-destructive"
+          aria-label="Profile incomplete"
+          title="Complete your commercial profile"
+        />
+      ) : null;
+    default:
+      return null;
+  }
+}
+
+export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [user, profile] = await Promise.all([
+    getCurrentUser(),
+    getCurrentProfile(),
+  ]);
+
+  // Layout is rendered under middleware-protected routes, so a missing user
+  // shouldn't happen — but if it does (e.g. session expired mid-render),
+  // skip the count round-trip entirely to keep the layout cheap.
+  const counts =
+    user && profile ? await getUserActionCounts(user.id, profile.role) : null;
+
   return (
     <>
       <Navbar />
@@ -31,9 +102,10 @@ export default function AppLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-md px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="flex items-center rounded-md px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
-                {item.label}
+                <span>{item.label}</span>
+                {badgeFor(item.href, counts)}
               </Link>
             ))}
           </nav>

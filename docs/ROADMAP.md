@@ -139,6 +139,17 @@ server actions / UI 元件實作：
 - [x] AI agent 撰寫規範：[`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc)（檔名規則、idempotency、enum 拆檔、RLS 覆蓋、failure handling）
 - [x] 解決舊版重複 prefix：`006_b2b_progress_enums` → `007_b2b_progress_enums`、`007_oauth_profile_handling` → `008_oauth_profile_handling`、`007_b2b_progress_tables` → `009_b2b_progress_tables`
 
+### A10. ✅ Workspace 待辦通知（已完成）
+
+之前的 Dashboard 只在卡片副標寫「N pending」，且 sidebar 完全沒有 badge，使用者必須點進 `/inquiries` 才知道有待處理事項。本次補上：
+
+- [x] `src/lib/notifications/counts.ts`：`getUserActionCounts(userId, role)` 與 `getAdminActionCounts()`，全部以 `React.cache()` per-request 記憶化，sidebar + dashboard 共用一次查詢
+- [x] `getOrderActionOwner(status)` / `describeOrderAction(status, myRole)`：判定某個訂單狀態目前是哪一方的回合，並產生短句 hint（「Submit payment」 / 「Mark ready to ship」 …）
+- [x] `(app)/layout.tsx`：Inquiries / Orders / Settings 三個側欄項目顯示金色數字 badge、紅色「!」disputed badge、紅點 incomplete-profile 提示
+- [x] `(app)/dashboard/page.tsx`：incomplete-profile banner、Quick links 卡片帶 action-needed badge、**Priority Actions 區塊**（混合 orders + inquiries top 5）、Active Orders 每列 「Your turn」/「Disputed」hint、Inquiries 區塊改為角色感知（seller 顯示 `pending`+`negotiating`，buyer 顯示 `quoted`+`negotiating`）
+- [x] `admin/layout.tsx`：Payments 顯示金色 badge（pending count）、Orders 顯示紅色 badge（disputed count）
+- [x] `admin/page.tsx`：新增 Disputed Orders 卡片、Payments Pending 卡片帶 action-needed badge、**動態 Priority Actions 區塊**（依 admin counts 列出進入點，全部 0 顯示「All caught up」）
+
 ---
 
 ## B. Phase 2（MVP 上線後 30 天內評估）

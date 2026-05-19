@@ -42,3 +42,9 @@ Quick reference:
    [`.cursor/rules/migrations.mdc`](./.cursor/rules/migrations.mdc).
 9. **Build gate**: `npm run build` must exit 0 before every `git commit`. See
    [`.cursor/rules/git.mdc`](./.cursor/rules/git.mdc).
+10. **Dev server lifecycle**: stop the dev server when you're done with it.
+    If port 3000 is already in use, *stop / kill the existing process* before
+    starting a new one — do **not** fall back to another port. Stale 3001/3002
+    instances leak DB sockets and confuse smoke tests. On Windows:
+    `Get-NetTCPConnection -LocalPort 3000 | Select OwningProcess` then
+    `Stop-Process -Id <pid> -Force`.
