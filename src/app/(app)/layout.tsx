@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 import { AiChatLauncher } from "@/components/chat/AiChatLauncher";
+import { Navbar } from "@/components/layout/Navbar";
 
 const NAV = [
-  { href: "/", label: "Home" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/market", label: "Market" },
   { href: "/listings", label: "My Listings" },
@@ -19,10 +19,11 @@ export default function AppLayout({
 }) {
   return (
     <>
+      <Navbar />
       <div className="flex flex-1">
         <aside className="hidden md:flex md:w-56 flex-col border-r border-border bg-card">
-          <div className="px-4 py-4 text-sm font-semibold tracking-wide">
-            Mada Graphite
+          <div className="px-4 py-4 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            Workspace
           </div>
           <nav className="flex flex-col px-2 py-2 gap-1 text-sm">
             {NAV.map((item) => (
