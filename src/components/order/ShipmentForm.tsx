@@ -187,6 +187,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
                 <FormControl>
                   <Input
                     placeholder="MSCU1234567, MSCU2345678"
+                    value={(field.value ?? []).join(", ")}
                     onChange={(e) =>
                       field.onChange(
                         e.target.value
@@ -195,7 +196,9 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
                           .filter(Boolean)
                       )
                     }
-                    defaultValue={(field.value ?? []).join(", ")}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
                   />
                 </FormControl>
                 <FormMessage />
