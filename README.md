@@ -176,7 +176,7 @@ Implemented:
       payment branch
 - [x] Admin Console (users / categories / orders / payments / news +
       `/admin/orders/[id]` force-transition controls)
-- [x] Audit log for all admin mutations + Resend email notifications
+- [x] Audit log for all admin mutations + Resend email + optional SMS notifications (Admin toggle)
 - [x] Three themes (light / dark / editorial)
 
 Remaining for full MVP launch — see [`docs/ROADMAP.md`](./docs/ROADMAP.md) §A

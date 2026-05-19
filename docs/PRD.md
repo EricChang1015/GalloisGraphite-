@@ -30,7 +30,7 @@
 | 10 | **付款人工審核**：buyer 提交 tx_hash / proof_url，admin 在後台 verify/reject | `/admin/payments` |
 | 11 | **訂單時間軸**：每次狀態轉換 append timeline 事件 | `appendTimeline()` |
 | 12 | **Audit log**：所有 admin 動作寫入 `audit_logs` | `writeAuditLog()` |
-| 13 | **Email 通知**：inquiry 發起、payment 提交、payment 審核、收貨確認 5 個事件點 | `src/lib/email/resend.ts` |
+| 13 | **Email + SMS 通知**：詢價/報價/合約/出貨/付款等 10 個 user 事件（SMS 需 Admin 開關 + env + `profiles.phone`）；admin 事件僅 Email | `src/lib/notifications/dispatch.ts` + `src/lib/sms/client.ts`；詳見 [ARCHITECTURE §8](./ARCHITECTURE.md#8-通知系統) |
 | 14 | **使用者 Dashboard**：active orders + pending inquiries 快速概覽 + 角色相關快捷 | `/dashboard` |
 | 15 | **三主題 UI**：light / dark / editorial（next-themes） | `<ThemeToggle />` |
 | 16 | **訂單進度條**：依 payment_terms 動態顯示 11–13 階段，已完成綠色、進行中金色、未到灰色 | `<OrderProgressBar />` |

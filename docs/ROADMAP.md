@@ -144,6 +144,7 @@ server actions / UI 元件實作：
 - [x] `.env.example`：`SMS_BASE_URL` / `SMS_APP_ID` / `SMS_TYPE`（可選 `type`）+ `ADMIN_EMAIL`
 - [x] `src/lib/sms/client.ts`：`POST …/sendSMS.do`，`SMS_TYPE` 空則不帶 `type`
 - [x] `011_platform_settings.sql` + `/admin/settings` 開關 `sms_notifications_enabled`
+- [x] `012_listings_categories_order_party_read.sql`：訂單詳情頁 listing/category embed RLS
 - [x] `src/lib/notifications/dispatch.ts`：與 Resend email 並行；需 profile.phone + Admin 開關 + env 才送 SMS
 - [x] 掛載：`inquiry` / `quotation` / `order` / `payment` 既有 email 觸發點
 

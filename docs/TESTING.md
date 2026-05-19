@@ -46,6 +46,15 @@ where email = 'eric.chang.1015+admin@gmail.com';
 測試 seller 需要先在 admin 後台把 `eric.chang.1015+seller@gmail.com` 從預設的
 `buyer` 改成 `seller`。
 
+### 1.4 SMS 交易通知（可選）
+
+1. 在 `.env.local` 填入 `SMS_BASE_URL`、`SMS_APP_ID`（可選 `SMS_TYPE`）。
+2. 以 admin 登入 → `/admin/settings` → 開啟 **SMS notifications**。
+3. 買/賣双方在 `/settings` 填寫 **phone**（含國碼）。
+4. 走一筆詢價→報價→訂單流程，確認閘道收到 SMS；關閉開關後應只發 Email。
+
+完整觸發點清單見 [`ARCHITECTURE.md` §8](./ARCHITECTURE.md#8-通知系統)。
+
 ---
 
 ## 2. End-to-End Happy Path 腳本（full_prepay 分支）

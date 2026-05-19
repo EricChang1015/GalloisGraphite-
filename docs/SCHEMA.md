@@ -22,6 +22,7 @@
 | `009_b2b_progress_tables.sql` | **B2B 追蹤 P1**：新增 `quotations` / `order_documents` 表；`orders` 加運輸欄位（`bl_no` / `vessel_*` / `etd/atd/ata` / `payment_terms` / `payment_due_*`）；`contracts` 加 revision + buyer-approval 欄位；補 RLS |
 | `010_storage_order_documents.sql` | **Storage**：建立 `order-documents` private bucket（20 MB / PDF + image MIME 白名單）+ `storage.objects` 的 4 條 RLS（read / insert / update parties；delete admin）；解除合約簽名掃描、付款證明、發票 / B/L / 海關 / 檢驗等檔案的上傳阻塞 |
 | `011_platform_settings.sql` | **平台設定**：`platform_settings(key, value jsonb, updated_at, updated_by)`；seed `sms_notifications_enabled=false`；admin RLS |
+| `012_listings_categories_order_party_read.sql` | **訂單雙方讀取**：`listings` / `product_categories` 額外 RLS，允許訂單 buyer/seller 讀取關聯商品（即使 listing 已 pause 或 category 已下架） |
 
 > ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >

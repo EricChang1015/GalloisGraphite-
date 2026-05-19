@@ -104,6 +104,7 @@
 | `/admin/orders/[id]` | Admin 訂單詳情：ProgressBar + **Force Transition**（繞過 state machine）+ contract 狀態 + payments + documents + audit log + timeline |
 | `/admin/payments` | ⭐ Pending Review + History 兩段，**核心人工審核流程**（`<PaymentVerifyActions />`） |
 | `/admin/news` | 新聞 CRUD（slug、content_html、cover、published toggle） |
+| `/admin/settings` | 平台設定：SMS 交易通知開關（需 env 已配置 `SMS_BASE_URL` + `SMS_APP_ID`） |
 
 **Layout**：`admin/layout.tsx` → 左側 Admin Console nav；Payments / Orders 兩個項目從 `getAdminActionCounts()` 抓 `paymentsPending` / `ordersDisputed` 並顯示 badge（金 / 紅），與 `/admin` 卡片數字一致。
 
@@ -450,9 +451,12 @@ src/components/
 | `rejectContract` | seller | 「Contract returned for revision」 | 短訊 + order link |
 | `markShipped` | buyer | 「Shipment dispatched」 | 短訊 + order link |
 | `markArrived`（尾款） | buyer | 「Final payment due」 | 短訊 + order link |
+| `markArrived`（預付完成） | admin (`ADMIN_EMAIL`) | 訂單 auto-completed | —（僅 email） |
 | `submitPayment` | admin (`ADMIN_EMAIL`) | 「New payment pending review」 | —（僅 email） |
 | `verifyPayment` | buyer | verified / rejected | 短訊摘要 |
 | `raiseDispute` | admin | 「Dispute raised」 | —（僅 email） |
+
+**SMS 發送條件**（四項同時滿足）：Admin Settings 開啟、`SMS_BASE_URL` + `SMS_APP_ID` 已設、收件人 `profiles.phone` 非空、上表該列有 SMS 欄。
 
 - Email：`src/lib/email/resend.ts`（Resend）
 - SMS：`src/lib/sms/client.ts` → `POST {SMS_BASE_URL}/sendSMS.do`，body 含 `appId` / `content` / `to`；`SMS_TYPE` 非空才帶 `type`
@@ -524,6 +528,7 @@ supabase/migrations/
   009_b2b_progress_tables.sql      ← quotations / order_documents 表 + orders/contracts 運輸與合約審核欄位擴充 + RLS
   010_storage_order_documents.sql  ← Storage：建立 `order-documents` bucket + RLS（解除合約簽名 / 付款證明 / 文件上傳的阻塞）
   011_platform_settings.sql        ← `platform_settings` 表 + `sms_notifications_enabled` seed（Admin Settings 開關）
+  012_listings_categories_order_party_read.sql  ← 訂單雙方可讀關聯 listing/category（避免訂單詳情 embed 被 RLS 擋成 404）
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）
