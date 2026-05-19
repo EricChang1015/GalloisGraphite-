@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail } from "@/lib/email/resend";
+import { notifyAdminEmail, notifyUser } from "@/lib/notifications/dispatch";
 import {
   describeCommercialGap,
   findCommercialProfileGaps,
@@ -97,20 +97,17 @@ export async function submitPayment(
 
   // Notify admin
   try {
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (adminEmail) {
-      await sendEmail({
-        to: adminEmail,
-        subject: `New payment pending review — Order ${parsed.data.order_id}`,
-        html: `
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    await notifyAdminEmail({
+      subject: `New payment pending review — Order ${parsed.data.order_id}`,
+      html: `
           <p>A new payment has been submitted for order <strong>${parsed.data.order_id}</strong>.</p>
           <p>Amount: <strong>${parsed.data.amount} ${parsed.data.currency}</strong></p>
           <p>Method: ${parsed.data.method}</p>
           <p>TX Hash: ${parsed.data.tx_hash ?? "—"}</p>
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/payments">Review in Admin</a></p>
+          <p><a href="${appUrl}/admin/payments">Review in Admin</a></p>
         `,
-      });
-    }
+    });
   } catch (_) {}
 
   revalidatePath(`/orders/${parsed.data.order_id}`);
@@ -238,21 +235,30 @@ export async function verifyPayment(
   try {
     const { data: buyerProfile } = await admin
       .from("profiles")
-      .select("email, full_name")
+      .select("email, full_name, phone")
       .eq("id", payment.buyer_id)
-      .single<{ email: string; full_name: string }>();
+      .single<{ email: string; full_name: string; phone: string | null }>();
 
-    if (buyerProfile?.email) {
-      const subject =
-        decision === "verified"
-          ? "Payment verified — Mada Graphite"
-          : "Payment rejected — Mada Graphite";
-      const html =
-        decision === "verified"
-          ? `<p>Your payment of <strong>${payment.amount} ${payment.currency}</strong> has been verified. The order is now in progress.</p>`
-          : `<p>Your payment has been <strong>rejected</strong>. Admin note: ${note ?? "—"}. Please contact support.</p>`;
-      await sendEmail({ to: buyerProfile.email, subject, html });
-    }
+    const subject =
+      decision === "verified"
+        ? "Payment verified — Mada Graphite"
+        : "Payment rejected — Mada Graphite";
+    const html =
+      decision === "verified"
+        ? `<p>Your payment of <strong>${payment.amount} ${payment.currency}</strong> has been verified. The order is now in progress.</p>`
+        : `<p>Your payment has been <strong>rejected</strong>. Admin note: ${note ?? "—"}. Please contact support.</p>`;
+    const smsText =
+      decision === "verified"
+        ? `Mada Graphite: Payment of ${payment.amount} ${payment.currency} verified.`
+        : `Mada Graphite: Payment rejected. Check your email for details.`;
+
+    await notifyUser({
+      email: buyerProfile?.email,
+      phone: buyerProfile?.phone,
+      subject,
+      html,
+      smsText,
+    });
   } catch (_) {}
 
   revalidatePath("/admin/payments");

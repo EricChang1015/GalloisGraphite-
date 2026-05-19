@@ -10,7 +10,12 @@ import {
   SetUserRoleSchema,
   CategoryInputSchema,
   NewsInputSchema,
+  SmsNotificationsToggleSchema,
 } from "@/lib/validations/admin";
+import {
+  SMS_NOTIFICATIONS_KEY,
+  isSmsGatewayConfigured,
+} from "@/lib/platform/settings";
 import type { ActionResult } from "./auth";
 
 async function requireAdmin() {
@@ -246,4 +251,44 @@ export async function upsertNews(
   revalidatePath("/news");
 
   return { data: result, error: null };
+}
+
+export async function updateSmsNotificationsEnabled(
+  input: z.infer<typeof SmsNotificationsToggleSchema>
+): Promise<ActionResult<true>> {
+  const { user, error: authError } = await requireAdmin();
+  if (!user) return { data: null, error: { message: authError! } };
+
+  const parsed = SmsNotificationsToggleSchema.safeParse(input);
+  if (!parsed.success) return { data: null, error: { message: "Invalid input." } };
+
+  if (parsed.data.enabled && !isSmsGatewayConfigured()) {
+    return {
+      data: null,
+      error: {
+        message:
+          "SMS gateway is not configured. Set SMS_BASE_URL and SMS_APP_ID in environment variables first.",
+      },
+    };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("platform_settings").upsert({
+    key: SMS_NOTIFICATIONS_KEY,
+    value: parsed.data.enabled,
+    updated_at: new Date().toISOString(),
+    updated_by: user.id,
+  });
+
+  if (error) return { data: null, error: { message: error.message } };
+
+  await writeAuditLog(user.id, "update_sms_notifications", "platform_settings", user.id, {
+    key: SMS_NOTIFICATIONS_KEY,
+    enabled: parsed.data.enabled,
+  });
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin");
+
+  return { data: true, error: null };
 }

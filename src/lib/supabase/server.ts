@@ -4,6 +4,7 @@ import { createServerClient as createSSRServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import type { Database } from "@/types/database";
+import { SERVER_AUTH_OPTIONS } from "@/lib/supabase/auth-config";
 
 type RawCookie = { name: string; value: string };
 
@@ -70,6 +71,7 @@ export async function createServerClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      auth: SERVER_AUTH_OPTIONS,
       cookies: {
         getAll() {
           // Sanitize auth cookies (validate combined chunks) so

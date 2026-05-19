@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { renderContractHtml } from "@/lib/contract/template";
-import { sendEmail } from "@/lib/email/resend";
+import { notifyAdminEmail, notifyUser } from "@/lib/notifications/dispatch";
 import { canTransition, nextAfter } from "@/lib/order/stateMachine";
 import {
   ShipmentUpdateSchema,
@@ -322,15 +322,18 @@ export async function draftContract(
 
   // Notify buyer to review
   try {
-    await sendEmail({
-      to: full.buyer.email,
-      subject: `Contract ready for review ??${full.order_no}`,
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    await notifyUser({
+      email: full.buyer.email,
+      phone: full.buyer.phone,
+      subject: `Contract ready for review — ${full.order_no}`,
       html: `
         <p>Hi ${full.buyer.full_name || "Buyer"},</p>
         <p>The seller has drafted contract <strong>${contractNo}</strong> (revision ${revision}).
            Please review and approve, or send it back with comments.</p>
-        <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/orders/${full.id}">Open order</a></p>
+        <p><a href="${appUrl}/orders/${full.id}">Open order</a></p>
       `,
+      smsText: `Mada Graphite: Contract ${full.order_no} ready for review. ${appUrl}/orders/${full.id}`,
     });
   } catch (_) {}
 
@@ -398,23 +401,24 @@ export async function rejectContract(
 
   // Notify seller
   try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const { data: seller } = await admin
       .from("profiles")
-      .select("email, full_name")
+      .select("email, full_name, phone")
       .eq("id", ctx.order.seller_id)
-      .single<{ email: string; full_name: string }>();
-    if (seller?.email) {
-      await sendEmail({
-        to: seller.email,
-        subject: `Contract returned for revision ??Order ${parsed.data.order_id.slice(0, 8)}`,
-        html: `
-          <p>Hi ${seller.full_name || "Seller"},</p>
+      .single<{ email: string; full_name: string; phone: string | null }>();
+    await notifyUser({
+      email: seller?.email,
+      phone: seller?.phone,
+      subject: `Contract returned for revision — Order ${parsed.data.order_id.slice(0, 8)}`,
+      html: `
+          <p>Hi ${seller?.full_name || "Seller"},</p>
           <p>The buyer has returned the contract with the following note:</p>
           <blockquote>${parsed.data.reason}</blockquote>
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/orders/${parsed.data.order_id}">Re-draft contract</a></p>
+          <p><a href="${appUrl}/orders/${parsed.data.order_id}">Re-draft contract</a></p>
         `,
-      });
-    }
+      smsText: `Mada Graphite: Contract returned. Re-draft: ${appUrl}/orders/${parsed.data.order_id}`,
+    });
   } catch (_) {}
 
   revalidatePath(`/orders/${parsed.data.order_id}`);
@@ -585,24 +589,25 @@ export async function markShipped(
 
   // Notify buyer
   try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const { data: buyer } = await admin
       .from("profiles")
-      .select("email, full_name")
+      .select("email, full_name, phone")
       .eq("id", ctx.order.buyer_id)
-      .single<{ email: string; full_name: string }>();
-    if (buyer?.email) {
-      await sendEmail({
-        to: buyer.email,
-        subject: `Shipment dispatched ??Order ${parsed.data.order_id.slice(0, 8)}`,
-        html: `
-          <p>Hi ${buyer.full_name || "Buyer"},</p>
+      .single<{ email: string; full_name: string; phone: string | null }>();
+    await notifyUser({
+      email: buyer?.email,
+      phone: buyer?.phone,
+      subject: `Shipment dispatched — Order ${parsed.data.order_id.slice(0, 8)}`,
+      html: `
+          <p>Hi ${buyer?.full_name || "Buyer"},</p>
           <p>Your order has been shipped${parsed.data.vessel_name ? ` on <strong>${parsed.data.vessel_name}</strong>` : ""}.</p>
           ${parsed.data.bl_no ? `<p>B/L No: <strong>${parsed.data.bl_no}</strong></p>` : ""}
           ${parsed.data.shipment_eta ? `<p>ETA: ${parsed.data.shipment_eta}</p>` : ""}
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/orders/${parsed.data.order_id}">Track shipment</a></p>
+          <p><a href="${appUrl}/orders/${parsed.data.order_id}">Track shipment</a></p>
         `,
-      });
-    }
+      smsText: `Mada Graphite: Order shipped. Track: ${appUrl}/orders/${parsed.data.order_id}`,
+    });
   } catch (_) {}
 
   revalidatePath(`/orders/${parsed.data.order_id}`);
@@ -720,34 +725,31 @@ export async function markCustomsCleared(orderId: string): Promise<ActionResult<
     if (next === "completed") {
       // Notify admin for record-keeping (buyer already prepaid)
       try {
-        const adminEmail = process.env.ADMIN_EMAIL;
-        if (adminEmail) {
-          await sendEmail({
-            to: adminEmail,
-            subject: `Order ${orderId.slice(0, 8)} completed ??buyer cleared customs`,
-            html: `<p>Order <strong>${orderId}</strong> auto-completed (full prepayment, customs cleared).</p>`,
-          });
-        }
+        await notifyAdminEmail({
+          subject: `Order ${orderId.slice(0, 8)} completed — buyer cleared customs`,
+          html: `<p>Order <strong>${orderId}</strong> auto-completed (full prepayment, customs cleared).</p>`,
+        });
       } catch (_) {}
     } else if (next === "payment_pending") {
       // Notify buyer that final payment is due
       try {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
         const { data: buyer } = await admin
           .from("profiles")
-          .select("email, full_name")
+          .select("email, full_name, phone")
           .eq("id", ctx.order.buyer_id)
-          .single<{ email: string; full_name: string }>();
-        if (buyer?.email) {
-          await sendEmail({
-            to: buyer.email,
-            subject: `Final payment due ??Order ${orderId.slice(0, 8)}`,
-            html: `
-              <p>Hi ${buyer.full_name || "Buyer"},</p>
+          .single<{ email: string; full_name: string; phone: string | null }>();
+        await notifyUser({
+          email: buyer?.email,
+          phone: buyer?.phone,
+          subject: `Final payment due — Order ${orderId.slice(0, 8)}`,
+          html: `
+              <p>Hi ${buyer?.full_name || "Buyer"},</p>
               <p>Customs cleared. Please submit final payment per the agreed terms.</p>
-              <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/orders/${orderId}">Submit payment</a></p>
+              <p><a href="${appUrl}/orders/${orderId}">Submit payment</a></p>
             `,
-          });
-        }
+          smsText: `Mada Graphite: Final payment due. ${appUrl}/orders/${orderId}`,
+        });
       } catch (_) {}
     }
   }
@@ -801,18 +803,15 @@ export async function raiseDispute(
 
   // Notify admin
   try {
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (adminEmail) {
-      await sendEmail({
-        to: adminEmail,
-        subject: `Dispute raised ??Order ${parsed.data.order_id.slice(0, 8)}`,
-        html: `
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    await notifyAdminEmail({
+      subject: `Dispute raised — Order ${parsed.data.order_id.slice(0, 8)}`,
+      html: `
           <p>Order <strong>${parsed.data.order_id}</strong> marked as disputed.</p>
           <p>Reason: ${parsed.data.reason}</p>
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/orders">Review</a></p>
+          <p><a href="${appUrl}/admin/orders">Review</a></p>
         `,
-      });
-    }
+    });
   } catch (_) {}
 
   revalidatePath(`/orders/${parsed.data.order_id}`);

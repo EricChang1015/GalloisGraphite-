@@ -2,6 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import type { Database } from "@/types/database";
+import {
+  isRecoverableAuthError,
+  SERVER_AUTH_OPTIONS,
+} from "@/lib/supabase/auth-config";
 
 type RawCookie = { name: string; value: string };
 
@@ -111,6 +115,7 @@ export async function updateSession(request: NextRequest) {
     url,
     anonKey,
     {
+      auth: SERVER_AUTH_OPTIONS,
       cookies: {
         getAll() {
           return safeCookies;
@@ -139,8 +144,19 @@ export async function updateSession(request: NextRequest) {
   let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] =
     null;
   try {
-    const { data } = await supabase.auth.getUser();
-    user = data.user;
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      if (isRecoverableAuthError(error)) {
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          // ignore sign-out failures
+        }
+      }
+      user = null;
+    } else {
+      user = data.user;
+    }
   } catch {
     // Treat any auth error as "not authenticated" — the user will be
     // redirected to /login and can sign in again to get a fresh session.

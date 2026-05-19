@@ -139,6 +139,14 @@ server actions / UI 元件實作：
 - [x] AI agent 撰寫規範：[`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc)（檔名規則、idempotency、enum 拆檔、RLS 覆蓋、failure handling）
 - [x] 解決舊版重複 prefix：`006_b2b_progress_enums` → `007_b2b_progress_enums`、`007_oauth_profile_handling` → `008_oauth_profile_handling`、`007_b2b_progress_tables` → `009_b2b_progress_tables`
 
+### A11. ✅ SMS 交易通知（已完成）
+
+- [x] `.env.example`：`SMS_BASE_URL` / `SMS_APP_ID` / `SMS_TYPE`（可選 `type`）+ `ADMIN_EMAIL`
+- [x] `src/lib/sms/client.ts`：`POST …/sendSMS.do`，`SMS_TYPE` 空則不帶 `type`
+- [x] `011_platform_settings.sql` + `/admin/settings` 開關 `sms_notifications_enabled`
+- [x] `src/lib/notifications/dispatch.ts`：與 Resend email 並行；需 profile.phone + Admin 開關 + env 才送 SMS
+- [x] 掛載：`inquiry` / `quotation` / `order` / `payment` 既有 email 觸發點
+
 ### A10. ✅ Workspace 待辦通知（已完成）
 
 之前的 Dashboard 只在卡片副標寫「N pending」，且 sidebar 完全沒有 badge，使用者必須點進 `/inquiries` 才知道有待處理事項。本次補上：

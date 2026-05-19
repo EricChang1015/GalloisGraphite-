@@ -10,6 +10,7 @@ const ADMIN_NAV = [
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/payments", label: "Payments" },
   { href: "/admin/news", label: "News" },
+  { href: "/admin/settings", label: "Settings" },
 ];
 
 export default async function AdminLayout({

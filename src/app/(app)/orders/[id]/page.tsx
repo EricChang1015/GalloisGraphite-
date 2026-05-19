@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 
+import { getCurrentUser } from "@/lib/auth/session";
 import { createServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -54,22 +55,7 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: `Order ${id.slice(0, 8).toUpperCase()} — Mada Graphite` };
 }
 
-export default async function OrderDetailPage({ params }: PageProps) {
-  const { id } = await params;
-  const supabase = await createServerClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) notFound();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single<{ role: string }>();
-
-  const { data: order } = await supabase
-    .from("orders")
-    .select(`
+const ORDER_DETAIL_SELECT = `
       *,
       buyer:profiles!orders_buyer_id_fkey(full_name, company_name, email, country),
       seller:profiles!orders_seller_id_fkey(full_name, company_name, email, country),
@@ -77,9 +63,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
       contracts(id, contract_no, content_html, buyer_signed_url, seller_signed_url, buyer_signed_at, seller_signed_at, buyer_approved_at, buyer_rejected_at, buyer_reject_reason, payment_terms, payment_due_days, revision_no),
       payments(id, method, amount, currency, tx_hash, proof_url, status, created_at, admin_note),
       current_quotation:quotations!orders_current_quotation_id_fkey(id, unit_price, currency, quantity, unit, incoterm, validity_until, notes, status)
-    `)
-    .eq("id", id)
-    .single<{
+    `;
+
+type OrderDetailRow = {
       id: string;
       order_no: string;
       buyer_id: string;
@@ -161,14 +147,46 @@ export default async function OrderDetailPage({ params }: PageProps) {
         notes: string | null;
         status: string;
       } | null;
-    }>();
+};
 
-  if (!order) notFound();
+export default async function OrderDetailPage({ params }: PageProps) {
+  const { id } = await params;
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect(`/login?next=${encodeURIComponent(`/orders/${id}`)}`);
+  }
+
+  const supabase = await createServerClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle<{ role: string }>();
+
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select(ORDER_DETAIL_SELECT)
+    .eq("id", id)
+    .maybeSingle<OrderDetailRow>();
+
+  if (orderError) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[orders/[id]] load failed:", orderError.message);
+    }
+    notFound();
+  }
+
+  if (!order) {
+    notFound();
+  }
 
   const isAdmin = profile?.role === "admin" || profile?.role === "super_admin";
   const isBuyer = order.buyer_id === user.id;
   const isSeller = order.seller_id === user.id;
-  if (!isAdmin && !isBuyer && !isSeller) notFound();
+  if (!isAdmin && !isBuyer && !isSeller) {
+    notFound();
+  }
 
   const myRole: "buyer" | "seller" | "admin" = isBuyer
     ? "buyer"

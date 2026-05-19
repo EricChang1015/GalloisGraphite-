@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createServerClient } from "@/lib/supabase/server";
-import { sendEmail } from "@/lib/email/resend";
+import { notifyUser } from "@/lib/notifications/dispatch";
 import {
   describeCommercialGap,
   findCommercialProfileGaps,
@@ -65,24 +65,25 @@ export async function createInquiry(
 
   // Notify seller
   try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const { data: seller } = await supabase
       .from("profiles")
-      .select("email, full_name")
+      .select("email, full_name, phone")
       .eq("id", parsed.data.seller_id)
-      .single<{ email: string; full_name: string }>();
+      .single<{ email: string; full_name: string; phone: string | null }>();
 
-    if (seller?.email) {
-      await sendEmail({
-        to: seller.email,
-        subject: "New inquiry received — Mada Graphite",
-        html: `
-          <p>Hi ${seller.full_name || "Seller"},</p>
+    await notifyUser({
+      email: seller?.email,
+      phone: seller?.phone,
+      subject: "New inquiry received — Mada Graphite",
+      html: `
+          <p>Hi ${seller?.full_name || "Seller"},</p>
           <p><strong>${profile.full_name || profile.email}</strong> has submitted a new inquiry for <strong>${parsed.data.requested_qty} MT</strong>.</p>
           <p>Message: ${parsed.data.message ?? "—"}</p>
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/inquiries">View inquiry</a></p>
+          <p><a href="${appUrl}/inquiries">View inquiry</a></p>
         `,
-      });
-    }
+      smsText: `Mada Graphite: New inquiry for ${parsed.data.requested_qty} MT. ${appUrl}/inquiries`,
+    });
   } catch (_) {
     // Email failure is non-blocking
   }
@@ -183,22 +184,23 @@ export async function acceptInquiry(
 
   // Notify buyer
   try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const { data: buyer } = await admin
       .from("profiles")
-      .select("email, full_name")
+      .select("email, full_name, phone")
       .eq("id", inquiry.buyer_id)
-      .single<{ email: string; full_name: string }>();
-    if (buyer?.email) {
-      await sendEmail({
-        to: buyer.email,
-        subject: "Quotation received — Mada Graphite",
-        html: `
-          <p>Hi ${buyer.full_name || "Buyer"},</p>
+      .single<{ email: string; full_name: string; phone: string | null }>();
+    await notifyUser({
+      email: buyer?.email,
+      phone: buyer?.phone,
+      subject: "Quotation received — Mada Graphite",
+      html: `
+          <p>Hi ${buyer?.full_name || "Buyer"},</p>
           <p>The seller has sent a quotation for your inquiry.</p>
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/inquiries/${id}">Review quotation</a></p>
+          <p><a href="${appUrl}/inquiries/${id}">Review quotation</a></p>
         `,
-      });
-    }
+      smsText: `Mada Graphite: Quotation received. Review: ${appUrl}/inquiries/${id}`,
+    });
   } catch (_) {}
 
   revalidatePath(`/inquiries/${id}`);

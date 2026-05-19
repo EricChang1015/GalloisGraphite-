@@ -21,6 +21,7 @@
 | `008_oauth_profile_handling.sql` | `handle_new_user` 支援 Google OAuth：fallback meta.name；`email_confirmed_at` 已設則 status 直接 `'active'` |
 | `009_b2b_progress_tables.sql` | **B2B 追蹤 P1**：新增 `quotations` / `order_documents` 表；`orders` 加運輸欄位（`bl_no` / `vessel_*` / `etd/atd/ata` / `payment_terms` / `payment_due_*`）；`contracts` 加 revision + buyer-approval 欄位；補 RLS |
 | `010_storage_order_documents.sql` | **Storage**：建立 `order-documents` private bucket（20 MB / PDF + image MIME 白名單）+ `storage.objects` 的 4 條 RLS（read / insert / update parties；delete admin）；解除合約簽名掃描、付款證明、發票 / B/L / 海關 / 檢驗等檔案的上傳阻塞 |
+| `011_platform_settings.sql` | **平台設定**：`platform_settings(key, value jsonb, updated_at, updated_by)`；seed `sms_notifications_enabled=false`；admin RLS |
 
 > ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >
@@ -372,7 +373,21 @@ Admin 手動發布(MVP 不爬蟲)。
 
 索引：`(slug)`, `(is_published, published_at desc)`
 
-## 8. 稽核
+## 8. 平台設定與稽核
+
+### `platform_settings`（migration 011）
+Admin 可在 `/admin/settings` 調整的全站 key-value 設定。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| key | text PK | e.g. `sms_notifications_enabled` |
+| value | jsonb | 布林或結構化設定 |
+| updated_at | timestamptz | |
+| updated_by | uuid FK profiles | 最後修改者 |
+
+Seed：`sms_notifications_enabled = false`。
+
+**RLS**：`admin` / `super_admin` 可 select + write；一般 user 無權。
 
 ### `audit_logs`
 所有 admin 動作都要寫一筆。
@@ -424,6 +439,7 @@ AI 助手每個 Q&A turn 的 server-side audit trail。append-only。
 | chat_members | self / admin | (server action) | -- | -- |
 | messages | room members / admin | room members | sender(短時間內) | -- |
 | news | published 公開 / admin | admin | admin | admin |
+| platform_settings | admin | admin | admin | -- |
 | audit_logs | admin | server action（service_role） | -- | -- |
 | ai_chat_logs | admin only | server action（service_role） | -- | -- |
 

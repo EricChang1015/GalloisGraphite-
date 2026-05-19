@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import { createServerClient } from "@/lib/supabase/server";
+import { isRecoverableAuthError } from "@/lib/supabase/auth-config";
 import type { Database } from "@/types/database";
 
 export type AuthUser = Awaited<
@@ -26,8 +27,22 @@ export type SessionProfile = {
  */
 export const getCurrentUser = cache(async (): Promise<AuthUser> => {
   const supabase = await createServerClient();
-  const { data } = await supabase.auth.getUser();
-  return data.user;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      if (isRecoverableAuthError(error)) {
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          // ignore
+        }
+      }
+      return null;
+    }
+    return data.user;
+  } catch {
+    return null;
+  }
 });
 
 /**

@@ -27,3 +27,7 @@ export const SetUserRoleSchema = z.object({
   user_id: z.string().uuid(),
   role: z.enum(["buyer", "seller", "admin"]),
 });
+
+export const SmsNotificationsToggleSchema = z.object({
+  enabled: z.boolean(),
+});

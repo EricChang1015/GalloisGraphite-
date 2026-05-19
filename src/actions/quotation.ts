@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail } from "@/lib/email/resend";
+import { notifyUser } from "@/lib/notifications/dispatch";
 import {
   QuotationInputSchema,
   CounterQuotationSchema,
@@ -123,24 +123,25 @@ export async function submitQuotation(
 
   // Notify buyer
   try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const { data: buyer } = await admin
       .from("profiles")
-      .select("email, full_name")
+      .select("email, full_name, phone")
       .eq("id", inquiry.buyer_id)
-      .single<{ email: string; full_name: string }>();
-    if (buyer?.email) {
-      await sendEmail({
-        to: buyer.email,
-        subject: "New quotation received — Mada Graphite",
-        html: `
-          <p>Hi ${buyer.full_name || "Buyer"},</p>
+      .single<{ email: string; full_name: string; phone: string | null }>();
+    await notifyUser({
+      email: buyer?.email,
+      phone: buyer?.phone,
+      subject: "New quotation received — Mada Graphite",
+      html: `
+          <p>Hi ${buyer?.full_name || "Buyer"},</p>
           <p>You have received a new quotation: <strong>${parsed.data.quantity} ${parsed.data.unit}</strong> @
              <strong>${parsed.data.unit_price} ${parsed.data.currency}</strong> (${parsed.data.incoterm}).</p>
           <p>Valid until: <strong>${parsed.data.validity_until}</strong></p>
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/inquiries/${parsed.data.inquiry_id}">Review quotation</a></p>
+          <p><a href="${appUrl}/inquiries/${parsed.data.inquiry_id}">Review quotation</a></p>
         `,
-      });
-    }
+      smsText: `Mada Graphite: New quotation. Review: ${appUrl}/inquiries/${parsed.data.inquiry_id}`,
+    });
   } catch (_) {}
 
   revalidatePath(`/inquiries/${parsed.data.inquiry_id}`);
@@ -310,22 +311,23 @@ export async function acceptQuotation(
 
   // Notify seller to draft contract
   try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const { data: seller } = await admin
       .from("profiles")
-      .select("email, full_name")
+      .select("email, full_name, phone")
       .eq("id", q.seller_id)
-      .single<{ email: string; full_name: string }>();
-    if (seller?.email) {
-      await sendEmail({
-        to: seller.email,
-        subject: "Quotation accepted — please draft the contract",
-        html: `
-          <p>Hi ${seller.full_name || "Seller"},</p>
+      .single<{ email: string; full_name: string; phone: string | null }>();
+    await notifyUser({
+      email: seller?.email,
+      phone: seller?.phone,
+      subject: "Quotation accepted — please draft the contract",
+      html: `
+          <p>Hi ${seller?.full_name || "Seller"},</p>
           <p>The buyer has accepted your quotation. Please proceed to draft the sales contract.</p>
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/orders/${order.id}">Open order</a></p>
+          <p><a href="${appUrl}/orders/${order.id}">Open order</a></p>
         `,
-      });
-    }
+      smsText: `Mada Graphite: Quotation accepted. Draft contract: ${appUrl}/orders/${order.id}`,
+    });
   } catch (_) {}
 
   revalidatePath("/inquiries");
