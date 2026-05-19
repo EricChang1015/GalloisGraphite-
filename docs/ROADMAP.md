@@ -70,12 +70,21 @@
 
 **設計原則**：一般用戶（瀏覽 / 用 AI Chat）不需要 KYC；只有真正要做買賣／詢價的實體才需要。Google OAuth 用戶現在以 `company_name=''` / `country=''` 建立 profile，後續第一次商業動作時觸發補資料 + KYC。
 
+**🟡 部分完成（commercial profile gate）：**
+
+- [x] `(app)/settings` 頁面 + `<CommercialProfileForm />`（編輯 full_name / company_name / country / phone）
+- [x] `src/lib/auth/commercial.ts` helper：`findCommercialProfileGaps(userId)` 與 `describeCommercialGap(missing)`
+- [x] **Lazy collect prompt**：`createInquiry` / `createListing`（seller 限定）/ `submitPayment` 入口在 `profiles.{company_name,country}` 為空時回 `{ error: { code: 'PROFILE_INCOMPLETE', fields, message } }`
+- [x] `<InquiryDialog />` / `<ListingForm />` / `<PaymentForm />` 收到 `code='PROFILE_INCOMPLETE'` 顯示 toast 含「Open Settings」action button，跳到 `/settings?prompt=incomplete`
+- [x] `updateCommercialProfile` server action（`src/actions/profile.ts`）
+
+**⚠️ 仍待實作（KYC document upload）：**
+
+- [ ] `kyc` Storage bucket + RLS migration
 - [ ] `(app)/settings/kyc` 頁面 + `<KycUploadForm />`
 - [ ] 上傳到 `kyc` bucket，URL 寫入 `profiles.kyc_docs jsonb`
 - [ ] Admin 可在 `/admin/users/[id]` 檢視與升級 `kyc_level`
-- [ ] **Lazy collect prompt**：在 `createInquiry` / `createListing` / `submitPayment` 三個 server action 入口檢查
-  - 若 `profiles.company_name` 或 `country` 為空 → 回 `{ error: { code: 'PROFILE_INCOMPLETE' } }`，前端彈出 `<CommercialProfileDialog />` 收集
-  - 若 `profiles.kyc_level < 1` → 回 `{ error: { code: 'KYC_REQUIRED' } }`，前端引導至 `/settings/kyc`
+- [ ] `createInquiry` / `submitPayment` 補 `kyc_level < 1` → 回 `{ error: { code: 'KYC_REQUIRED' } }`
 - [ ] Seller 自助升級流程：buyer → seller 的 role 切換需 admin 審核（在 admin/users 加按鈕）
 
 ### A7. 部署與端到端煙霧測試（原 Step 9）
@@ -190,7 +199,7 @@ server actions / UI 元件實作：
 - [x] A3 簽名掃描可上傳並推進到 `contract_signed` 狀態（009 完成）+ 雙方簽名嵌入 PDF 預覽（commit 1620d8e）
 - [x] A4 **`order-documents`** bucket 建立完成（`010_storage_order_documents.sql`）；avatars/kyc/listings/chat 依需要時補
 - [x] A5 dispute / cancel 流程可走通（009 完成）
-- [ ] A6 KYC 上傳可運作（admin 可升級 level）
+- [ ] A6 KYC 上傳可運作（admin 可升級 level） — commercial profile gate ✅；KYC 文件上傳仍待
 - [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，10 個 migration 已套用
 - [x] A7 full_prepay 端到端 happy path 通過（2026-05-15 走測 `ORD-TEST-MP6PL7MZ`）
 - [ ] A7 net_after_arrival 端到端 happy path 通過 + dispute / cancel / force-transition 走測

@@ -27,3 +27,18 @@ export const UpdatePasswordSchema = z
     message: "Passwords do not match.",
     path: ["confirm"],
   });
+
+/**
+ * Profile fields a user must have populated before they can submit an
+ * inquiry, create a listing, or make a payment. Phone is optional in MVP
+ * but encouraged for support contact; KYC documents are a separate
+ * concern (see ROADMAP §A6) and not enforced here.
+ */
+export const CommercialProfileSchema = z.object({
+  full_name: z.string().min(1, "Required"),
+  company_name: z.string().min(1, "Required"),
+  country: z.string().min(2, "Required"),
+  phone: z.string().optional(),
+});
+
+export type CommercialProfileInput = z.infer<typeof CommercialProfileSchema>;

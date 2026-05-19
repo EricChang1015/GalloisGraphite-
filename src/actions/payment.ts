@@ -6,6 +6,10 @@ import { z } from "zod";
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
+import {
+  describeCommercialGap,
+  findCommercialProfileGaps,
+} from "@/lib/auth/commercial";
 import { SubmitPaymentSchema, type SubmitPaymentInput } from "@/lib/validations/forms";
 import type { ActionResult } from "./auth";
 
@@ -35,6 +39,18 @@ export async function submitPayment(
 
   if (!order) return { data: null, error: { message: "Order not found." } };
   if (order.buyer_id !== user.id) return { data: null, error: { message: "Access denied." } };
+
+  const missing = await findCommercialProfileGaps(user.id);
+  if (missing.length > 0) {
+    return {
+      data: null,
+      error: {
+        message: describeCommercialGap(missing),
+        code: "PROFILE_INCOMPLETE",
+        fields: missing,
+      },
+    };
+  }
 
   // Buyer can submit payment in two contexts:
   //  - full_prepay: order.status must be `contract_signed` (we'll move to payment_pending)

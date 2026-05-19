@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createServerClient } from "@/lib/supabase/server";
+import {
+  describeCommercialGap,
+  findCommercialProfileGaps,
+} from "@/lib/auth/commercial";
 import { ListingInputSchema, type ListingInput } from "@/lib/validations/forms";
 import type { ActionResult } from "./auth";
 
@@ -33,6 +37,23 @@ export async function createListing(
   }
   if (profile.role !== "seller" && profile.role !== "admin" && profile.role !== "super_admin") {
     return { data: null, error: { message: "Only sellers can create listings." } };
+  }
+
+  // Admins/super-admins can list on behalf of others without filling in
+  // their own commercial profile (e.g. seeding test data); the gate
+  // only applies to real sellers.
+  if (profile.role === "seller") {
+    const missing = await findCommercialProfileGaps(user.id);
+    if (missing.length > 0) {
+      return {
+        data: null,
+        error: {
+          message: describeCommercialGap(missing),
+          code: "PROFILE_INCOMPLETE",
+          fields: missing,
+        },
+      };
+    }
   }
 
   const { data, error } = await supabase

@@ -42,6 +42,7 @@
 | 22 | **付款憑證上傳**：`bank_transfer` / `usdi` / `mup` 出示 file uploader 上傳到 `order-documents/<order_id>/payment_proof/...`，寫 signed URL 進 `payments.proof_url`；on-chain 方式才要求 `tx_hash` | `<PaymentForm />` |
 | 23 | **簽名合約預覽**：`<ContractPreview />` 內嵌雙方 signed scan（image 或 PDF iframe），「Download signed contract」 把簽名注入到列印 HTML，PDF 輸出含簽名 | `<ContractPreview />` |
 | 24 | **`order-documents` Storage bucket**：private、20 MB / PDF + image 白名單、`storage.objects` 4 條 RLS（read/insert/update parties；delete admin） | `010_storage_order_documents.sql` |
+| 25 | **Commercial profile gate + Settings 頁**：`createInquiry` / `createListing`（seller）/ `submitPayment` 在 `profiles.{company_name,country}` 為空時回 `error.code='PROFILE_INCOMPLETE'`；UI 顯示 toast 含「Open Settings」action 跳到 `/settings?prompt=incomplete`；`<CommercialProfileForm />` 編輯 full_name / company_name / country / phone | `src/lib/auth/commercial.ts` + `src/actions/profile.ts` + `(app)/settings/page.tsx` |
 
 > 已實作但原 PRD 未列的項目（Dashboard、行銷頁 Geopolitics/Sustainability、Admin Console 統計、News slug 富文本等）見 [`ARCHITECTURE.md` §附錄 A](./ARCHITECTURE.md#附錄-a實作但-prd-未列項目)。
 
@@ -54,7 +55,7 @@
 - ~~**A3** 合約簽名掃描上傳 UI~~ ✅ 已完成（009 + `<SignedScanUploader />`，並可嵌入簽名後 PDF 預覽下載）
 - ~~**A4** `order-documents` Storage bucket + RLS~~ ✅ 已完成（migration 010）；其餘 buckets（avatars / kyc / listings / chat）依需要時補
 - ~~**A5** Disputed / Cancelled UI 觸發點~~ ✅ 已完成（009 + `<OrderPhaseActions />`）
-- **A6** KYC 文件上傳（簡易版，提升 `kyc_level`）
+- **A6** KYC 文件上傳（簡易版，提升 `kyc_level`） — commercial profile gate ✅；KYC 文件上傳仍待
 - **A7** 部署 ✅；full_prepay 端到端煙霧測試 ✅（2026-05-15）；net_after_arrival 走測待補
 - ~~**B1** B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心、回合制合約）~~ ✅ 已完成（migrations 007 + 009）
 

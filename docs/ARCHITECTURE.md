@@ -87,6 +87,7 @@
 | `/orders` | 買賣雙視角訂單列表 |
 | `/orders/[id]` | 7 個 Tab + **OrderProgressBar**：**Overview** / **Quotation** / **Contract**（含 buyer approve/reject + signed-scan upload） / **Payment** / **Shipment**（B/L、vessel、container、ETD/ATD/ETA/ATA） / **Documents**（13 種類型分組上傳） / **Timeline** |
 | `/messages` | ⚠️ **Placeholder（A2 待補）**：將顯示房間列表 |
+| `/settings` | 帳戶設定：commercial profile（full_name / company_name / country / phone）+ role/status/kyc badges +「Change password」連結；若 `?prompt=incomplete` 或 `profiles.{company_name,country}` 為空，最上方顯示黃色提示 banner |
 
 **Layout**：`(app)/layout.tsx` → 左側 sidebar nav
 
@@ -194,9 +195,11 @@ type ActionResult<T> =
 | `auth.ts` | `signUp` / `signIn` / `signOut` / `resendVerification` | — | Supabase Auth（email/password）；`signUp` 會偵測 Supabase 對「已存在帳號」的 silent no-op（`data.user.identities.length===0`）並回友善提示，導到 forgot-password 而非假裝寄信 |
 |  | `requestPasswordReset(email)` | — | 呼叫 `auth.resetPasswordForEmail`，redirect 到 `/auth/callback?type=recovery&next=/reset-password`；Google OAuth 用戶可藉此額外綁定 email/password identity |
 |  | `updatePassword(password)` | recovery session | 呼叫 `auth.updateUser({ password })` |
+| **`profile.ts`** | `updateCommercialProfile(input)` | self | 更新 `profiles.{full_name,company_name,country,phone}`；`/settings` 表單與「lazy-collect」入口都呼叫它 |
 | `components/auth/GoogleSignInButton.tsx` | client-side `supabase.auth.signInWithOAuth({ provider:'google' })` | — | 重導 Google → `/auth/callback` |
-| `listing.ts` | `createListing` / `updateListing` / `pauseListing` / `resumeListing` | role ∈ {seller, admin}, status='active', owner | revalidate /listings, /market |
-| `inquiry.ts` | `createInquiry` | role='buyer' | Email 通知 seller, revalidate /inquiries |
+| `listing.ts` | `createListing` | role ∈ {seller, admin}, status='active'；seller 角色另需 `company_name`/`country` non-empty | revalidate /listings, /market；commercial profile 缺漏時回 `error.code='PROFILE_INCOMPLETE'` |
+|  | `updateListing` / `pauseListing` / `resumeListing` | owner | revalidate /listings, /market |
+| `inquiry.ts` | `createInquiry` | role='buyer' + `profiles.company_name`/`country` non-empty | Email 通知 seller, revalidate /inquiries；commercial profile 缺漏時回 `error.code='PROFILE_INCOMPLETE'` |
 |  | `acceptInquiry` | seller_id = auth.uid() | **(007 變更)** 改為自動發出預設 quotation（用 listing 條件 + 14 天 validity），inquiry='quoted'，buyer 仍需 accept quotation |
 |  | `rejectInquiry` | seller_id = auth.uid() | inquiry='rejected' |
 | **`quotation.ts`（007）** | `submitQuotation` | seller, role check | mark prior live quotations as superseded, insert quotation, inquiry='quoted', notify buyer |
@@ -217,7 +220,7 @@ type ActionResult<T> =
 |  | `cancelOrder` | parties + admin（pre-shipment 階段） | status='cancelled'，audit_logs |
 |  | `forceTransitionOrder` | admin only | bypass state machine，audit_logs（管理員恢復用） |
 |  | `confirmReceipt` / `markDelivered` / `updateShipment` | (legacy) | 對應 `markCustomsCleared` / `markArrived` / `markShipped` 的別名，相容舊 UI |
-| `payment.ts` | `submitPayment` | buyer, status ∈ {contract_signed, payment_pending} | payment 寫入(pending), order.status→'payment_pending', notify admin |
+| `payment.ts` | `submitPayment` | buyer, status ∈ {contract_signed, payment_pending}, `company_name`/`country` non-empty | payment 寫入(pending), order.status→'payment_pending', notify admin；commercial profile 缺漏時回 `error.code='PROFILE_INCOMPLETE'` |
 |  | `verifyPayment` | role ∈ {admin, super_admin} | payment.status→verified/rejected；驗證通過後依 `order.payment_terms` 自動推進：`full_prepay` → paid → in_production；`net_after_arrival` → paid → completed |
 | **`document.ts`（007）** | `uploadOrderDocument` | parties + admin | insert `order_documents` row（檔案由 client 上傳到 `order-documents` bucket），timeline append |
 |  | `verifyOrderDocument` | admin only | 標記已核驗，audit_logs |
@@ -410,6 +413,7 @@ src/components/
                 CommandPalette / CommandPaletteHost / BgGrid
   auth/         LoginForm / RegisterForm / VerifyResendForm /
                 ForgotPasswordForm / ResetPasswordForm /
+                CommercialProfileForm /
                 GoogleSignInButton / LogoutButton
   listing/      ListingForm / InquiryDialog / InquiryActions /
                 QuotationForm / QuotationActions
@@ -522,8 +526,8 @@ npm run db:types             # 重新生成 src/types/database.ts
 | 10 | Net-after-arrival 端到端流程煙霧測試 | ⚠️ 待執行 | UI / actions 路徑相同，僅分支跳轉時點不同；需要實際走一次驗證 |
 | 11 | 站內 IM（A2） | ⚠️ 待實作 | schema 已就位（`chat_rooms` / `chat_members` / `messages`）；`OrderChat` 元件、自動建房、`/messages` 列表頁都未做 |
 | 12 | 其餘 Storage buckets（avatars / kyc / listings / chat） | ⚠️ 待實作 | 用到該功能時補上 |
-| 13 | KYC 上傳 + lazy-collect commercial profile（A6） | ⚠️ 待實作 | OAuth 用戶以 `company_name=''` 進站，缺 `<CommercialProfileDialog />` 與 `<KycUploadForm />` |
-| 14 | `(app)` layout sidebar 缺 Logout 按鈕 | ⚠️ 待補 | 目前 `<LogoutButton />` 只掛在 `(public)/` Navbar，登入後頁面需回首頁才能登出 |
+| 13 | KYC 上傳 + lazy-collect commercial profile（A6） | 🟡 部分完成 | Commercial profile gate（`createInquiry` / `createListing` / `submitPayment` 缺欄位時回 `error.code='PROFILE_INCOMPLETE'`）、`/settings` 編輯頁、`<CommercialProfileForm />`、client toast 帶 "Open Settings" action 已完成；KYC 文件上傳 + admin 升級 kyc_level 仍待 |
+| 14 | `(app)` / `admin` layout 缺 Logout 按鈕 | ✅ 已完成 | `(app)/layout.tsx` 與 `admin/layout.tsx` 已掛上 `<Navbar />`，desktop 有 LogoutButton 在右上、mobile 有 `<MobileNav />` 抽屜 |
 
 ---
 

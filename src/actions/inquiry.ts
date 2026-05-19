@@ -5,6 +5,10 @@ import { z } from "zod";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/resend";
+import {
+  describeCommercialGap,
+  findCommercialProfileGaps,
+} from "@/lib/auth/commercial";
 import { InquiryInputSchema, type InquiryInput } from "@/lib/validations/inquiry";
 import type { ActionResult } from "./auth";
 
@@ -34,6 +38,18 @@ export async function createInquiry(
   }
   if (profile.role !== "buyer") {
     return { data: null, error: { message: "Only buyers can submit inquiries." } };
+  }
+
+  const missing = await findCommercialProfileGaps(user.id);
+  if (missing.length > 0) {
+    return {
+      data: null,
+      error: {
+        message: describeCommercialGap(missing),
+        code: "PROFILE_INCOMPLETE",
+        fields: missing,
+      },
+    };
   }
 
   const { data, error } = await supabase

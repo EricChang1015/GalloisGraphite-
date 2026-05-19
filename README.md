@@ -184,7 +184,9 @@ and [`docs/TESTING.md`](./docs/TESTING.md) §5:
 
 - [ ] A2 — In-app IM (`OrderChat`, auto room creation, `/messages` list)
 - [ ] A4 — Remaining storage buckets (`avatars` / `kyc` / `listings` / `chat`)
-- [ ] A6 — KYC document upload + lazy-collect commercial profile for
-      OAuth users
+- [ ] A6 — KYC document upload (commercial profile gate + `/settings`
+      page already shipped: server actions return
+      `error.code='PROFILE_INCOMPLETE'` and the UI surfaces an
+      "Open Settings" toast action)
 - [ ] A7 — `net_after_arrival` end-to-end happy path walkthrough +
       `disputed` / `cancelled` / admin force-transition smoke test

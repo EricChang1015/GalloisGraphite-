@@ -10,6 +10,7 @@ const NAV = [
   { href: "/inquiries", label: "Inquiries" },
   { href: "/orders", label: "Orders" },
   { href: "/messages", label: "Messages" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export default function AppLayout({

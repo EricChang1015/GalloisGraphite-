@@ -209,7 +209,17 @@ function PaymentForm({
     startTransition(async () => {
       const result = await submitPayment(values);
       if (result.error) {
-        toast.error(result.error.message);
+        if (result.error.code === "PROFILE_INCOMPLETE") {
+          toast.error(result.error.message, {
+            duration: 8000,
+            action: {
+              label: "Open Settings",
+              onClick: () => router.push("/settings?prompt=incomplete"),
+            },
+          });
+        } else {
+          toast.error(result.error.message);
+        }
         return;
       }
       toast.success("Payment submitted. Pending admin review.");

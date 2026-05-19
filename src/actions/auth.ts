@@ -12,7 +12,18 @@ import {
 
 export type ActionResult<T> =
   | { data: T; error: null }
-  | { data: null; error: { message: string; fieldErrors?: Record<string, string[]> } };
+  | {
+      data: null;
+      error: {
+        message: string;
+        /** Optional machine-readable code (e.g. `"PROFILE_INCOMPLETE"`). */
+        code?: string;
+        /** zod field-level errors keyed by field path. */
+        fieldErrors?: Record<string, string[]>;
+        /** Optional list of missing/required field names for the UI. */
+        fields?: string[];
+      };
+    };
 
 function validationError(error: z.ZodError): { message: string; fieldErrors?: Record<string, string[]> } {
   return {
