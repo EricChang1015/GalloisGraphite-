@@ -62,12 +62,14 @@
 
 | 路由 | 檔案 | 內容 |
 |---|---|---|
-| `/login` | `(auth)/login/page.tsx` | `<LoginForm />`（email/password）+ `<GoogleSignInButton />` |
+| `/login` | `(auth)/login/page.tsx` | `<LoginForm />`（email/password，含「Forgot password?」inline link）+ `<GoogleSignInButton />` |
 | `/register` | `(auth)/register/page.tsx` | `<RegisterForm />`（含 role 選擇 buyer/seller）+ `<GoogleSignInButton />` |
 | `/verify` | `(auth)/verify/page.tsx` | Email 驗證落地頁 + `<VerifyResendForm />` |
-| `/auth/callback` | `app/auth/callback/route.ts` | OAuth code → session 交換；成功重導 `next \|\| /dashboard`，失敗回 `/login?error=oauth_failed` |
+| `/forgot-password` | `(auth)/forgot-password/page.tsx` | `<ForgotPasswordForm />`：呼叫 `requestPasswordReset` 寄送 recovery 連結（包括給原 Google OAuth 用戶綁定 email/password 登入用） |
+| `/reset-password` | `(auth)/reset-password/page.tsx` | Server component 讀 `auth.getUser()` 後渲染 `<ResetPasswordForm />`；未授權者顯示「Reset link expired」回到 `/forgot-password` |
+| `/auth/callback` | `app/auth/callback/route.ts` | OAuth code → session 交換；`?type=recovery` 走 `/reset-password`、其它走 `next \|\| /dashboard`，失敗回 `/login?error=oauth_failed`（recovery 失敗回 `/forgot-password?error=recovery_failed`） |
 
-**Layout**：`(auth)/layout.tsx`（無 Navbar）
+**Layout**：`(auth)/layout.tsx`（無 Navbar）。`/reset-password` 不在 `isAuthRoute` 名單，避免恢復流程被導回 `/dashboard`。
 
 ### 2.3 `(app)/` — 登入後
 
@@ -189,7 +191,9 @@ type ActionResult<T> =
 
 | 檔案 | Action | 權限檢查 | 副作用 |
 |---|---|---|---|
-| `auth.ts` | `signUp` / `signIn` / `signOut` / `resendVerification` | — | Supabase Auth（email/password） |
+| `auth.ts` | `signUp` / `signIn` / `signOut` / `resendVerification` | — | Supabase Auth（email/password）；`signUp` 會偵測 Supabase 對「已存在帳號」的 silent no-op（`data.user.identities.length===0`）並回友善提示，導到 forgot-password 而非假裝寄信 |
+|  | `requestPasswordReset(email)` | — | 呼叫 `auth.resetPasswordForEmail`，redirect 到 `/auth/callback?type=recovery&next=/reset-password`；Google OAuth 用戶可藉此額外綁定 email/password identity |
+|  | `updatePassword(password)` | recovery session | 呼叫 `auth.updateUser({ password })` |
 | `components/auth/GoogleSignInButton.tsx` | client-side `supabase.auth.signInWithOAuth({ provider:'google' })` | — | 重導 Google → `/auth/callback` |
 | `listing.ts` | `createListing` / `updateListing` / `pauseListing` / `resumeListing` | role ∈ {seller, admin}, status='active', owner | revalidate /listings, /market |
 | `inquiry.ts` | `createInquiry` | role='buyer' | Email 通知 seller, revalidate /inquiries |
@@ -405,6 +409,7 @@ src/components/
                 SustainabilityDashboard / AiPreview / ClosingCta /
                 CommandPalette / CommandPaletteHost / BgGrid
   auth/         LoginForm / RegisterForm / VerifyResendForm /
+                ForgotPasswordForm / ResetPasswordForm /
                 GoogleSignInButton / LogoutButton
   listing/      ListingForm / InquiryDialog / InquiryActions /
                 QuotationForm / QuotationActions

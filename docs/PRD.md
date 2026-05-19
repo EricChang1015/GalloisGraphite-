@@ -38,6 +38,10 @@
 | 18 | **B/L + Vessel 追蹤**：賣家 markShipped 時填 B/L No、vessel name/IMO、container numbers、ETD/ATD/ETA；任一方可 markArrived（記 ATA）；買家 markCustomsCleared | `<ShipmentForm />` + `<OrderPhaseActions />` |
 | 19 | **Disputed / Cancelled UI**：所有非終止狀態都可 raiseDispute / cancelOrder，admin 收 email + audit log | `<OrderPhaseActions />` |
 | 20 | **Admin 訂單詳情 + Force Transition**：admin 可 force transition 繞過狀態機（dispute 解決用），所有強制動作寫 audit_logs | `/admin/orders/[id]` + `<AdminOrderActions />` |
+| 21 | **Forgot / Reset password**：寄 recovery 連結 → 設新密碼；Google OAuth 用戶可藉此額外綁定 email/password identity，同一個 profile 可用兩種方式登入 | `(auth)/{forgot-password,reset-password}` + `requestPasswordReset` / `updatePassword` server actions |
+| 22 | **付款憑證上傳**：`bank_transfer` / `usdi` / `mup` 出示 file uploader 上傳到 `order-documents/<order_id>/payment_proof/...`，寫 signed URL 進 `payments.proof_url`；on-chain 方式才要求 `tx_hash` | `<PaymentForm />` |
+| 23 | **簽名合約預覽**：`<ContractPreview />` 內嵌雙方 signed scan（image 或 PDF iframe），「Download signed contract」 把簽名注入到列印 HTML，PDF 輸出含簽名 | `<ContractPreview />` |
+| 24 | **`order-documents` Storage bucket**：private、20 MB / PDF + image 白名單、`storage.objects` 4 條 RLS（read/insert/update parties；delete admin） | `010_storage_order_documents.sql` |
 
 > 已實作但原 PRD 未列的項目（Dashboard、行銷頁 Geopolitics/Sustainability、Admin Console 統計、News slug 富文本等）見 [`ARCHITECTURE.md` §附錄 A](./ARCHITECTURE.md#附錄-a實作但-prd-未列項目)。
 
@@ -86,7 +90,11 @@
 2. **Google OAuth 註冊／登入**（lazy collect）：點「Continue with Google」→ Supabase 走 OAuth 2.0 → 回 `/auth/callback?code=...` → `exchangeCodeForSession` 後重導 `/dashboard`
    - `handle_new_user` 偵測 `auth.users.email_confirmed_at` 已非 null（Google 已驗證），直接建 `profiles` 並設 `status='active'`
    - `role` 預設 `'buyer'`、`company_name` / `country` 留空，待用戶日後在 inquiry / listing / payment 時補齊（並進入 KYC 流程，見 ROADMAP §A6）
-3. 超管可在 `/admin/users` 凍結/解凍（`status='frozen'`）
+3. **Forgot / Reset password**（`/forgot-password` + `/reset-password`）：
+   - `requestPasswordReset(email)` 呼叫 `auth.resetPasswordForEmail`，寄出 recovery 連結到 `/auth/callback?type=recovery&next=/reset-password`
+   - 在 reset 頁設定新密碼後，Supabase 會把 `email` identity 加到該 `auth.users` 上 → **原本只用 Google 登入的帳號可同時用 email/password 登入**（同一個 profile，不會建第二個帳號）
+   - `signUp` 也會偵測 Supabase 對「已存在帳號」的 silent no-op（`data.user.identities.length === 0`）並回友善提示，導去 `/forgot-password`
+4. 超管可在 `/admin/users` 凍結/解凍（`status='frozen'`）
 
 ### 4.2 賣家上貨
 1. 賣家進入 `/listings/new`
@@ -170,3 +178,8 @@ quotation_pending → quoted ↔ negotiating
 | 2026-05-13 | feat(order) 76e40c2：導入 13 階段 B2B 訂單狀態機 + quotation 議價 + order_documents 文件中心；migrations 改名 006/007 → 007/009（保留 006_ai_chat_logs / 008_oauth_profile_handling） |
 | 2026-05-14 | feat(admin) 3f9c8d2：新增 `/admin/orders/[id]` 與 `<AdminOrderActions />` force-transition 控制台；docs 15a21f5：同步 SCHEMA / ARCHITECTURE / PRD / ROADMAP |
 | 2026-05-15 | feat(db) 2c38ddf：`scripts/apply-migrations.mjs` 與 `scripts/gen-types.mjs` 透過 Supabase Management API 自動套用 migration（不需 DB password）；新增 `.cursor/rules/migrations.mdc` 規範 AI agent 撰寫 migration；本次 PRD §4.4/4.5/§5/§8 對齊 13 階段 B2B 流程 |
+| 2026-05-15 | feat(auth) c163710：新增 `/forgot-password` + `/reset-password` 流程；Google OAuth 用戶可藉此補綁定 email/password identity；`signUp` 偵測 Supabase silent no-op 並導向 forgot password |
+| 2026-05-15 | fix(orders) a2095b6：修復 PostgREST 1:1 embed 把 contracts 解析成 object 而非陣列導致「No contract drafted yet」幻象 bug；新增 `010_storage_order_documents.sql` 與 `docs/TESTING.md` |
+| 2026-05-15 | fix(orders) 1620d8e：合約簽名後預覽 / Save-as-PDF 內嵌雙方簽名掃描；`<PaymentForm />` 對 `bank_transfer / usdi / mup` 加 remittance proof uploader；`/admin/payments` 用對 FK hint（`payments_payer_id_fkey`） |
+| 2026-05-15 | fix(admin) 768cfbc：`/admin` 計數器與 `/admin/payments` 同步（`dynamic = "force-dynamic"` + 於 `verifyPayment` / `submitPayment` revalidate） |
+| 2026-05-15 | docs 773411c：完成 full-prepay 端到端走測（`ORD-TEST-MP6PL7MZ`）；A4 關閉，A7 full-prepay happy path 勾選；OrderProgressBar 在 `completed` 狀態 polish |

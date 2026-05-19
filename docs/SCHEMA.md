@@ -20,6 +20,7 @@
 | `007_b2b_progress_enums.sql` | **B2B 追蹤 P1**：新增 `quotation_status` / `payment_terms_type` / `document_type` enum；`order_status` rename `signed→contract_signed`、`delivered→customs_cleared` 並加 9 個新狀態；`inquiry_status` 加 `quoted/negotiating/expired` |
 | `008_oauth_profile_handling.sql` | `handle_new_user` 支援 Google OAuth：fallback meta.name；`email_confirmed_at` 已設則 status 直接 `'active'` |
 | `009_b2b_progress_tables.sql` | **B2B 追蹤 P1**：新增 `quotations` / `order_documents` 表；`orders` 加運輸欄位（`bl_no` / `vessel_*` / `etd/atd/ata` / `payment_terms` / `payment_due_*`）；`contracts` 加 revision + buyer-approval 欄位；補 RLS |
+| `010_storage_order_documents.sql` | **Storage**：建立 `order-documents` private bucket（20 MB / PDF + image MIME 白名單）+ `storage.objects` 的 4 條 RLS（read / insert / update parties；delete admin）；解除合約簽名掃描、付款證明、發票 / B/L / 海關 / 檢驗等檔案的上傳阻塞 |
 
 > ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >
@@ -301,13 +302,16 @@ disputed → cancelled / completed
 
 索引：`(order_id, type)`
 
-**RLS**：
+**RLS**（`public.order_documents` 表，由 `009_b2b_progress_tables.sql` 設）：
 - select：parties + admin
 - insert：parties（必須是 order 的 buyer / seller）+ admin
 - update：uploader 在 1 小時內可改自己的；admin 隨時可改（驗證）
 - delete：uploader 在 1 小時內且未驗證可撤回；admin 可隨時刪
 
-> **依賴**：Storage 需要新增 `order-documents` private bucket（A4 完成後一起 push policy）。
+**Storage 層 RLS**（`010_storage_order_documents.sql` 在 `storage.objects` 套用，bucket=`order-documents`）：
+- select / insert / update：訂單雙方 + admin（依路徑首段 `{order_id}/...` 反查 `orders` 確認身分）
+- delete：admin only（避免買賣方手滑刪掉合約 / 付款證明，保留稽核線索）
+- bucket 設 private、20 MB 上限、僅允許 PDF 與常見圖片 MIME（jpg/png/webp/heic）
 
 ## 6. 即時通訊
 
@@ -426,16 +430,17 @@ AI 助手每個 Q&A turn 的 server-side audit trail。append-only。
 > Helper SQL function：`public.current_user_role()` returns enum `user_role`。
 > 真正 SQL policy 見 migration 檔案。
 
-## 10. Storage Buckets（規劃 — 待 ROADMAP §A4 自動化）
+## 10. Storage Buckets
 
-| Bucket | 訪問模式 | 用途 |
-|---|---|---|
-| `avatars` | public read, self write | 使用者頭像 |
-| `kyc` | private（owner + admin） | KYC 證件 |
-| `contracts` | private（訂單雙方 + admin） | 合約簽名掃描 |
-| `payments` | private（buyer + admin） | 付款憑證圖 |
-| `listings` | public read, seller write | 商品圖 |
-| `chat` | private（chat members） | 聊天室附件 |
+| Bucket | 訪問模式 | 用途 | 現況 |
+|---|---|---|---|
+| **`order-documents`** | private（訂單雙方 + admin） | **合約簽名掃描、付款證明、發票、B/L、檢驗、海關、其他訂單檔案**（依路徑首段 `{order_id}/{doctype}/...` 分類） | ✅ 已建立（`010_storage_order_documents.sql`） |
+| `avatars` | public read, self write | 使用者頭像 | ⚠️ 待建立 |
+| `kyc` | private（owner + admin） | KYC 證件 | ⚠️ 待建立（與 ROADMAP §A6 一起） |
+| `listings` | public read, seller write | 商品圖 | ⚠️ 待建立 |
+| `chat` | private（chat members） | 聊天室附件 | ⚠️ 待建立（與 ROADMAP §A2 一起） |
+| ~~`contracts`~~ | — | （legacy 規劃）合約簽名掃描 | ❌ 不再建立，`order-documents` 已涵蓋 |
+| ~~`payments`~~ | — | （legacy 規劃）付款憑證 | ❌ 不再建立，`order-documents` `payment_proof` 子路徑已涵蓋 |
 
 ## 11. Realtime
 
