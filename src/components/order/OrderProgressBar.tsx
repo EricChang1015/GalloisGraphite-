@@ -54,6 +54,12 @@ export function OrderProgressBar({
   const currentIdx = getStageIndex(status);
   const isFullyDone = status === "completed";
 
+  const paymentsOutstanding =
+    paymentsSummary && paymentsSummary.total > 0
+      ? paymentsSummary.total - paymentsSummary.paid
+      : 0;
+  const completedButUnpaid = isFullyDone && paymentsOutstanding > 0;
+
   return (
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between text-xs text-muted-foreground gap-2 flex-wrap">
@@ -74,6 +80,22 @@ export function OrderProgressBar({
           </span>
         )}
       </div>
+
+      {completedButUnpaid && (
+        <div className="rounded-lg border border-red-400/40 bg-red-500/5 p-3 flex items-start gap-2 text-xs">
+          <AlertTriangle className="size-4 text-red-400 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium text-red-400">
+              Payments outstanding ({paymentsOutstanding})
+            </p>
+            <p className="text-muted-foreground mt-0.5">
+              This order is marked completed but {paymentsOutstanding} payment
+              installment{paymentsOutstanding === 1 ? "" : "s"} are still unpaid.
+              Open the Payment tab to settle them.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Desktop horizontal */}
       <ol className="hidden md:flex items-start gap-1">

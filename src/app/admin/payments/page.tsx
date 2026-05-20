@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PaymentVerifyActions } from "@/components/admin/PaymentVerifyActions";
+import { PaymentVerifyActions } from "@/components/order/PaymentVerifyActions";
 
 export const metadata = { title: "Admin · Payments" };
 export const dynamic = "force-dynamic";
@@ -62,9 +62,12 @@ export default async function AdminPaymentsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Payment Verification</h1>
+        <h1 className="text-2xl font-semibold">Payment Oversight</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          ⭐ Core workflow: review pending payments and mark them verified or rejected.
+          Sellers are the primary reviewers for payments on their own orders.
+          This page lets admins audit and (if needed) override the decision —
+          e.g. to mediate disputes or unstick a payment when a seller is
+          unresponsive.
         </p>
       </div>
 
@@ -157,7 +160,7 @@ export default async function AdminPaymentsPage() {
                       {new Date(p.created_at).toLocaleString()}
                     </TableCell>
                     <TableCell>
-                      <PaymentVerifyActions paymentId={p.id} />
+                      <PaymentVerifyActions paymentId={p.id} reviewerLabel="Admin" />
                     </TableCell>
                   </TableRow>
                 ))}

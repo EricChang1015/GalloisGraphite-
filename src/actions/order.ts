@@ -196,17 +196,19 @@ async function maybeAutoComplete(orderId: string, actorId: string) {
     .single<{ id: string; status: OrderStatus }>();
   if (!order || order.status !== "customs_cleared") return;
 
-  const { data: pending } = await admin
+  // With `head: true`, Supabase returns `data: null` and exposes the
+  // count directly on the response. The previous version destructured
+  // `data: pending` and then read `pending?.count`, which is always
+  // undefined → 0 → every customs-cleared order was auto-completed
+  // regardless of unpaid installments. (See post-mortem in plan §5.)
+  const { count: remaining } = await admin
     .from("payment_schedules")
     .select("id", { count: "exact", head: true })
     .eq("order_id", orderId)
     .neq("status", "paid")
     .neq("status", "waived");
 
-  // `pending` is { count } when head:true is used; treat undefined as zero.
-  type CountWrap = { count: number | null } | null;
-  const remaining = (pending as unknown as CountWrap)?.count ?? 0;
-  if (remaining > 0) return;
+  if ((remaining ?? 0) > 0) return;
 
   await transitionOrder(orderId, "customs_cleared", "completed", actorId);
 }

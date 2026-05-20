@@ -132,7 +132,27 @@ export const getUserActionCounts = cache(
             .returns<{ order_id: string }[]>()
         : Promise.resolve({ data: [] as { order_id: string }[] });
 
-    const [inquiryRes, ordersRes, disputedRes, missing, duePayments] = await Promise.all([
+    // Payments awaiting seller review (seller is now primary reviewer
+    // post-015). Count distinct orders so a multi-payment order pings
+    // once.
+    const sellerPaymentReviewPromise =
+      role === "seller"
+        ? supabase
+            .from("payments")
+            .select("order_id, orders!inner(seller_id)")
+            .eq("status", "pending")
+            .eq("orders.seller_id", userId)
+            .returns<{ order_id: string }[]>()
+        : Promise.resolve({ data: [] as { order_id: string }[] });
+
+    const [
+      inquiryRes,
+      ordersRes,
+      disputedRes,
+      missing,
+      duePayments,
+      sellerPaymentReviews,
+    ] = await Promise.all([
       inquiryPromise,
       supabase
         .from("orders")
@@ -147,6 +167,7 @@ export const getUserActionCounts = cache(
         .eq("status", "disputed"),
       findCommercialProfileGaps(userId),
       duePaymentOrdersPromise,
+      sellerPaymentReviewPromise,
     ]);
 
     let ordersNeedingMyAction = 0;
@@ -166,6 +187,11 @@ export const getUserActionCounts = cache(
 
     if (role === "buyer") {
       const orderIds = new Set((duePayments.data ?? []).map((r) => r.order_id));
+      ordersNeedingMyAction += orderIds.size;
+    }
+
+    if (role === "seller") {
+      const orderIds = new Set((sellerPaymentReviews.data ?? []).map((r) => r.order_id));
       ordersNeedingMyAction += orderIds.size;
     }
 

@@ -127,14 +127,22 @@ export function PaymentScheduleTable({ orderId, schedules, role, limit }: Props)
                   </Badge>
                 </td>
                 <td className="px-3 py-2 text-right">
-                  {role === "buyer" && (s.status === "due" || s.status === "overdue") ? (
+                  {role === "buyer" &&
+                  (s.status === "due" ||
+                    s.status === "overdue" ||
+                    s.status === "scheduled") ? (
                     <Button
                       size="sm"
                       variant="outline"
                       className="h-7 text-[11px]"
                       onClick={() => setActive(s)}
+                      title={
+                        s.status === "scheduled"
+                          ? "Settle this installment early — milestone not yet triggered"
+                          : undefined
+                      }
                     >
-                      Submit Payment
+                      {s.status === "scheduled" ? "Pay Early" : "Submit Payment"}
                     </Button>
                   ) : null}
                 </td>
@@ -285,7 +293,7 @@ function PaymentSubmitDialog({
                 placeholder="0x..."
               />
               <p className="text-[11px] text-muted-foreground">
-                Admin will verify it on a block explorer.
+                Seller will verify it on a block explorer (admin may intervene).
               </p>
             </div>
           )}

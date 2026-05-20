@@ -288,6 +288,10 @@ export async function acceptQuotation(
       total_amount: total,
       currency: q.currency,
       destination: q.destination_port,
+      // Snapshot the negotiated Incoterm onto the order so subsequent
+      // contract drafting starts from the latest agreed term, not the
+      // original listing's default.
+      incoterm: q.incoterm,
       status: "contract_pending",
       timeline: [
         { event: "quotation_accepted", at: new Date().toISOString(), by: user.id, quotation_id: q.id },

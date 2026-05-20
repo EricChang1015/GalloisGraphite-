@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DocumentUploader } from "./DocumentUploader";
 
 type Input = z.infer<typeof ShipmentUpdateSchema>;
 
@@ -62,6 +63,29 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
       <p className="text-xs text-muted-foreground">
         Provide Bill of Lading & vessel details. The buyer will be notified.
       </p>
+
+      <div className="rounded-md border bg-muted/20 p-3 space-y-3">
+        <div>
+          <p className="text-xs font-medium">Attach shipping documents</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Upload the B/L file now. The cargo inspection report (COA / SGS) is
+            optional but strongly recommended for the buyer&apos;s records.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Bill of Lading (PDF / image) — optional
+          </label>
+          <DocumentUploader orderId={orderId} type="bill_of_lading" compact />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Inspection Report (COA / SGS) — optional
+          </label>
+          <DocumentUploader orderId={orderId} type="inspection_report" compact />
+        </div>
+      </div>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">

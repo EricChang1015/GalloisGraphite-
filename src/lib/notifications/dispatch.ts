@@ -1,6 +1,6 @@
 import "server-only";
 
-import { sendEmail } from "@/lib/email/resend";
+import { sendEmail } from "@/lib/email/smtp";
 import { sendSms, isSmsConfigured } from "@/lib/sms/client";
 import { getSmsNotificationsEnabled } from "@/lib/platform/settings";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -24,7 +24,9 @@ export async function notifyUser(params: {
         html: params.html,
       });
     }
-  } catch (_) {}
+  } catch (err) {
+    console.warn("[notify] email send failed for", params.email, err);
+  }
 
   try {
     const phone = params.phone?.trim();
@@ -35,23 +37,30 @@ export async function notifyUser(params: {
     ) {
       await sendSms({ to: phone, content: params.smsText });
     }
-  } catch (_) {}
+  } catch (err) {
+    console.warn("[notify] sms send failed for", params.phone, err);
+  }
 }
 
 export async function notifyAdminEmail(params: {
   subject: string;
   html: string;
 }) {
-  try {
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (!adminEmail) return;
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) {
+    console.warn("[notify] ADMIN_EMAIL not set — skipping admin notification:", params.subject);
+    return;
+  }
 
+  try {
     await sendEmail({
       to: adminEmail,
       subject: params.subject,
       html: params.html,
     });
-  } catch (_) {}
+  } catch (err) {
+    console.warn("[notify] admin email send failed:", err);
+  }
 }
 
 // ---------------------------------------------------------------------

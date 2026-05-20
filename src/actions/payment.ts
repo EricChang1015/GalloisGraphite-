@@ -74,7 +74,14 @@ export async function submitPayment(
   if (!schedule || schedule.order_id !== parsed.data.order_id) {
     return { data: null, error: { message: "Payment schedule not found for this order." } };
   }
-  if (schedule.status !== "due" && schedule.status !== "overdue") {
+  // Allow `scheduled` so buyers can settle early (e.g. lock in FX rate
+  // before bl_date_plus_N hits its due date). Reject anything terminal
+  // (paid, waived, awaiting_review).
+  if (
+    schedule.status !== "due" &&
+    schedule.status !== "overdue" &&
+    schedule.status !== "scheduled"
+  ) {
     return {
       data: null,
       error: { message: `Schedule is in ${schedule.status} state; cannot accept payment.` },
@@ -109,17 +116,45 @@ export async function submitPayment(
     .update({ status: "awaiting_review" })
     .eq("id", parsed.data.schedule_id);
 
-  // Notify admin
+  // Notify seller (primary reviewer) + cc admin for visibility.
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const { data: orderWithSeller } = await admin
+      .from("orders")
+      .select(
+        "seller_id, seller:profiles!orders_seller_id_fkey(email, full_name, phone)"
+      )
+      .eq("id", parsed.data.order_id)
+      .single<{
+        seller_id: string;
+        seller: { email: string; full_name: string; phone: string | null } | null;
+      }>();
+
+    if (orderWithSeller?.seller?.email) {
+      await notifyUser({
+        email: orderWithSeller.seller.email,
+        phone: orderWithSeller.seller.phone,
+        subject: `New payment pending your review — Order ${order.order_no}`,
+        html: `
+            <p>Hi ${orderWithSeller.seller.full_name || "Seller"},</p>
+            <p>The buyer has submitted a payment for order <strong>${order.order_no}</strong> awaiting your review.</p>
+            <p>Amount: <strong>${parsed.data.amount} ${parsed.data.currency}</strong><br/>
+               Method: ${parsed.data.method}<br/>
+               TX Hash: ${parsed.data.tx_hash ?? "—"}</p>
+            <p><a href="${appUrl}/orders/${parsed.data.order_id}">Review the payment</a></p>
+          `,
+        smsText: `Mada Graphite: Payment pending review — ${order.order_no}. ${appUrl}/orders/${parsed.data.order_id}`,
+      });
+    }
+
     await notifyAdminEmail({
-      subject: `New payment pending review — Order ${order.order_no}`,
+      subject: `Payment submitted (seller to review) — Order ${order.order_no}`,
       html: `
-          <p>A new payment has been submitted for order <strong>${order.order_no}</strong>.</p>
-          <p>Amount: <strong>${parsed.data.amount} ${parsed.data.currency}</strong></p>
-          <p>Method: ${parsed.data.method}</p>
-          <p>TX Hash: ${parsed.data.tx_hash ?? "—"}</p>
-          <p><a href="${appUrl}/admin/payments">Review in Admin</a></p>
+          <p>Audit notice: a payment was submitted for order <strong>${order.order_no}</strong>.</p>
+          <p>Amount: <strong>${parsed.data.amount} ${parsed.data.currency}</strong><br/>
+             Method: ${parsed.data.method}<br/>
+             TX Hash: ${parsed.data.tx_hash ?? "—"}</p>
+          <p>Seller is the primary reviewer. Admin oversight: <a href="${appUrl}/admin/payments">Open</a></p>
         `,
     });
   } catch (_) {}
@@ -146,15 +181,15 @@ export async function verifyPayment(
     .eq("id", user.id)
     .single<{ role: string }>();
 
-  if (!profile || (profile.role !== "admin" && profile.role !== "super_admin")) {
-    return { data: null, error: { message: "Admin access required." } };
-  }
+  if (!profile) return { data: null, error: { message: "Profile not found." } };
+
+  const isAdmin = profile.role === "admin" || profile.role === "super_admin";
 
   const admin = createAdminClient();
 
   const { data: payment } = await admin
     .from("payments")
-    .select("order_id, buyer_id, amount, currency, schedule_id")
+    .select("order_id, buyer_id, amount, currency, schedule_id, orders!inner(seller_id)")
     .eq("id", paymentId)
     .single<{
       order_id: string;
@@ -162,9 +197,18 @@ export async function verifyPayment(
       amount: number;
       currency: string;
       schedule_id: string | null;
+      orders: { seller_id: string };
     }>();
 
   if (!payment) return { data: null, error: { message: "Payment not found." } };
+
+  // Seller of THIS order is the primary reviewer; admin may always
+  // override / mediate. Anyone else (incl. other sellers / buyers) is
+  // denied.
+  const isOrderSeller = payment.orders.seller_id === user.id;
+  if (!isAdmin && !isOrderSeller) {
+    return { data: null, error: { message: "Only the seller of this order or an admin can verify this payment." } };
+  }
 
   const { error } = await admin
     .from("payments")
@@ -220,13 +264,20 @@ export async function verifyPayment(
     await autoCompleteIfReady(payment.order_id, user.id);
   }
 
-  // Write audit log
+  // Write audit log — record who reviewed (seller vs admin) so the
+  // audit trail makes clear whether seller signed-off themselves or
+  // admin had to intervene.
   await admin.from("audit_logs").insert({
     actor_id: user.id,
     action: decision === "verified" ? "payment_verified" : "payment_rejected",
     target_type: "payment",
     target_id: paymentId,
-    metadata: { order_id: payment.order_id, schedule_id: payment.schedule_id, note } as Json,
+    metadata: {
+      order_id: payment.order_id,
+      schedule_id: payment.schedule_id,
+      note,
+      reviewer_role: isAdmin ? "admin" : "seller",
+    } as Json,
   });
 
   // Notify buyer
@@ -237,14 +288,16 @@ export async function verifyPayment(
       .eq("id", payment.buyer_id)
       .single<{ email: string; full_name: string; phone: string | null }>();
 
+    const reviewerLabel = isAdmin ? "Admin" : "Seller";
+
     const subject =
       decision === "verified"
         ? "Payment verified — Mada Graphite"
         : "Payment rejected — Mada Graphite";
     const html =
       decision === "verified"
-        ? `<p>Your payment of <strong>${payment.amount} ${payment.currency}</strong> has been verified.</p>`
-        : `<p>Your payment has been <strong>rejected</strong>. Admin note: ${note ?? "—"}. Please re-submit or contact support.</p>`;
+        ? `<p>Your payment of <strong>${payment.amount} ${payment.currency}</strong> has been verified by the ${reviewerLabel.toLowerCase()}.</p>`
+        : `<p>Your payment has been <strong>rejected</strong> by the ${reviewerLabel.toLowerCase()}. ${reviewerLabel} note: ${note ?? "—"}. Please re-submit or contact support.</p>`;
     const smsText =
       decision === "verified"
         ? `Mada Graphite: Payment of ${payment.amount} ${payment.currency} verified.`

@@ -4,6 +4,7 @@ import {
   isSmsGatewayConfigured,
 } from "@/lib/platform/settings";
 import { SmsNotificationsToggle } from "@/components/admin/SmsNotificationsToggle";
+import { SendTestEmailButton } from "@/components/admin/SendTestEmailButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata = { title: "Admin · Settings" };
@@ -22,6 +23,8 @@ export default async function AdminSettingsPage() {
   const smsEnabled = setting?.value === true;
   const gatewayConfigured = isSmsGatewayConfigured();
 
+  const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
+
   return (
     <div className="max-w-2xl space-y-6">
       <div>
@@ -30,6 +33,30 @@ export default async function AdminSettingsPage() {
           Configure platform-wide notification and integration options.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Email (SMTP)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1 text-sm">
+            <p>
+              Status:{" "}
+              {smtpConfigured ? (
+                <span className="text-emerald-400 font-medium">Configured</span>
+              ) : (
+                <span className="text-amber-400 font-medium">Not configured</span>
+              )}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Configure SMTP_HOST / SMTP_USER / SMTP_PASS / EMAIL_FROM_ADDRESS in
+              .env.local. AWS SES domain must be verified before sending to
+              non-verified recipients (production access required).
+            </p>
+          </div>
+          <SendTestEmailButton />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

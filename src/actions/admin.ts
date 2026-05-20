@@ -253,6 +253,74 @@ export async function upsertNews(
   return { data: result, error: null };
 }
 
+/**
+ * Send a one-off test email through the configured SMTP transport.
+ * Used by the admin Settings page to verify SES credentials / domain
+ * verification without having to run a full order flow.
+ */
+export async function sendTestEmail(): Promise<
+  ActionResult<{ messageId: string | null; to: string }>
+> {
+  const { user, error: authError } = await requireAdmin();
+  if (!user) return { data: null, error: { message: authError! } };
+
+  // Lazy import to keep nodemailer out of any client-bundled path. The
+  // outer file is "use server" so this is purely defensive.
+  const { sendEmail, verifySmtp } = await import("@/lib/email/smtp");
+
+  // Surface connection errors clearly before attempting send.
+  const verify = await verifySmtp();
+  if (!verify.ok) {
+    return {
+      data: null,
+      error: { message: `SMTP verify failed: ${verify.error}` },
+    };
+  }
+
+  const supabase = await createServerClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("email, full_name")
+    .eq("id", user.id)
+    .single<{ email: string | null; full_name: string | null }>();
+
+  const adminEmail = process.env.ADMIN_EMAIL || profile?.email;
+  if (!adminEmail) {
+    return {
+      data: null,
+      error: { message: "Neither ADMIN_EMAIL nor your profile email is set." },
+    };
+  }
+
+  try {
+    const info = await sendEmail({
+      to: adminEmail,
+      subject: "Mada Graphite — SMTP test email",
+      html: `
+        <p>Hi ${profile?.full_name || "Admin"},</p>
+        <p>This is a test email from the Mada Graphite platform confirming
+           that the SMTP transport is configured correctly.</p>
+        <p>Sent at: <strong>${new Date().toISOString()}</strong></p>
+        <p>If you received this, transactional notifications will reach
+           buyers / sellers / admin from now on.</p>
+      `,
+    });
+
+    await writeAuditLog(user.id, "send_test_email", "platform_settings", user.id, {
+      to: adminEmail,
+      messageId: info.messageId ?? null,
+    });
+
+    return {
+      data: { messageId: info.messageId ?? null, to: adminEmail },
+      error: null,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown SMTP error.";
+    return { data: null, error: { message: `Send failed: ${message}` } };
+  }
+}
+
 export async function updateSmsNotificationsEnabled(
   input: z.infer<typeof SmsNotificationsToggleSchema>
 ): Promise<ActionResult<true>> {

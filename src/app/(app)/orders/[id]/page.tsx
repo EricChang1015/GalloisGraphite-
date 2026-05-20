@@ -13,6 +13,7 @@ import { SignedScanUploader } from "@/components/order/SignedScanUploader";
 import { ContractPreview } from "@/components/order/ContractPreview";
 import { ShipmentForm } from "@/components/order/ShipmentForm";
 import { OrderPhaseActions } from "@/components/order/OrderPhaseActions";
+import { PaymentVerifyActions } from "@/components/order/PaymentVerifyActions";
 import {
   OrderDocumentsTab,
   type OrderDocumentRow,
@@ -412,7 +413,10 @@ export default async function OrderDetailPage({ params }: PageProps) {
               totalAmount={order.total_amount}
               currency={order.currency}
               currentIncoterm={
-                order.incoterm ?? (order.listings?.incoterm as Incoterm | undefined) ?? null
+                order.incoterm ??
+                (order.current_quotation?.incoterm as Incoterm | undefined) ??
+                (order.listings?.incoterm as Incoterm | undefined) ??
+                null
               }
               currentSchedule={scheduleAsEntries}
             />
@@ -430,7 +434,11 @@ export default async function OrderDetailPage({ params }: PageProps) {
               orderId={order.id}
               totalAmount={order.total_amount}
               currency={order.currency}
-              currentIncoterm={order.incoterm ?? null}
+              currentIncoterm={
+                order.incoterm ??
+                (order.current_quotation?.incoterm as Incoterm | undefined) ??
+                null
+              }
               currentSchedule={scheduleAsEntries}
               currentRevision={contract.revision_no}
             />
@@ -515,6 +523,13 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
           <div className="space-y-2">
             <p className="text-sm font-medium">Payment History</p>
+            {(isSeller || isAdmin) && payments.some((p) => p.status === "pending") && (
+              <p className="text-xs text-muted-foreground">
+                {isSeller
+                  ? "Review the buyer's payment(s) below. Admin may intervene if needed."
+                  : "Audit view — the seller is the primary reviewer."}
+              </p>
+            )}
             {payments.length === 0 ? (
               <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground text-sm">
                 No payment submitted yet.
@@ -554,11 +569,22 @@ export default async function OrderDetailPage({ params }: PageProps) {
                       </a>
                     )}
                     {p.admin_note && (
-                      <p className="text-xs text-muted-foreground">Admin: {p.admin_note}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Reviewer note: {p.admin_note}
+                      </p>
                     )}
                     <p className="text-xs text-muted-foreground">
                       {new Date(p.created_at).toLocaleString()}
                     </p>
+
+                    {p.status === "pending" && (isSeller || isAdmin) && (
+                      <div className="border-t pt-2">
+                        <PaymentVerifyActions
+                          paymentId={p.id}
+                          reviewerLabel={isAdmin ? "Admin" : "Seller"}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
