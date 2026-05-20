@@ -97,7 +97,7 @@
 - [x] Supabase production schema：所有 10 個 migrations（001 → 010）都已透過 `scripts/apply-migrations.mjs` 套用，並由 `_agent_migrations` 追蹤表記錄
   > 注意：未來如增量 migration，**enum add value 與使用該值必須分檔**（007/009 是現有範例：007 加 enum value、009 才使用）
 - [ ] RLS policy review（特別是 005 / 009 / 010 新增 / 修改的政策）
-- [ ] Resend domain DNS（或先用 `onboarding@resend.dev` 寄件）
+- [x] ~~Resend domain DNS（或先用 `onboarding@resend.dev` 寄件）~~ — 2026-05-20 改用 **AWS SES SMTP**（`src/lib/email/smtp.ts`）；production env 需設 `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM_ADDRESS`（必須是 SES 已驗證 identity）
 - [x] **建立 `order-documents` Storage bucket + policy**（A4） — `010_storage_order_documents.sql` 已建立
 - 端到端 happy path：
   1. [x] 註冊（buyer + seller）— Email 登入已驗證；Google OAuth 路徑已實作但 production smoke 走測待補
@@ -138,6 +138,30 @@ server actions / UI 元件實作：
 - [x] 同步 npm scripts：`db:migrate` / `db:migrate:status` / `db:migrate:bootstrap` / `db:migrate:dry` / `db:types`
 - [x] AI agent 撰寫規範：[`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc)（檔名規則、idempotency、enum 拆檔、RLS 覆蓋、failure handling）
 - [x] 解決舊版重複 prefix：`006_b2b_progress_enums` → `007_b2b_progress_enums`、`007_oauth_profile_handling` → `008_oauth_profile_handling`、`007_b2b_progress_tables` → `009_b2b_progress_tables`
+
+### A13. ✅ Payment 改 seller-primary review + Email migrate 到 AWS SES SMTP（已完成 — 2026-05-20）
+
+把第一線審核責任交回賣家，把 admin 從每日 ops 解放但保留覆審權；同時把通知信
+從 Resend 沙箱 domain 改 AWS SES SMTP，讓正式信能寄達。
+
+- [x] **migration 015**：drop `payments_admin_update`，新建 `payments_seller_or_admin_update`（auth.uid() 是 payment.order.seller_id 或 admin/super_admin 都可 update）；補 `idx_payments_status_pending` (partial) + `idx_payments_order_status`
+- [x] `src/actions/payment.ts`：
+  - `verifyPayment` role check 改為 seller-of-order 或 admin/super_admin，audit_logs / buyer 通知都標記 reviewer 角色
+  - `submitPayment` 通知改寄 seller（primary）並 CC `ADMIN_EMAIL`；同時接受 schedule.status='scheduled' 讓買家「Pay Early」
+- [x] `src/components/order/PaymentVerifyActions.tsx`（從 `src/components/admin/` 移過來，admin/ 改為 re-export），接 `reviewerLabel` prop 分頭顯示
+- [x] `(app)/orders/[id]` Payment Tab：seller/admin 看到自己有權的列直接 verify/reject；payment history 文案 `Admin: {note}` → `Reviewer note: {note}`
+- [x] `(app)/components/order/PaymentScheduleTable.tsx`：對 `scheduled` 列顯示「Pay Early」按鈕（buyer 視角）+ tooltip
+- [x] `src/lib/notifications/counts.ts`：seller 新增 `paymentsAwaitingMyReview` 計數，sidebar 顯示 badge
+- [x] **Email migration**：
+  - 移除 `src/lib/email/resend.ts`，改 `src/lib/email/smtp.ts`（nodemailer + AWS SES SMTP；`sendEmail` 簽名與舊版相容、加 `verifySmtp()`）
+  - `.env.local` 預填 `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_SECURE` / `EMAIL_FROM_*` / `ADMIN_EMAIL`（`.env.example` 改成註解佔位，避免 leak）
+  - `src/lib/notifications/dispatch.ts`：取消舊的 silent `catch(_){}`，改 `console.warn`
+  - 新 server action `sendTestEmail` + `<SendTestEmailButton />` 掛到 `/admin/settings`
+- [x] **Incoterm consistency**：`acceptQuotation` 寫入 `orders.incoterm = q.incoterm`；`<ContractDraftForm />` 取 `order.incoterm ?? order.current_quotation?.incoterm` fallback
+- [x] **`<ShipmentForm />`** 加 optional B/L 與 Inspection Report 上傳（寫進 `order_documents`）
+- [x] **`autoCompleteIfReady` bug fix**：Supabase count 改用 `{ count: "exact", head: true }` 避免誤推 completed（ORD-260520-601b6b 案例）
+- [x] **`<SelectItem />`** 補 `data-[highlighted]` 樣式，解決合約 redraft 下拉文字 / 背景對比不足
+- [x] **Dev log discipline**：新增 `scripts/check-dev-errors.mjs` + 升級 `scripts/probe-ssr.mjs` 過濾 MCP / 瀏覽器擴充注入的 hydration false positive；`.cursor/rules/verify-before-commit.mdc` 強制在 UI 測試後跑這支腳本
 
 ### A12. ✅ Payment timeline decoupling（已完成 — 2026-05-19）
 
@@ -221,7 +245,7 @@ server actions / UI 元件實作：
 | 風險 | 備案 |
 |---|---|
 | Supabase Realtime 延遲/不穩 | 改 polling（SWR 5s） |
-| Resend domain DNS 來不及 | 用預設 sender（`onboarding@resend.dev`） |
+| ~~Resend domain DNS 來不及~~ | ✅ 已切換 AWS SES SMTP（2026-05-20）；備案：若 SES 出問題可暫時 fallback Gmail SMTP（同樣靠 `src/lib/email/smtp.ts` 換 env 即可） |
 | Vercel build 失敗（env） | 本地 `next build` 先過，確認 `server-only` 沒進 client |
 | AI Token 過大 | 訊息超過 N 條時對前文做摘要 |
 | Storage 成本 | KYC docs / contracts size 5MB 上限，圖檔壓縮 |

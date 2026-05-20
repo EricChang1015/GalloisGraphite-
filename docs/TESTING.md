@@ -17,9 +17,10 @@
 **所有帳號都是 Gmail alias**：`+admin` / `+seller` / `+buyer` 三個地址實際上都會
 進到 `eric.chang.1015@gmail.com` 同一個收件夾，但 Supabase Auth 視為三個獨立帳號。
 
-> ⚠️ 不要對這些 email 做「是否收到信」的驗證 — 它們唯一的用途是在 Supabase
-> auth.users 留下登入紀錄。Transactional emails（inquiry 通知、payment 通知等）
-> 因 Resend domain DNS 未驗證可能不會實際寄達，但業務流程不受影響。
+> ✅ **2026-05-20 起 transactional email 已能正常寄達**：通知信改走 **AWS SES SMTP**
+> （`src/lib/email/smtp.ts`，nodemailer）。三個 Gmail alias（`+admin` / `+seller` /
+> `+buyer`）都會收進 `eric.chang.1015@gmail.com` 同一個收件夾，**可以**用來驗證信件
+> 內容。`/admin/settings → Send test email` 提供一鍵連線驗證。
 
 ### 1.1 切換登入
 
@@ -87,16 +88,16 @@ where email = 'eric.chang.1015+admin@gmail.com';
 | C2 | Buyer 切到 Contract Tab → 看 `<ContractPreview />` → 「Approve Contract」 | `contracts.buyer_approved_at` 寫入；UI 顯示「You have approved this contract.」 |
 | C3 | Seller 與 Buyer 各自上傳簽名掃描（任意 PNG / PDF） | 兩份都齊 + buyer approved → **自動 `contract_signed` → 再自動 `payment_pending`**（full_prepay 分支），timeline 連續記錄 |
 
-### Phase D — 付款 + 出貨（full_prepay 流）
+### Phase D — 付款 + 出貨
 
 | # | 動作 | 預期結果 |
 |---|---|---|
-| D1 | Buyer → Payment Tab → 填 method=`usdt_trc20` + amount + tx_hash + note → Submit | `payments.status='pending'`，admin 收 email |
-| D2 | Admin → `/admin/payments` → 「Verify」（可填 admin_note） | `payments.status='verified'`，**`orders.status` 自動：`paid` → `in_production`**（full_prepay 分支），timeline 兩筆 |
+| D1 | Buyer → Payment Tab → 對 `due`（或 `scheduled` 列 Pay Early）填 method=`usdt_trc20` + amount + tx_hash + note → Submit | `payments.status='pending'` + `schedule.status='awaiting_review'`，**seller 收 email/SMS（主收）、admin 收 email CC** |
+| D2 | **Seller**（or Admin）→ `/orders/[id]` Payment Tab →`<PaymentVerifyActions />` 「Verify」（可填 reviewer note） | `payments.status='verified'`、`schedule.status='paid'`、`schedule.paid_payment_id=payment.id`；buyer 收信標明 verified by Seller / Admin。**訂單 status 不變**（除非 customs_cleared 且全部 schedule 都 paid → `autoCompleteIfReady` 自動 → `completed`） |
 | D3 | Seller → `/orders/[id]` → 「Mark Ready to Ship」 | status → `ready_to_ship` |
-| D4 | Seller → `<ShipmentForm />` 填 B/L No、vessel_name、container_numbers、ETD/ATD/ETA → Submit | status → `shipped`，buyer 收 email |
+| D4 | Seller → `<ShipmentForm />` 填 B/L No、vessel_name、container_numbers、ETD/ATD/ETA → **(optional)** 上傳 B/L scan + Inspection Report (COA/SGS) → Submit | status → `shipped`，buyer 收 email；optional 檔案寫進 `order_documents`（type=`bill_of_lading` / `inspection_report`） |
 | D5 | Seller → 「Mark In Transit」 | status → `in_transit` |
-| D6 | Seller / Buyer / Admin → `<MarkArrived />` 填 ATA | status → `arrived`，net_after_arrival 流會計算 `payment_due_date` |
+| D6 | Seller / Buyer / Admin → `<MarkArrived />` 填 ATA | status → `arrived`；觸發 `arrived_at_port` milestone，相關 schedule `scheduled→due` |
 
 ### Phase E — 結案
 
@@ -132,10 +133,11 @@ C1 起選 `net_after_arrival` + Days 30，後面：
 ## 5. 已知阻塞
 
 1. ✅ ~~**`order-documents` Storage bucket 尚未建立**~~ — 已由 `010_storage_order_documents.sql` 建立
-2. ⚠️ **Resend domain DNS 未驗證** — 通知信不會實際寄達（業務流程不受影響）
+2. ✅ ~~**Resend domain DNS 未驗證**~~ — 2026-05-20 改 **AWS SES SMTP**（`src/lib/email/smtp.ts`），通知信已能正常寄達；`/admin/settings` 有「Send test email」可即時驗證連線
 3. ⚠️ **A2 站內 IM 未實作** — 訂單 Tab 沒有 chat 欄位
-4. ⚠️ **`(app)` layout sidebar 缺 Logout 按鈕** — 登入後頁面要回首頁才能登出；UX 待改善
+4. ✅ ~~**`(app)` layout sidebar 缺 Logout 按鈕**~~ — 已掛上 `<Navbar />` + `<MobileNav />`
 5. ⚠️ **net_after_arrival 走測尚未完成** — 路徑與 actions 與 full_prepay 共用，但分支跳轉時點不同，需各跑一次
+6. ⚠️ **KYC 文件上傳尚未實作** — commercial profile gate 已完成（缺欄會回 `PROFILE_INCOMPLETE`），但 `kyc` bucket / `<KycUploadForm />` / admin 升級 `kyc_level` 仍待補（ROADMAP §A6）
 
 ---
 
@@ -165,9 +167,24 @@ C1 起選 `net_after_arrival` + Days 30，後面：
 
 ---
 
+### 2026-05-20 — Payment seller-review + Pay Early + Email migration 煙霧通過
+
+驗證項目：
+- ✅ Buyer 對 `ORD-260520-601b6b` `scheduled` 列點「Pay Early」→ schedule 進 `awaiting_review`、seller 收 email
+- ✅ Seller 在訂單 Payment Tab 直接 `<PaymentVerifyActions />` Verify → schedule `paid`、buyer 收信標明「verified by Seller」
+- ✅ 所有 schedule paid 後 `autoCompleteIfReady` 才把訂單推到 `completed`（修正先前 count bug，未付完款不再誤推）
+- ✅ `/admin/settings → Send test email` 在 admin Gmail 收件夾收到測試信（AWS SES SMTP）
+- ✅ `<ContractDraftForm />` Incoterm 帶到議價最後一輪的 q.incoterm（非 listing 原值）
+- ✅ `<ShipmentForm />` 在不上傳 B/L / Inspection Report 時仍可 Mark Shipped；上傳時寫進 `order_documents`
+- ✅ `<SelectItem />` 在 hover 時前景 / 背景對比清楚
+- ✅ `node scripts/check-dev-errors.mjs` exit 0（過濾掉 MCP / Bitdefender 注入的 hydration false positive）
+
+---
+
 ## 7. 變更歷史
 
 | 日期 | 變更 |
 |---|---|
 | 2026-05-15 | 初版：3 個測試帳號、full_prepay / net_after_arrival 走測腳本、dispute/cancel 旁支 |
 | 2026-05-15 | Full prepay 端到端走測通過；`order-documents` bucket 建好（010） |
+| 2026-05-20 | Payment seller-review + Pay Early + Email (AWS SES SMTP) 煙霧通過；§1 移除「不要驗 email」警示、§5 阻塞列 #2/#4 標完成、§2 Phase D 改寫成 seller-primary review 流程；新增已知阻塞 #6 KYC 上傳 |

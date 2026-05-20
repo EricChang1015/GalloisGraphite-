@@ -25,6 +25,7 @@
 | `012_listings_categories_order_party_read.sql` | **訂單雙方讀取**：`listings` / `product_categories` 額外 RLS，允許訂單 buyer/seller 讀取關聯商品（即使 listing 已 pause 或 category 已下架） |
 | `013_payment_schedules.sql` | **付款抽離**：新增 enum `payment_category` / `payment_milestone` / `payment_schedule_status` + `payment_schedules` 表；`payments` 加 `schedule_id`；`orders` 加 `incoterm` + 9 個 milestone 時間戳；RLS 對 buyer/seller/admin 開放 select |
 | `014_drop_legacy_payment_terms.sql` | **Hard cutover**：truncate 所有 orders / contracts / payments / quotations / payment_schedules 測試資料；`orders` drop `payment_terms` / `payment_due_days` / `payment_due_date`；`contracts` drop `payment_terms` / `payment_due_days`。`payment_terms_type` enum + `order_status` 的 `payment_pending` / `paid` / `draft` / `contract_generated` 仍保留（PG 無法 drop enum value），但不再被任何 server action 寫入 |
+| `015_payment_seller_verify.sql` | **Payment 審核權限改寫**：drop legacy `payments_admin_update`，新建 `payments_seller_or_admin_update`，允許 update 的條件為「auth.uid() 是該 payment.order 的 seller_id，或 `current_user_role()` ∈ {admin, super_admin}」。順手加 `idx_payments_status_pending` (partial, status='pending') 與 `idx_payments_order_status`，加速 seller / admin 查詢待審 payment |
 
 > ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >
@@ -273,7 +274,15 @@ disputed → cancelled / completed
 | **schedule_id** | uuid FK payment_schedules | 013 新增：本筆 payment 結算的 schedule 列；admin verify 後 schedule.paid_payment_id 回指此 row |
 | created_at | timestamptz | |
 
-索引：`(order_id, status)`, `(schedule_id)`
+索引：`(order_id, status)`, `(schedule_id)`，**`(status) WHERE status='pending'`（015）**, **`(order_id, status)`（015）**。
+
+**RLS（015 後）**：
+- select：order 的 buyer / seller 或 admin
+- insert：buyer（本人）
+- **update：order 的 seller（自審）或 admin / super_admin（覆審 / 介入）** — `payments_seller_or_admin_update` 取代 `payments_admin_update`
+- delete：—（無 policy）
+
+> 設計理由：把第一線審核責任交還賣家（他能直接在區塊鏈 / 銀行對帳系統確認到帳），把 admin 從每日例行 ops 解放，但保留 admin override 處理爭議的權力。
 
 ## 5c. 付款排程 — `payment_schedules` (013 新增)
 
@@ -474,7 +483,7 @@ AI 助手每個 Q&A turn 的 server-side audit trail。append-only。
 | inquiries | parties / admin | buyer | parties / admin | -- |
 | orders | parties / admin | server action（service_role） | server action / admin | -- |
 | contracts | parties / admin | server action | server action | -- |
-| payments | parties / admin | buyer | admin only | -- |
+| payments | parties / admin | buyer | **seller (of order) / admin**（015） | -- |
 | chat_rooms | members / admin | (server action) | -- | -- |
 | chat_members | self / admin | (server action) | -- | -- |
 | messages | room members / admin | room members | sender(短時間內) | -- |

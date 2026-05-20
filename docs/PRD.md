@@ -27,15 +27,15 @@
 | 7 | **詢價 → 報價流程**：買家提交 inquiry → 賣家發 quotation（規格/價格/Incoterm/有效期）→ 雙方可 counter 來回議價 → buyer accept → 自動建立 order | `<InquiryDialog />` + `<QuotationForm />` + `acceptQuotation` |
 | 8 | **訂單狀態機（B2B 12 階段，付款已抽離）**：Quotation Pending → Quoted ↔ Negotiating → Contract Pending → Contract Signed → In Production → Ready to Ship → Shipped → In Transit → Arrived → Customs Cleared → Completed；Disputed / Cancelled。付款不再卡關訂單流程，獨立由 `payment_schedules` 管理（migration 013/014） | `src/lib/order/stateMachine.ts` |
 | 9 | **合約生成 + 多階段付款排程**：賣家 draftContract 選 Incoterm（FOB/CFR/CIF only） + 用 `<PaymentScheduleBuilder />` 拆出 prepayment / regular / postpayment 多筆 installment（總和 100%）；買家 approve / reject（revision_no++）；雙方上傳簽名掃描 | `src/lib/contract/template.ts` + `<ContractDraftForm />` + `<PaymentScheduleBuilder />` |
-| 10 | **多階段付款 + 人工審核**：每筆 schedule 在對應 milestone 觸發（粗節點隨訂單狀態自動；細節點由買賣方手動 button；`bl_date_plus_N` 由 Vercel Cron 排程）→ schedule.status `scheduled → due → awaiting_review → paid`；admin 在後台 verify/reject 每筆 payment | `/admin/payments` + `<PaymentScheduleTable />` + `<MilestoneActionButtons />` + `/api/cron/payment-schedule` |
+| 10 | **多階段付款 + 人工審核**：每筆 schedule 在對應 milestone 觸發（粗節點隨訂單狀態自動；細節點由買賣方手動 button；`bl_date_plus_N` 由 Vercel Cron 排程）→ schedule.status `scheduled → due → awaiting_review → paid`。**Seller 為 primary reviewer，在 Payment tab 內直接 verify / reject；Admin 保留覆審 / 爭議介入權**（migration 015）。Buyer 可對 `scheduled` 列 **「Pay Early」** 提前結算 | `/admin/payments` + `<PaymentScheduleTable />` + `<PaymentVerifyActions />` + `<MilestoneActionButtons />` + `/api/cron/payment-schedule` |
 | 11 | **訂單時間軸**：每次狀態轉換 append timeline 事件 | `appendTimeline()` |
 | 12 | **Audit log**：所有 admin 動作寫入 `audit_logs` | `writeAuditLog()` |
-| 13 | **Email + SMS 通知**：詢價/報價/合約/出貨/付款等 10 個 user 事件（SMS 需 Admin 開關 + env + `profiles.phone`）；admin 事件僅 Email | `src/lib/notifications/dispatch.ts` + `src/lib/sms/client.ts`；詳見 [ARCHITECTURE §8](./ARCHITECTURE.md#8-通知系統) |
+| 13 | **Email + SMS 通知**：詢價/報價/合約/出貨/付款等 10 個 user 事件（SMS 需 Admin 開關 + env + `profiles.phone`）；admin 事件僅 Email。Email 走 **AWS SES SMTP（nodemailer，2026-05-20 從 Resend 遷移）**，`/admin/settings` 有「Send test email」即時驗證 | `src/lib/notifications/dispatch.ts` + `src/lib/email/smtp.ts` + `src/lib/sms/client.ts`；詳見 [ARCHITECTURE §8](./ARCHITECTURE.md#8-通知系統) |
 | 14 | **使用者 Dashboard**：active orders + pending inquiries 快速概覽 + 角色相關快捷 | `/dashboard` |
 | 15 | **三主題 UI**：light / dark / editorial（next-themes） | `<ThemeToggle />` |
 | 16 | **訂單進度條**：固定 12 階段線性進度（付款已抽離），右上 micro-badge 顯示 Payments: X/Y paid | `<OrderProgressBar />` |
 | 17 | **訂單文件中心**：13 種文件類型分組（Contract / Invoice / Logistics / Inspection / Customs / Payment / Other）+ 每個 type 多檔上傳 + admin 核驗徽章 | `<OrderDocumentsTab />` + `<DocumentUploader />` |
-| 18 | **B/L + Vessel 追蹤**：賣家 markShipped 時填 B/L No、vessel name/IMO、container numbers、ETD/ATD/ETA；任一方可 markArrived（記 ATA）；買家 markCustomsCleared | `<ShipmentForm />` + `<OrderPhaseActions />` |
+| 18 | **B/L + Vessel 追蹤 + 文件上傳**：賣家 markShipped 時填 B/L No、vessel name/IMO、container numbers、ETD/ATD/ETA；UI **可選**上傳 B/L 掃描與 Inspection Report（COA/SGS）到 `order_documents`（不強制，符合實務上有些船公司只給電子 B/L）。任一方可 markArrived（記 ATA）；買家 markCustomsCleared | `<ShipmentForm />` + `<OrderPhaseActions />` |
 | 19 | **Disputed / Cancelled UI**：所有非終止狀態都可 raiseDispute / cancelOrder，admin 收 email + audit log | `<OrderPhaseActions />` |
 | 20 | **Admin 訂單詳情 + Force Transition**：admin 可 force transition 繞過狀態機（dispute 解決用），所有強制動作寫 audit_logs | `/admin/orders/[id]` + `<AdminOrderActions />` |
 | 21 | **Forgot / Reset password**：寄 recovery 連結 → 設新密碼；Google OAuth 用戶可藉此額外綁定 email/password identity，同一個 profile 可用兩種方式登入 | `(auth)/{forgot-password,reset-password}` + `requestPasswordReset` / `updatePassword` server actions |
@@ -107,7 +107,8 @@
 1. 買家在 `/market` 瀏覽，進詳情頁，點「Submit Inquiry」
 2. `<InquiryDialog />` 表單：requested_qty、target_price、destination、message
 3. 賣家收到 Email 通知 + 在 `/inquiries` Received Tab 看到
-4. 賣家「Accept」 → 自動建立 `orders.status='draft'`，inquiry.status='converted'，導向訂單頁
+4. 賣家以 `<QuotationForm />` 發出第一筆 quotation（可預設 listing 條件 + 14 天 validity）→ 雙方可 counter 來回議價
+5. Buyer accept quotation → `acceptQuotation` 建立 `orders.status='contract_pending'`、`orders.incoterm = q.incoterm`、`current_quotation_id = q.id`；inquiry.status='converted'，導向訂單頁。Incoterm 在這一步就敲定，避免後續合約 draft 沿用 listing 的舊 Incoterm。
 
 ### 4.4 訂單核心流程（B2B 12 階段，付款已抽離）
 
@@ -149,15 +150,28 @@ quotation_pending → quoted ↔ negotiating
 | 手動（買家按鈕） | `bl_received` / `shipping_docs_received` / `bl_plus_insurance_received` / `goods_picked_up` | `<MilestoneActionButtons />` |
 | 時間（cron） | `bl_date_plus_30 / 60 / 90` | `/api/cron/payment-schedule` 每日 04:00 UTC |
 
-**買家付款流程**：在 Payment tab `<PaymentScheduleTable />` 看到 `due` 列
+**買家付款流程**：在 Payment tab `<PaymentScheduleTable />` 看到 `due`（或 `scheduled` — 可 Pay Early）列
 → 點 Submit Payment 開 dialog（method / tx_hash / proof_url / note）→
 `payments.status='pending'` + `schedule.status='awaiting_review'` →
-admin 在 `/admin/payments` 審核 → verified 時 `schedule.status='paid'` +
-`schedule.paid_payment_id`。
+**seller 在訂單的 Payment tab（或 admin 在 `/admin/payments`）審核**
+→ verified 時 `schedule.status='paid'` + `schedule.paid_payment_id`。
+
+**Pay Early**：buyer 可以對任何 `scheduled` 列（尚未到 milestone）按 Pay Early，
+方便在已有資金 / 想鎖匯率時提前結算。提前付款一樣會送進 awaiting_review 等 seller / admin verify。
+
+**Reviewer 邏輯（migration 015）**：
+- Seller 是 primary reviewer：他能直接從鏈上 (USDT) 或自家銀行對帳系統確認入金
+- Admin 是 fallback：遇到爭議、seller 失職、買賣雙方意見不一時介入
+- RLS：`payments_seller_or_admin_update` — `auth.uid()` 是該 payment.order 的 seller_id 或 `current_user_role() ∈ {admin, super_admin}`
+- 通知：`submitPayment` → seller email/SMS（主收）+ admin email CC；`verifyPayment` → buyer email 含 reviewer 角色標記
 
 **自動 completion**：`verifyPayment` 在「所有 schedule paid 且
 `order.status='customs_cleared'`」時呼叫 `autoCompleteIfReady()` 把訂單
 推到 `completed`。
+
+> **2026-05-20 bug fix**：`autoCompleteIfReady` 先前用 `.select("id")` 取陣列 length 判斷，
+> 部分情況回傳 size hint 為 0 導致沒付完款的訂單被誤推到 `completed`（ORD-260520-601b6b
+> 案例）。現改為 `select("id", { count: "exact", head: true })` 取真實 count。
 
 ### 4.6 站內 IM ⚠️ 待實作（A2）
 - 建立訂單時自動建 `chat_rooms (type='order')` + `chat_members(buyer, seller)`
@@ -205,3 +219,4 @@ admin 在 `/admin/payments` 審核 → verified 時 `schedule.status='paid'` +
 | 2026-05-15 | fix(admin) 768cfbc：`/admin` 計數器與 `/admin/payments` 同步（`dynamic = "force-dynamic"` + 於 `verifyPayment` / `submitPayment` revalidate） |
 | 2026-05-15 | docs 773411c：完成 full-prepay 端到端走測（`ORD-TEST-MP6PL7MZ`）；A4 關閉，A7 full-prepay happy path 勾選；OrderProgressBar 在 `completed` 狀態 polish |
 | 2026-05-19 | refactor(orders) decouple-payment：付款從訂單時間軸抽離，新增 `payment_schedules`（migration 013/014）；訂單狀態機簡化為 12 階段線性；Incoterm 限縮 FOB/CFR/CIF；新增 `<PaymentScheduleBuilder />`、`<PaymentScheduleTable />`、`<MilestoneActionButtons />`、`/api/cron/payment-schedule`；移除 `payment_terms` / `payment_due_days` 欄位（hard cutover，舊測試資料清空） |
+| 2026-05-20 | feat(payment/email/shipment) seller-review-and-ses：(1) Payment 改 seller 主審 admin 覆審（migration 015 `payments_seller_or_admin_update`，`<PaymentVerifyActions />` 抽到 `src/components/order/` 雙處使用）；(2) Email 從 Resend 改 nodemailer + AWS SES SMTP（`src/lib/email/smtp.ts`，`/admin/settings` 加「Send test email」）；(3) `acceptQuotation` 寫入 `orders.incoterm = q.incoterm`，解決議價更動後合約 draft 仍用 listing 原 Incoterm 的 bug；(4) `<ShipmentForm />` 加 optional B/L + Inspection Report 上傳；(5) `submitPayment` 接受 `scheduled` 期讓買家「Pay Early」；(6) `autoCompleteIfReady` 修正 Supabase count 用法（`{ count: "exact", head: true }`），解決 ORD-260520-601b6b 未付完款就被推到 completed 的 bug；(7) seller `getUserActionCounts` 加 `paymentsAwaitingMyReview` |
