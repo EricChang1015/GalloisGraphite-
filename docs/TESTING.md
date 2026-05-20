@@ -1,8 +1,50 @@
-# Testing Accounts & End-to-End Walkthrough
+# Testing Accounts & QA Process
 
-> 本文件記錄 production / staging Supabase 的測試帳號與完整 happy-path
-> 走測腳本。請勿把帳號改成真實 email 發信目的地——
-> 這些 email 是 Gmail alias（`+suffix` 形式），只在 Supabase 留登入紀錄用。
+> 本文件是 **B2B 交易流程** 的 QA 單一來源：測試帳號、分層驗證流程、端到端走測腳本、
+> DB 斷言 SQL、已知缺口與走測紀錄。
+>
+> **架構對齊（2026-05-19 migration 014）**：訂單為 **12 階段線性狀態機**；
+> 付款已抽離至 `payment_schedules`，**不再**使用 `full_prepay` /
+> `net_after_arrival` 或 `orders.payment_terms`。舊文件若仍提到 `payment_pending → paid`
+> 推進訂單，請以本文件與 [`ARCHITECTURE.md` §4.4–4.5](./ARCHITECTURE.md) 為準。
+
+---
+
+## 0. 快速對照：訂單 vs 付款
+
+```mermaid
+flowchart LR
+  subgraph order["訂單狀態（12 階段）"]
+    QP[quotation_pending] --> Q[quoted]
+    Q <--> N[negotiating]
+    N --> CP[contract_pending]
+    CP --> CS[contract_signed]
+    CS --> IP[in_production]
+    IP --> RTS[ready_to_ship]
+    RTS --> SH[shipped]
+    SH --> IT[in_transit]
+    IT --> AR[arrived]
+    AR --> CC[customs_cleared]
+    CC --> CO[completed]
+  end
+
+  subgraph pay["付款排程（每筆 installment）"]
+    SCH[scheduled] --> DUE[due]
+    DUE --> ARV[awaiting_review]
+    ARV --> PD[paid]
+  end
+
+  CS -.->|milestone contract_signed| DUE
+  CC -.->|全部 schedule paid| CO
+```
+
+| 概念 | 表 / 欄位 | 誰推進 |
+|---|---|---|
+| 訂單階段 | `orders.status` | Server Actions（`src/actions/order.ts`） |
+| 付款期數 | `payment_schedules`（1–10 筆，總和 100%） | 賣家 `draftContract` 時建立 |
+| 單次付款提交 | `payments` + `schedule_id` | 買家 `submitPayment` |
+| 付款審核 | `payments.status` → verified | **Seller 主審**；Admin 覆審 |
+| 訂單結案 | `customs_cleared` → `completed` | 僅當 **所有** schedule 為 `paid` 或 `waived` |
 
 ---
 
@@ -10,181 +52,295 @@
 
 | 角色 | Email | Password | 備註 |
 |---|---|---|---|
-| **Admin (super_admin)** | `eric.chang.1015+admin@gmail.com` | `a1234567` | 可進 `/admin/*`、人工審核付款 |
-| **Seller** | `eric.chang.1015+seller@gmail.com` | `a1234567` | 可上架 listings、發 quotations、起草合約 |
-| **Buyer** | `eric.chang.1015+buyer@gmail.com` | `a1234567` | 詢價、議價、簽合約、付款 |
+| **Admin (super_admin)** | `[REDACTED]` | `a1234567` | `/admin/*`、付款覆審、force transition |
+| **Seller** | `eric.chang.1015+seller@gmail.com` | `a1234567` | 上架、報價、起草合約、出貨、**付款主審** |
+| **Buyer** | `eric.chang.1015+buyer@gmail.com` | `a1234567` | 詢價、議價、核准合約、付款、通關確認 |
 
-**所有帳號都是 Gmail alias**：`+admin` / `+seller` / `+buyer` 三個地址實際上都會
-進到 `eric.chang.1015@gmail.com` 同一個收件夾，但 Supabase Auth 視為三個獨立帳號。
+**Gmail alias**：`+admin` / `+seller` / `+buyer` 會進同一收件夾，Supabase Auth 視為三個帳號。
 
-> ✅ **2026-05-20 起 transactional email 已能正常寄達**：通知信改走 **AWS SES SMTP**
-> （`src/lib/email/smtp.ts`，nodemailer）。三個 Gmail alias（`+admin` / `+seller` /
-> `+buyer`）都會收進 `eric.chang.1015@gmail.com` 同一個收件夾，**可以**用來驗證信件
-> 內容。`/admin/settings → Send test email` 提供一鍵連線驗證。
+> ✅ **2026-05-20 起** 通知信走 **AWS SES SMTP**（`src/lib/email/smtp.ts`）。
+> `/admin/settings → Send test email` 可驗證連線。
 
-### 1.1 切換登入
+### 1.1 多角色並行登入
 
-Chrome 推薦做法：開三個 **incognito profile** 或用 **Profiles**（左上角 avatar）
-建立 Seller / Buyer / Admin 三個 profile，互不干擾 cookie。或者用 Edge + Firefox
-+ Chrome 三個瀏覽器各登一個角色。
+- **建議**：Chrome 三個 Profile（或 Edge + Firefox + Chrome），各登一角色，避免 cookie 互搶。
+- **首次部署**：admin 的 `profiles.role` 可能仍是 `buyer`，需 SQL 或 `/admin/users` 升為 `super_admin`。
+- **Seller 帳號**：在 `/admin/users` 將 `+seller@` 的 role 改為 `seller`。
+- **Commercial profile**：`createInquiry` / `createListing` / `submitPayment` 要求 `company_name` + `country` 非空；缺欄時到 `/settings?prompt=incomplete` 補齊。
 
-### 1.2 升級為 super_admin
+### 1.2 SMS（可選）
 
-第一次部署後，admin 帳號的 `profiles.role` 預設是 `buyer`。需要手動 SQL 升級：
+1. `.env` 設 `SMS_BASE_URL`、`SMS_APP_ID`
+2. Admin → `/admin/settings` 開啟 SMS
+3. 買賣双方在 `/settings` 填 phone（含國碼）
+4. 走一筆訂單流程，確認閘道收到 SMS
 
-```sql
-update public.profiles
-set role = 'super_admin'
-where email = 'eric.chang.1015+admin@gmail.com';
-```
-
-可以透過 `scripts/apply-migrations.mjs` 的 query helper 跑（見
-[`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc#helper-queries)）。
-
-### 1.3 切換 buyer ↔ seller
-
-`/admin/users` 提供 role picker（super_admin 才能 promote 為 admin / super_admin）。
-測試 seller 需要先在 admin 後台把 `eric.chang.1015+seller@gmail.com` 從預設的
-`buyer` 改成 `seller`。
-
-### 1.4 SMS 交易通知（可選）
-
-1. 在 `.env.local` 填入 `SMS_BASE_URL`、`SMS_APP_ID`（可選 `SMS_TYPE`）。
-2. 以 admin 登入 → `/admin/settings` → 開啟 **SMS notifications**。
-3. 買/賣双方在 `/settings` 填寫 **phone**（含國碼）。
-4. 走一筆詢價→報價→訂單流程，確認閘道收到 SMS；關閉開關後應只發 Email。
-
-完整觸發點清單見 [`ARCHITECTURE.md` §8](./ARCHITECTURE.md#8-通知系統)。
+觸發點見 [`ARCHITECTURE.md` §8](./ARCHITECTURE.md#8-通知系統)。
 
 ---
 
-## 2. End-to-End Happy Path 腳本（full_prepay 分支）
+## 2. QA 流程（分層）
 
-下面這條路徑會走過 13-stage state machine 的主要節點。每一步預期看到的畫面
-與資料庫狀態都列在右側。
+每次發版或改動 **訂單 / 付款 / 合約** 相關程式時，依序執行下列層級。**不可**只做 `npm run build` 就宣告交易流程通過。
+
+### Tier 0 — 環境與 schema（約 2 分鐘）
+
+```bash
+npm run qa:preflight
+```
+
+等同：
+
+```bash
+npm run build
+node scripts/apply-migrations.mjs --status
+node scripts/verify-schema.mjs
+```
+
+**通過標準**：build exit 0；所有 migration 已套用；`payment_schedules` 存在、`orders.payment_terms` 已不存在。
+
+### Tier 1 — 靜態與型別
+
+```bash
+npm run lint
+npm run build
+```
+
+### Tier 2 — 手動 E2E（交易核心，約 30–45 分鐘）
+
+執行 **§3 情境 A**（必做）與 **§4 情境 B**（建議，驗證分期與結案閘門）。
+
+走測結束後：
+
+```bash
+node scripts/check-dev-errors.mjs
+```
+
+（需先跑過 `npm run dev` 並在瀏覽器走過相關頁面。）
+
+### Tier 3 — 旁支與 regression（發版前）
+
+| 項目 | 腳本章節 | 狀態 |
+|---|---|---|
+| Dispute / Cancel | §6 | 待各跑一次 |
+| Admin force transition | §6 | 待跑 |
+| Pay Early（`scheduled` → 提前付款） | §3 D1 變體 | 2026-05-20 已煙霧通過 |
+| Seller reject payment | Payment Tab | 建議補 |
+| Contract reject + re-draft | §3 C1 變體 | 建議補 |
+| `PROFILE_INCOMPLETE` gate | 清空 settings 後試 inquiry | 建議補 |
+| Google OAuth 註冊 | ROADMAP A7 | production 待補 |
+
+### Tier 4 — 清理測試資料
+
+```bash
+node scripts/cleanup-test-data.mjs
+```
+
+會刪除 title 為 `TEST · MADA1%` / `SMOKE · %` / `BROWSER · %` 的 listings 及連帶列。
+
+### 加速：跳過 A/B 上架議價
+
+若只驗證合約以後流程：
+
+```bash
+node scripts/seed-test-order.mjs
+```
+
+會建立 `contract_pending` 訂單（`ORD-TEST-*`），輸出 `order_id` 後直接開 `/orders/{id}`。
+
+---
+
+## 3. 情境 A — 全額預付（100% @ `contract_signed`）
+
+**目的**：最短路徑，覆蓋 12 階段訂單 + 單筆 schedule 付款 + seller 審核 + 自動結案。
+
+**付款排程設定（C1）**：Incoterm `CFR`，一筆 installment：
+
+| category | milestone | percentage |
+|---|---|---|
+| prepayment | contract_signed | 100 |
 
 ### Phase A — 上架（Seller）
 
-| # | 動作 | 預期結果 |
-|---|---|---|
-| A1 | 登入 Seller 帳號 → `/listings/new` | 進入上架表單 |
-| A2 | 選 category（e.g. `MADA1 — +80 Mesh`）、qty 50 MT、price 4500 USD、CFR、origin Tamatave | 表單通過 zod 驗證 |
-| A3 | Submit | listings.status='active'，跳轉 `/listings`，新 listing 出現在 `/market` |
-
-### Phase B — 詢價 + 議價（Buyer ↔ Seller）
-
-| # | 動作 | 預期結果 |
-|---|---|---|
-| B1 | Buyer 登入 → `/market` → 點 listing → `<InquiryDialog />` 填 requested_qty / target_price / destination / message | `inquiries.status='pending'`，seller 收 email |
-| B2 | Seller → `/inquiries` Received tab → `<QuotationForm />` 開報價（price/incoterm/validity） | `quotations.status='sent'`，`inquiries.status='quoted'` |
-| B3 | Buyer → `/inquiries/[id]` → `<QuotationActions />` 「Counter」回一個新價 | parent quotation `'countered'`，新 quotation `'sent'`，`inquiries.status='negotiating'` |
-| B4 | Seller 再 counter 一次 → Buyer 最終 「Accept」 | `quotations.status='accepted'`，**`orders` insert (`status='contract_pending'`, `current_quotation_id=q.id`)**，`inquiries.status='converted'` |
-
-### Phase C — 合約（Seller draft → Buyer review → 簽名）
-
-| # | 動作 | 預期結果 |
-|---|---|---|
-| C1 | Seller → `/orders/[id]` → Contract Tab → `<ContractDraftForm />` 選 `full_prepay` + Days 5 → 「Draft Contract」 | `contracts.revision_no=1`，`contracts.content_html` 有渲染好的 HTML，`orders.payment_terms='full_prepay'`，order 維持 `contract_pending`，timeline append `contract_redrafted` |
-| C2 | Buyer 切到 Contract Tab → 看 `<ContractPreview />` → 「Approve Contract」 | `contracts.buyer_approved_at` 寫入；UI 顯示「You have approved this contract.」 |
-| C3 | Seller 與 Buyer 各自上傳簽名掃描（任意 PNG / PDF） | 兩份都齊 + buyer approved → **自動 `contract_signed` → 再自動 `payment_pending`**（full_prepay 分支），timeline 連續記錄 |
-
-### Phase D — 付款 + 出貨
-
-| # | 動作 | 預期結果 |
-|---|---|---|
-| D1 | Buyer → Payment Tab → 對 `due`（或 `scheduled` 列 Pay Early）填 method=`usdt_trc20` + amount + tx_hash + note → Submit | `payments.status='pending'` + `schedule.status='awaiting_review'`，**seller 收 email/SMS（主收）、admin 收 email CC** |
-| D2 | **Seller**（or Admin）→ `/orders/[id]` Payment Tab →`<PaymentVerifyActions />` 「Verify」（可填 reviewer note） | `payments.status='verified'`、`schedule.status='paid'`、`schedule.paid_payment_id=payment.id`；buyer 收信標明 verified by Seller / Admin。**訂單 status 不變**（除非 customs_cleared 且全部 schedule 都 paid → `autoCompleteIfReady` 自動 → `completed`） |
-| D3 | Seller → `/orders/[id]` → 「Mark Ready to Ship」 | status → `ready_to_ship` |
-| D4 | Seller → `<ShipmentForm />` 填 B/L No、vessel_name、container_numbers、ETD/ATD/ETA → **(optional)** 上傳 B/L scan + Inspection Report (COA/SGS) → Submit | status → `shipped`，buyer 收 email；optional 檔案寫進 `order_documents`（type=`bill_of_lading` / `inspection_report`） |
-| D5 | Seller → 「Mark In Transit」 | status → `in_transit` |
-| D6 | Seller / Buyer / Admin → `<MarkArrived />` 填 ATA | status → `arrived`；觸發 `arrived_at_port` milestone，相關 schedule `scheduled→due` |
-
-### Phase E — 結案
-
-| # | 動作 | 預期結果 |
-|---|---|---|
-| E1 | Buyer → 「Customs Cleared」 | full_prepay 流：status → `customs_cleared` → 自動 `completed`，admin 收 email |
-| E2 | 切回 Admin → `/admin/orders/[id]` 看 Timeline | 13+ 筆事件，狀態欄 `Completed` |
-
----
-
-## 3. Net-after-arrival 分支差異
-
-C1 起選 `net_after_arrival` + Days 30，後面：
-
-- C3 雙方簽完 + buyer approved → **直接 `contract_signed` → `in_production`**（跳過 `payment_pending` / `paid`）
-- D1–D2 跳過
-- E1 Buyer 確認通關 → 直接 → `payment_pending`（**不是 completed**），UI 顯示 `payment_due_date`
-- E2 Buyer 補做 D1（submit payment）
-- E3 Admin verify → **`paid` → `completed`**（**不再進 `in_production`**）
-
----
-
-## 4. Dispute / Cancel 旁支
-
-| 動作 | 觸發者 | 結果 |
-|---|---|---|
-| Raise Dispute | 任一方（非終止狀態） | status → `disputed`，admin 收 email，audit_logs |
-| Cancel Order | 任一方（pre-shipment 階段） | status → `cancelled` |
-| Admin Force Transition | super_admin / admin | 從 `disputed` 強推回 `completed` / `cancelled` / 任意目標；audit_logs metadata 記錄 from/to/reason |
-
----
-
-## 5. 已知阻塞
-
-1. ✅ ~~**`order-documents` Storage bucket 尚未建立**~~ — 已由 `010_storage_order_documents.sql` 建立
-2. ✅ ~~**Resend domain DNS 未驗證**~~ — 2026-05-20 改 **AWS SES SMTP**（`src/lib/email/smtp.ts`），通知信已能正常寄達；`/admin/settings` 有「Send test email」可即時驗證連線
-3. ⚠️ **A2 站內 IM 未實作** — 訂單 Tab 沒有 chat 欄位
-4. ✅ ~~**`(app)` layout sidebar 缺 Logout 按鈕**~~ — 已掛上 `<Navbar />` + `<MobileNav />`
-5. ⚠️ **net_after_arrival 走測尚未完成** — 路徑與 actions 與 full_prepay 共用，但分支跳轉時點不同，需各跑一次
-6. ⚠️ **KYC 文件上傳尚未實作** — commercial profile gate 已完成（缺欄會回 `PROFILE_INCOMPLETE`），但 `kyc` bucket / `<KycUploadForm />` / admin 升級 `kyc_level` 仍待補（ROADMAP §A6）
-
----
-
-## 6. 走測紀錄
-
-### 2026-05-15 — Full prepay flow 端到端通過
-
-`ORD-TEST-MP6PL7MZ` 從 `negotiating` 一路推到 `completed`，每個階段的 timeline event 都正確記錄：
-
-| 階段 | 操作者 | 動作 | 結果 |
+| # | 動作 | 預期（UI） | DB 斷言（可選） |
 |---|---|---|---|
-| `quotation_pending → quoted` | Seller | `<QuotationForm />` 報價 | `inquiries.status='quoted'` |
-| `quoted → negotiating` | Buyer | counter-offer | parent quotation 變 `countered` |
-| `negotiating → contract_pending` | Buyer | `acceptQuotation` | order insert |
-| `contract_pending → contract_pending` (redraft) | Seller | `<ContractDraftForm />` 選 `full_prepay` / 5d | `contracts.revision_no=1` |
-| Buyer approve + 雙方上傳簽名掃描 | Both | `<SignedScanUploader />` | `contract_signed` → 自動 `payment_pending`，預覽自動嵌入簽名 |
-| `payment_pending → paid` | Buyer / Admin | `submitPayment` (`bank_transfer`+proof) → `verifyPayment` | `paid → in_production` 自動推 |
-| `in_production → ready_to_ship → shipped` | Seller | `markReadyToShip` + `<ShipmentForm />`（B/L MAEU260515E2E、vessel MAERSK SOUTH） | 全部欄位寫入 |
-| `shipped → in_transit → arrived` | Seller | `markInTransit` + `markArrived` (ATA 2026-05-15) | `orders.ata` 寫入 |
-| `arrived → customs_cleared → completed` | Buyer | `markCustomsCleared` | `customs_cleared_at` 寫入，自動進 `completed` |
+| A1 | Seller 登入 → `/listings/new` | 表單可填 | — |
+| A2 | Category `MADA1`、qty 50 MT、price 4500、CFR、origin Tamatave | zod 通過 | — |
+| A3 | Submit | 跳轉 `/listings`；`/market` 可見 | `listings.status='active'` |
 
-驗證項目：
-- ✅ Buyer 列表頁訂單顯示 `completed` 徽章
-- ✅ Timeline tab 完整顯示 15 筆 transition events
-- ✅ OrderProgressBar 第 14 階段顯示為綠色「Done」
-- ✅ `npm run build` exit 0、無 lint error、無新 console error
+### Phase B — 詢價與議價（Buyer ↔ Seller）
+
+| # | 動作 | 預期 | DB |
+|---|---|---|---|
+| B1 | Buyer → `/market` → listing → `<InquiryDialog />` | toast 成功 | `inquiries.status='pending'`；seller 收 email |
+| B2 | Seller → `/inquiries` Received → `<QuotationForm />` | 報價送出 | `quotations.status='sent'`；`inquiries.status='quoted'` |
+| B3 | Buyer → `/inquiries/[id]` → Counter（可選） | 議價中 | `inquiries.status='negotiating'` |
+| B4 | Buyer → Accept | 導向新訂單 | `orders.status='contract_pending'`；`orders.incoterm` = quotation.incoterm；`inquiries.status='converted'` |
+
+### Phase C — 合約（Seller draft → Buyer approve → 簽名）
+
+| # | 動作 | 預期 | DB |
+|---|---|---|---|
+| C1 | Seller → `/orders/[id]` Contract → `<ContractDraftForm />`：CFR + **100% contract_signed** → Draft | Buyer 收通知 | `contracts.revision_no=1`；`payment_schedules` 1 列、`status='scheduled'`；`orders.incoterm='CFR'`；order 仍 `contract_pending` |
+| C2 | Buyer → Approve Contract | 顯示已核准 | `contracts.buyer_approved_at` 非空 |
+| C3 | Seller、Buyer 各上傳簽名 PNG/PDF | 雙方簽名區塊齊 | 雙方 `*_signed_url` 有值 |
+| C4 | （C2+C3 完成後自動） | Progress → Contract Signed → **In Production** | `orders.status='in_production'`；`contract_signed` 那筆 schedule → **`due`** |
+
+> **常見錯誤**：未 Approve 就上傳簽名 → 不會自動推進。順序必須 **先 C2 再 C3**。
+
+### Phase D — 付款（不推進訂單狀態）
+
+| # | 動作 | 預期 | DB |
+|---|---|---|---|
+| D1 | Buyer → Payment Tab → 對 **`due`** 列 Submit：`usdt_trc20` + amount + tx_hash | 待審核 | `payments.status='pending'`；schedule → `awaiting_review`；seller email（admin CC） |
+| D2 | Seller → Payment Tab → `<PaymentVerifyActions />` Verify | Buyer 收「verified by Seller」 | `payments.status='verified'`；schedule → `paid`；**`orders.status` 仍 `in_production`** |
+| D3 | Seller → Mark Ready to Ship | 狀態更新 | `orders.status='ready_to_ship'` |
+| D4 | Seller → `<ShipmentForm />`（B/L、vessel、container、ETD…；B/L/COA 上傳可選） | Shipped | `orders.status='shipped'`；`loaded_onto_vessel` milestone 若 schedule 有綁則變 `due` |
+| D5 | Seller → Mark In Transit | — | `in_transit` |
+| D6 | 任一方 → Mark Arrived（填 ATA） | — | `arrived`；`arrived_at_port` milestone 觸發 |
+| D7 | Buyer → Customs Cleared | 若 D2 已付清 → **Completed** | `customs_cleared`；若仍有未付 schedule → **停在 customs_cleared**，ProgressBar 顯示 Payments outstanding |
+
+**情境 A 在 D7 的結案條件**：僅一筆 schedule 且 D2 已 `paid` → `maybeAutoComplete` → `completed`。
+
+### Phase E — Admin 覆核
+
+| # | 動作 | 預期 |
+|---|---|---|
+| E1 | Admin → `/admin/orders/[id]` | Timeline 含 quotation / contract / payment / shipping 事件；狀態 `Completed` |
+| E2 | Admin → `/admin/payments` | History 可見該筆 verified payment |
+
+### SQL 快查（替換 `{ORDER_ID}`）
+
+```sql
+-- 訂單 + 排程 + 最近付款
+select o.order_no, o.status, o.incoterm,
+       ps.seq, ps.category, ps.milestone, ps.percentage, ps.amount, ps.status as sched_status,
+       p.method, p.status as pay_status
+  from orders o
+  left join payment_schedules ps on ps.order_id = o.id
+  left join payments p on p.schedule_id = ps.id
+ where o.id = '{ORDER_ID}'
+ order by ps.seq nulls last, p.created_at desc;
+```
 
 ---
 
-### 2026-05-20 — Payment seller-review + Pay Early + Email migration 煙霧通過
+## 4. 情境 B — 分期付款（30% 簽約 + 70% 收貨）
 
-驗證項目：
-- ✅ Buyer 對 `ORD-260520-601b6b` `scheduled` 列點「Pay Early」→ schedule 進 `awaiting_review`、seller 收 email
-- ✅ Seller 在訂單 Payment Tab 直接 `<PaymentVerifyActions />` Verify → schedule `paid`、buyer 收信標明「verified by Seller」
-- ✅ 所有 schedule paid 後 `autoCompleteIfReady` 才把訂單推到 `completed`（修正先前 count bug，未付完款不再誤推）
-- ✅ `/admin/settings → Send test email` 在 admin Gmail 收件夾收到測試信（AWS SES SMTP）
-- ✅ `<ContractDraftForm />` Incoterm 帶到議價最後一輪的 q.incoterm（非 listing 原值）
-- ✅ `<ShipmentForm />` 在不上傳 B/L / Inspection Report 時仍可 Mark Shipped；上傳時寫進 `order_documents`
-- ✅ `<SelectItem />` 在 hover 時前景 / 背景對比清楚
-- ✅ `node scripts/check-dev-errors.mjs` exit 0（過濾掉 MCP / Bitdefender 注入的 hydration false positive）
+**目的**：驗證 **未付清不得 completed**、第二筆 milestone `accepted_by_buyer`、結案閘門。
+
+**C1 排程範例**（CFR）：
+
+| # | category | milestone | % |
+|---|---|---|---|
+| 1 | prepayment | contract_signed | 30 |
+| 2 | postpayment | accepted_by_buyer | 70 |
+
+### 與情境 A 的差異步驟
+
+| 步驟 | 預期 |
+|---|---|
+| C4 後 | 僅 30% 列為 `due`；70% 仍 `scheduled` |
+| D1–D2 | 只付 30%；verify 後 order 可一路推到 `customs_cleared` |
+| D7 Buyer Customs Cleared | order → `customs_cleared`；**不會** completed（70% 未付） |
+| D8 | 70% 列應變 `due`（`accepted_by_buyer` milestone） |
+| D9–D10 | Buyer 再 Submit + Seller Verify 70% |
+| D11 | 此時才 `completed`（或 verify 後若已在 customs_cleared 則自動 completed） |
+
+> 此情境可揭露 2026-05-20 已修的 `autoCompleteIfReady` count bug：未付完不得 completed。
 
 ---
 
-## 7. 變更歷史
+## 5. Regression 矩陣（交易相關）
+
+| 功能 | 元件 / Action | 情境 A | 情境 B | 備註 |
+|---|---|:---:|:---:|---|
+| 詢價 | `<InquiryDialog />` / `createInquiry` | ✅ | ✅ | 需 commercial profile |
+| 報價 | `<QuotationForm />` | ✅ | ✅ | |
+| Counter | `<QuotationActions />` | 可選 | 可選 | |
+| Accept → 訂單 | `acceptQuotation` | ✅ | ✅ | incoterm 來自 quotation |
+| 合約起草 | `<ContractDraftForm />` + `<PaymentScheduleBuilder />` | ✅ | ✅ | 總和須 100% |
+| 買方核准 | `approveContract` | ✅ | ✅ | |
+| 簽名上傳 | `<SignedScanUploader />` | ✅ | ✅ | 先 approve |
+| 付款提交 | `<PaymentForm />` / `submitPayment` | ✅ | ✅×2 | Pay Early：`scheduled` 也可付 |
+| Seller 審核 | `<PaymentVerifyActions />` | ✅ | ✅ | Admin 亦可 |
+| 出貨表單 | `<ShipmentForm />` | ✅ | ✅ | B/L 可選 |
+| 手動 milestone | `<MilestoneActionButtons />` | 可選 | 可選 | 依排程設計 |
+| 進度條 | `<OrderProgressBar />` | ✅ | ✅ | 12 階段 + Payments X/Y |
+| 文件中心 | `<OrderDocumentsTab />` | 可選 | 可選 | |
+| 站內 IM | `/messages` | — | — | **未實作（A2）** |
+| KYC 上傳 | — | — | — | **未實作（A6）** |
+
+---
+
+## 6. Dispute / Cancel / Admin 旁支
+
+| 動作 | 觸發者 | 預期 |
+|---|---|---|
+| Raise Dispute | 任一方（非終止狀態） | `disputed`；admin email；timeline + audit |
+| Cancel Order | 任一方（pre-shipment） | `cancelled` |
+| Force Transition | admin / super_admin | 繞過狀態機；`audit_logs` 記 from/to/reason |
+
+**建議走測**：複製一筆測試訂單到 `in_production`，Raise Dispute → Admin force 回 `in_production` 或 `cancelled`。
+
+---
+
+## 7. 已知缺口與阻塞
+
+| # | 項目 | 影響 |
+|---|---|---|
+| 1 | 站內 IM（A2） | 訂單頁無 Communication Tab |
+| 2 | KYC 上傳（A6） | 僅 commercial profile gate，無 `kyc_level` 升級 UI |
+| 3 | 情境 B 正式走測紀錄 | 邏輯已實作，文件化腳本在本版補上，待人工跑一輪寫入 §8 |
+| 4 | dispute / cancel / force | 待 Tier 3 |
+| 5 | `bl_date_plus_N` cron | 需 Vercel cron + `bl_date`；日常 E2E 可略 |
+
+已解決（僅供對照）：`order-documents` bucket ✅；SES email ✅；seller-primary payment review ✅。
+
+---
+
+## 8. 走測紀錄
+
+### 2026-05-15 — 舊版 full_prepay 端到端（歷史）
+
+訂單 `ORD-TEST-MP6PL7MZ` 在 **migration 014 之前** 走通；當時訂單仍含 `payment_pending → paid`。
+**勿**以此為現行流程標準；現行請用 §3 情境 A。
+
+### 2026-05-20 — Payment seller-review + Pay Early + Email
+
+- `ORD-260520-601b6b`：Pay Early、`scheduled` → seller verify
+- `autoCompleteIfReady` count 修正
+- `/admin/settings` Send test email 成功
+
+### （待填）— 情境 B 分期走測
+
+| 欄位 | 值 |
+|---|---|
+| order_no | |
+| 走測人 | |
+| 結果 | pass / fail |
+| 備註 | |
+
+---
+
+## 9. 變更歷史
 
 | 日期 | 變更 |
 |---|---|
-| 2026-05-15 | 初版：3 個測試帳號、full_prepay / net_after_arrival 走測腳本、dispute/cancel 旁支 |
-| 2026-05-15 | Full prepay 端到端走測通過；`order-documents` bucket 建好（010） |
-| 2026-05-20 | Payment seller-review + Pay Early + Email (AWS SES SMTP) 煙霧通過；§1 移除「不要驗 email」警示、§5 阻塞列 #2/#4 標完成、§2 Phase D 改寫成 seller-primary review 流程；新增已知阻塞 #6 KYC 上傳 |
+| 2026-05-15 | 初版：測試帳號、舊 full_prepay 腳本 |
+| 2026-05-20 | Payment seller-review、SES、走測紀錄 |
+| 2026-05-20 | **重寫**：對齊 migration 014 / `payment_schedules`；新增 §0–§2 QA 分層、情境 A/B、regression 矩陣、SQL 快查；移除過時 `net_after_arrival` 章節 |
+
+---
+
+## 附錄：相關腳本
+
+| 腳本 | 用途 |
+|---|---|
+| `scripts/seed-test-order.mjs` | 建立 `contract_pending` 測試訂單 |
+| `scripts/cleanup-test-data.mjs` | 清除 TEST/SMOKE/BROWSER 前綴資料 |
+| `scripts/check-dev-errors.mjs` | 分析 `.next/dev/logs/next-development.log` |
+| `scripts/verify-schema.mjs` | 斷言 014 cutover 後 schema |
+| `scripts/apply-migrations.mjs --status` | migration 套用狀態 |
+
+`package.json` 捷徑：`npm run qa:preflight`、`npm run qa:cleanup`、`npm run qa:seed-order`。
