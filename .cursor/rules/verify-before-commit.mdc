@@ -22,18 +22,53 @@ When using `cursor-ide-browser` MCP or running `npm run dev`:
 1. After **every** navigation or action, call `browser_console_messages` and
    read the dev server terminal file. Do **not** rely on the red issues badge
    alone.
-2. For any hydration / SSR warning, **never** assume "MCP injection" or
-   "browser extension". Prove it:
+2. Next.js 16 records every browser console message and server log entry to
+   `.next/dev/logs/next-development.log` as JSON-per-line. This file is the
+   **single source of truth** for "did the page error" — the floating dev
+   tools badge only counts the last few. Before declaring a test pass:
 
    ```powershell
-   node scripts/probe-ssr.mjs http://localhost:<port>/<path>
-   # hits: 0  → MCP-injected, ignore
-   # hits: >0 → real SSR/CSR mismatch, must fix
+   # MANDATORY end-of-test check — analyses the dev log, filters known
+   # extension noise (data-cursor-ref, bis_skin_checked, cz-shortcut-listen)
+   # and prints any real ERROR / WARN that needs attention. Exit code 1 if
+   # any real ERROR remains.
+   node scripts/check-dev-errors.mjs
    ```
-3. Dev server log greps to run before declaring success:
+
+   If the script lists any real ERROR (e.g. `TypeError`, `Base UI: ...`,
+   `Cannot read properties of`, real hydration diff), fix it before
+   committing. Do **not** dismiss warnings as "unrelated" — at minimum
+   investigate the file:line shown in the entry.
+
+3. For any hydration / SSR warning, **never** assume "MCP injection" or
+   "browser extension". Prove it with the SSR probe:
 
    ```powershell
-   rg "Error|TypeError|Unhandled|⨯" .next\dev\logs\next-development.log
+   # exits 0 if the marker is NOT in server HTML (safe to ignore),
+   # exits 1 if it IS (real SSR/CSR mismatch — must fix)
+   node scripts/probe-ssr.mjs http://localhost:3000/<path>
+   # Or check a specific marker:
+   node scripts/probe-ssr.mjs http://localhost:3000/<path> some-attr-name
+   ```
+
+   Already-known client-side injections that this project tolerates:
+   - `data-cursor-ref` (cursor-ide-browser MCP)
+   - `bis_skin_checked` (Bitdefender browser extension)
+   - `cz-shortcut-listen` (ColorZilla browser extension)
+
+   Anything else showing up in a `-` diff line of a hydration mismatch
+   message is a **real bug** — fix it.
+
+4. PowerShell ad-hoc greps (Windows shell — `rg` is not installed):
+
+   ```powershell
+   # Count ERROR / WARN entries
+   (Select-String -Path .next\dev\logs\next-development.log -Pattern '"level":"ERROR"').Count
+
+   # Tail last N entries in human form
+   Get-Content .next\dev\logs\next-development.log -Tail 40 |
+     ForEach-Object { (ConvertFrom-Json $_).message } |
+     Select-Object -First 40
    ```
 
 ## 3. Migration verification

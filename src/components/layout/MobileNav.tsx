@@ -62,6 +62,7 @@ export function MobileNav({
           {links.map((link) => (
             <SheetClose
               key={link.href}
+              nativeButton={false}
               render={
                 <Link
                   href={link.href}
@@ -79,6 +80,7 @@ export function MobileNav({
           {isAuthenticated ? (
             <>
               <SheetClose
+                nativeButton={false}
                 render={
                   <Link
                     href="/dashboard"
@@ -93,6 +95,7 @@ export function MobileNav({
                 Dashboard
               </SheetClose>
               <SheetClose
+                nativeButton={false}
                 render={
                   <Link
                     href="/messages"
@@ -108,6 +111,7 @@ export function MobileNav({
               </SheetClose>
               {isAdmin && (
                 <SheetClose
+                  nativeButton={false}
                   render={
                     <Link
                       href="/admin"
@@ -127,6 +131,7 @@ export function MobileNav({
           ) : (
             <>
               <SheetClose
+                nativeButton={false}
                 render={
                   <Link
                     href="/login"
@@ -141,6 +146,7 @@ export function MobileNav({
                 Log in
               </SheetClose>
               <SheetClose
+                nativeButton={false}
                 render={
                   <Link
                     href="/register"

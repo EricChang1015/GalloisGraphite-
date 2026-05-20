@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   ShoppingBagIcon,
   PackageIcon,
@@ -49,15 +50,19 @@ type OrderRow = {
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   const profile = await getCurrentProfile();
+
+  // Defensive: middleware should have redirected, but if a request races a
+  // sign-out (revalidate fires while the session cookie is being cleared)
+  // we'd otherwise crash on `user!.id` below. Bounce to /login.
+  if (!user || !profile) redirect("/login");
+
   const supabase = await createServerClient();
 
-  const isSeller = profile?.role === "seller";
-  const isBuyer = profile?.role === "buyer";
-  const isAdmin = profile?.role === "admin" || profile?.role === "super_admin";
+  const isSeller = profile.role === "seller";
+  const isBuyer = profile.role === "buyer";
+  const isAdmin = profile.role === "admin" || profile.role === "super_admin";
 
-  const counts = user && profile
-    ? await getUserActionCounts(user.id, profile.role)
-    : null;
+  const counts = await getUserActionCounts(user.id, profile.role);
 
   // Inquiries that are currently "your turn" — role-aware status set.
   // Sellers: `pending` (first quotation owed) + `negotiating` (counter to respond)
@@ -76,7 +81,7 @@ export default async function DashboardPage() {
       .select(
         "id, order_no, status, total_amount, currency, buyer_id, seller_id, created_at"
       )
-      .or(`buyer_id.eq.${user!.id},seller_id.eq.${user!.id}`)
+      .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
       .neq("status", "completed")
       .neq("status", "cancelled")
       .order("created_at", { ascending: false })
@@ -88,7 +93,7 @@ export default async function DashboardPage() {
           .select(
             "id, status, requested_qty, created_at, product_categories(name), listings(id, title)"
           )
-          .eq(inquiryCol, user!.id)
+          .eq(inquiryCol, user.id)
           .in("status", inquiryStatuses)
           .order("created_at", { ascending: false })
           .limit(5)
@@ -122,7 +127,7 @@ export default async function DashboardPage() {
     })
     .map((o) => {
       const role: "buyer" | "seller" =
-        o.buyer_id === user!.id ? "buyer" : "seller";
+        o.buyer_id === user.id ? "buyer" : "seller";
       const hint = describeOrderAction(o.status, role) ?? o.status;
       const tone: "gold" | "red" = o.status === "disputed" ? "red" : "gold";
       return {
@@ -201,12 +206,12 @@ export default async function DashboardPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">
-            Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}
+            Welcome back{profile.full_name ? `, ${profile.full_name}` : ""}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {profile?.company_name ?? "—"} ·{" "}
+            {profile.company_name ?? "—"} ·{" "}
             <Badge variant="secondary" className="text-xs">
-              {profile?.role}
+              {profile.role}
             </Badge>
           </p>
         </div>
@@ -367,7 +372,7 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 {activeOrders.map((o) => {
                   const role: "buyer" | "seller" =
-                    o.buyer_id === user!.id ? "buyer" : "seller";
+                    o.buyer_id === user.id ? "buyer" : "seller";
                   const owner = getOrderActionOwner(o.status);
                   const isMyTurn = owner === role;
                   const isDisputed = o.status === "disputed";

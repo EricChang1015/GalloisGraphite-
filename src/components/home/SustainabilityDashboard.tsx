@@ -143,7 +143,15 @@ function IntensityPanel() {
 
       <div className="mt-4 h-[220px] w-full">
         {mounted ? (
-        <ResponsiveContainer>
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          // Workaround for recharts 3.x noisy "width(-1) and height(-1)"
+          // console warning during the brief gap between first render and
+          // ResizeObserver settling. See recharts/recharts#6716 (fix landed
+          // post-3.8.1; remove this prop once the upstream patch ships).
+          initialDimension={{ width: 100, height: 220 }}
+        >
           <BarChart
             data={INTENSITY_DATA}
             barCategoryGap={28}
