@@ -139,6 +139,23 @@ server actions / UI 元件實作：
 - [x] AI agent 撰寫規範：[`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc)（檔名規則、idempotency、enum 拆檔、RLS 覆蓋、failure handling）
 - [x] 解決舊版重複 prefix：`006_b2b_progress_enums` → `007_b2b_progress_enums`、`007_oauth_profile_handling` → `008_oauth_profile_handling`、`007_b2b_progress_tables` → `009_b2b_progress_tables`
 
+### A12. ✅ Payment timeline decoupling（已完成 — 2026-05-19）
+
+把付款從訂單時間軸抽離，改為多階段獨立排程：
+
+- [x] migrations 013/014：建立 `payment_schedules` 表 + `payments.schedule_id` + `orders.incoterm` + 9 個 milestone 時間戳；hard cutover 清掉 `payment_terms` / `payment_due_days` 欄位
+- [x] `src/lib/order/stateMachine.ts` 簡化為 12 階段線性（去掉 `payment_pending` / `paid` 分支）
+- [x] `src/lib/validations/payment-schedule.ts`：milestone 依 Incoterm 過濾、`PaymentScheduleArraySchema` 校驗 SUM=100
+- [x] `src/actions/order.ts`：`draftContract` 接 incoterm + schedule[]；新增 7 個手動 milestone server actions（before_production / before_shipment / before_loading / bl_received / shipping_docs / bl_plus_insurance / picked_up）；新增 `triggerMilestone` helper；`markShipped` / `markArrived` / `markCustomsCleared` 同時觸發對應 milestone；移除 legacy wrappers (`generateContract` / `updateShipment` / `confirmReceipt` / `markDelivered`)
+- [x] `src/actions/payment.ts`：`submitPayment` 必填 `schedule_id`；`verifyPayment` 改寫 schedule 而非 order status，搭配 `autoCompleteIfReady` 在所有 schedule paid 時 → completed
+- [x] `src/lib/contract/template.ts`：渲染 payment-schedule 表，取代「100% within 5 days」段落
+- [x] 新元件：`<PaymentScheduleBuilder />`、`<PaymentScheduleTable />`、`<MilestoneActionButtons />`
+- [x] `ListingForm.tsx`：Incoterm 限縮 FOB / CFR / CIF（移除 EXW / DDP）
+- [x] `/api/cron/payment-schedule` + `vercel.json`：每日 04:00 UTC 補算 `bl_date_plus_N` due_date、scheduled→due、due→overdue
+- [x] `src/lib/notifications/dispatch.ts`：新增 `notifyScheduleDue` / `notifyScheduleOverdue`
+- [x] `src/lib/notifications/counts.ts`：buyer 的 `ordersNeedingMyAction` 加入 `payment_schedules.status='due'/overdue` 的 distinct order 數
+- [x] docs：PRD §2/§4.4/§4.5、SCHEMA +§5c、ARCHITECTURE §4.4/§4.5/§8/§10、CONTRACT_TEMPLATE §2/§4 同步
+
 ### A11. ✅ SMS 交易通知（已完成）
 
 - [x] `.env.example`：`SMS_BASE_URL` / `SMS_APP_ID` / `SMS_TYPE`（可選 `type`）+ `ADMIN_EMAIL`

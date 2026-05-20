@@ -17,12 +17,15 @@ import {
   OrderDocumentsTab,
   type OrderDocumentRow,
 } from "@/components/order/OrderDocumentsTab";
-import { OrderActions } from "@/components/order/OrderActions";
+import {
+  PaymentScheduleTable,
+  type ScheduleRow,
+} from "@/components/order/PaymentScheduleTable";
 import {
   STATUS_LABEL,
   type OrderStatus,
-  type PaymentTermsType,
 } from "@/lib/order/stateMachine";
+import type { Incoterm, PaymentScheduleEntry } from "@/lib/validations/payment-schedule";
 import type { DocumentType } from "@/lib/validations/document";
 
 interface PageProps {
@@ -60,72 +63,72 @@ const ORDER_DETAIL_SELECT = `
       buyer:profiles!orders_buyer_id_fkey(full_name, company_name, email, country),
       seller:profiles!orders_seller_id_fkey(full_name, company_name, email, country),
       listings(title, origin_location, unit, incoterm, product_categories(name)),
-      contracts(id, contract_no, content_html, buyer_signed_url, seller_signed_url, buyer_signed_at, seller_signed_at, buyer_approved_at, buyer_rejected_at, buyer_reject_reason, payment_terms, payment_due_days, revision_no),
-      payments(id, method, amount, currency, tx_hash, proof_url, status, created_at, admin_note),
+      contracts(id, contract_no, content_html, buyer_signed_url, seller_signed_url, buyer_signed_at, seller_signed_at, buyer_approved_at, buyer_rejected_at, buyer_reject_reason, revision_no),
+      payments(id, method, amount, currency, tx_hash, proof_url, status, created_at, admin_note, schedule_id),
+      payment_schedules(id, sequence, category, milestone, percentage, amount, currency, due_date, bl_offset_days, status, paid_payment_id, notes),
       current_quotation:quotations!orders_current_quotation_id_fkey(id, unit_price, currency, quantity, unit, incoterm, validity_until, notes, status)
     `;
 
 type OrderDetailRow = {
-      id: string;
-      order_no: string;
-      buyer_id: string;
-      seller_id: string;
-      inquiry_id: string | null;
-      quantity: number;
-      unit_price: number;
-      total_amount: number;
-      currency: string;
-      destination: string | null;
-      shipment_from: string | null;
-      shipment_eta: string | null;
-      payment_terms: PaymentTermsType | null;
-      payment_due_days: number | null;
-      payment_due_date: string | null;
-      vessel_name: string | null;
-      vessel_imo: string | null;
-      container_numbers: string[] | null;
-      bl_no: string | null;
-      bl_date: string | null;
-      etd: string | null;
-      atd: string | null;
-      ata: string | null;
-      customs_cleared_at: string | null;
-      current_quotation_id: string | null;
-      status: OrderStatus;
-      timeline: { event: string; at: string; by: string; from?: string; to?: string }[];
-      created_at: string;
-      buyer: { full_name: string; company_name: string; email: string; country: string } | null;
-      seller: { full_name: string; company_name: string; email: string; country: string } | null;
-      listings: {
-        title: string;
-        origin_location: string;
-        unit: string;
-        incoterm: string;
-        product_categories: { name: string } | null;
-      } | null;
-      // PostgREST returns the embedded `contracts` row as a single
-      // object (not an array) because `contracts.order_id` carries both
-      // a foreign key and a UNIQUE constraint — i.e. a one-to-one
-      // relationship. Treating it as an array silently broke the
-      // contract preview / signature panes (every contract looked like
-      // "No contract drafted yet" no matter how many times the seller
-      // re-drafted it).
-      contracts: {
-        id: string;
-        contract_no: string;
-        content_html: string | null;
-        buyer_signed_url: string | null;
-        seller_signed_url: string | null;
-        buyer_signed_at: string | null;
-        seller_signed_at: string | null;
-        buyer_approved_at: string | null;
-        buyer_rejected_at: string | null;
-        buyer_reject_reason: string | null;
-        payment_terms: PaymentTermsType | null;
-        payment_due_days: number | null;
-        revision_no: number;
-      } | null;
-      payments: {
+  id: string;
+  order_no: string;
+  buyer_id: string;
+  seller_id: string;
+  inquiry_id: string | null;
+  quantity: number;
+  unit_price: number;
+  total_amount: number;
+  currency: string;
+  destination: string | null;
+  shipment_from: string | null;
+  shipment_eta: string | null;
+  incoterm: Incoterm | null;
+  vessel_name: string | null;
+  vessel_imo: string | null;
+  container_numbers: string[] | null;
+  bl_no: string | null;
+  bl_date: string | null;
+  etd: string | null;
+  atd: string | null;
+  ata: string | null;
+  customs_cleared_at: string | null;
+  before_production_at: string | null;
+  before_shipment_at: string | null;
+  before_loading_at: string | null;
+  loaded_at: string | null;
+  bl_received_at: string | null;
+  shipping_docs_received_at: string | null;
+  bl_plus_insurance_received_at: string | null;
+  picked_up_at: string | null;
+  accepted_at: string | null;
+  current_quotation_id: string | null;
+  status: OrderStatus;
+  timeline: { event: string; at: string; by: string; from?: string; to?: string }[];
+  created_at: string;
+  buyer: { full_name: string; company_name: string; email: string; country: string } | null;
+  seller: { full_name: string; company_name: string; email: string; country: string } | null;
+  listings: {
+    title: string;
+    origin_location: string;
+    unit: string;
+    incoterm: string;
+    product_categories: { name: string } | null;
+  } | null;
+  contracts: {
+    id: string;
+    contract_no: string;
+    content_html: string | null;
+    buyer_signed_url: string | null;
+    seller_signed_url: string | null;
+    buyer_signed_at: string | null;
+    seller_signed_at: string | null;
+    buyer_approved_at: string | null;
+    buyer_rejected_at: string | null;
+    buyer_reject_reason: string | null;
+    revision_no: number;
+  } | null;
+  payments:
+    | {
         id: string;
         method: string;
         amount: number;
@@ -135,18 +138,21 @@ type OrderDetailRow = {
         status: string;
         created_at: string;
         admin_note: string | null;
-      }[] | null;
-      current_quotation: {
-        id: string;
-        unit_price: number;
-        currency: string;
-        quantity: number;
-        unit: string;
-        incoterm: string;
-        validity_until: string;
-        notes: string | null;
-        status: string;
-      } | null;
+        schedule_id: string | null;
+      }[]
+    | null;
+  payment_schedules: ScheduleRow[] | null;
+  current_quotation: {
+    id: string;
+    unit_price: number;
+    currency: string;
+    quantity: number;
+    unit: string;
+    incoterm: string;
+    validity_until: string;
+    notes: string | null;
+    status: string;
+  } | null;
 };
 
 export default async function OrderDetailPage({ params }: PageProps) {
@@ -191,12 +197,46 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const myRole: "buyer" | "seller" | "admin" = isBuyer
     ? "buyer"
     : isSeller
-    ? "seller"
-    : "admin";
+      ? "seller"
+      : "admin";
+  const myRoleForChild: "buyer" | "seller" | "other" = isBuyer
+    ? "buyer"
+    : isSeller
+      ? "seller"
+      : "other";
   const contract = order.contracts ?? null;
   const payments = order.payments ?? [];
 
-  // Fetch documents
+  const schedules = [...(order.payment_schedules ?? [])].sort(
+    (a, b) => a.sequence - b.sequence
+  );
+
+  // Snapshot of schedule entries for re-draft (only `scheduled` rows
+  // get rebuilt; we surface them so the seller can tweak unpaid
+  // installments without losing already-paid ones).
+  const scheduleAsEntries: PaymentScheduleEntry[] = schedules
+    .filter((s) => s.status !== "paid" && s.status !== "waived")
+    .map((s) => ({
+      category: s.category,
+      milestone: s.milestone,
+      percentage: s.percentage,
+      bl_offset_days: s.bl_offset_days ?? undefined,
+      notes: s.notes ?? undefined,
+    }));
+
+  const paidCount = schedules.filter((s) => s.status === "paid").length;
+  const paymentsSummary = { paid: paidCount, total: schedules.length };
+
+  const milestoneTimestamps = {
+    before_production_at: order.before_production_at,
+    before_shipment_at: order.before_shipment_at,
+    before_loading_at: order.before_loading_at,
+    bl_received_at: order.bl_received_at,
+    shipping_docs_received_at: order.shipping_docs_received_at,
+    bl_plus_insurance_received_at: order.bl_plus_insurance_received_at,
+    picked_up_at: order.picked_up_at,
+  };
+
   const { data: documentsRaw } = await supabase
     .from("order_documents")
     .select(
@@ -205,7 +245,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
     .eq("order_id", id)
     .order("uploaded_at", { ascending: false });
 
-  const documents = (documentsRaw ?? []) as Array<OrderDocumentRow & { type: DocumentType }>;
+  const documents = (documentsRaw ?? []) as Array<
+    OrderDocumentRow & { type: DocumentType }
+  >;
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -227,15 +269,14 @@ export default async function OrderDetailPage({ params }: PageProps) {
         <Badge variant="outline" className={statusColor[order.status] ?? ""}>
           {STATUS_LABEL[order.status]}
         </Badge>
-        {order.payment_terms && (
+        {order.incoterm && (
           <Badge variant="outline" className="text-xs">
-            {order.payment_terms === "full_prepay" ? "Full Prepay" : "Net After Arrival"}
-            {order.payment_due_days != null ? ` · ${order.payment_due_days}d` : ""}
+            {order.incoterm}
           </Badge>
         )}
       </div>
 
-      <OrderProgressBar status={order.status} paymentTerms={order.payment_terms} />
+      <OrderProgressBar status={order.status} paymentsSummary={paymentsSummary} />
 
       <Tabs defaultValue="overview">
         <TabsList className="flex-wrap">
@@ -272,15 +313,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
               ["Quantity", `${order.quantity} ${order.listings?.unit ?? "MT"}`],
               ["Unit Price", `${order.unit_price} ${order.currency}`],
               ["Total", `${order.total_amount} ${order.currency}`],
-              ["Incoterm", order.listings?.incoterm ?? "—"],
+              ["Incoterm", order.incoterm ?? order.listings?.incoterm ?? "—"],
               ["Destination", order.destination ?? "—"],
               ["Origin", order.listings?.origin_location ?? "—"],
-              ["Payment Terms", order.payment_terms
-                ? order.payment_terms === "full_prepay"
-                  ? `Full Prepay`
-                  : `Net ${order.payment_due_days ?? "—"} days after arrival`
-                : "—"],
-              ["Payment Due Date", order.payment_due_date ?? "—"],
             ].map(([label, value]) => (
               <div key={label} className="flex items-start px-4 py-2">
                 <span className="w-40 text-muted-foreground shrink-0">{label}</span>
@@ -289,12 +324,30 @@ export default async function OrderDetailPage({ params }: PageProps) {
             ))}
           </div>
 
+          {schedules.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Payment Schedule</p>
+                <p className="text-xs text-muted-foreground">
+                  {paidCount} / {schedules.length} paid
+                </p>
+              </div>
+              <PaymentScheduleTable
+                orderId={order.id}
+                schedules={schedules}
+                role={myRoleForChild}
+                limit={3}
+              />
+            </div>
+          )}
+
           {!isAdmin && (
             <OrderPhaseActions
               orderId={order.id}
               status={order.status}
               role={myRole}
               ata={order.ata}
+              milestoneTimestamps={milestoneTimestamps}
             />
           )}
         </TabsContent>
@@ -353,9 +406,16 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
         {/* Contract */}
         <TabsContent value="contract" className="mt-4 space-y-4">
-          {/* Seller draft / re-draft */}
           {isSeller && !contract && order.status === "contract_pending" && (
-            <ContractDraftForm orderId={order.id} />
+            <ContractDraftForm
+              orderId={order.id}
+              totalAmount={order.total_amount}
+              currency={order.currency}
+              currentIncoterm={
+                order.incoterm ?? (order.listings?.incoterm as Incoterm | undefined) ?? null
+              }
+              currentSchedule={scheduleAsEntries}
+            />
           )}
           {isSeller && contract && contract.buyer_rejected_at && (
             <div className="rounded-lg border border-red-400/30 bg-red-500/5 p-3 text-sm">
@@ -368,13 +428,14 @@ export default async function OrderDetailPage({ params }: PageProps) {
           {isSeller && contract && contract.buyer_rejected_at && order.status === "contract_pending" && (
             <ContractDraftForm
               orderId={order.id}
-              currentPaymentTerms={contract.payment_terms}
-              currentPaymentDueDays={contract.payment_due_days}
+              totalAmount={order.total_amount}
+              currency={order.currency}
+              currentIncoterm={order.incoterm ?? null}
+              currentSchedule={scheduleAsEntries}
               currentRevision={contract.revision_no}
             />
           )}
 
-          {/* Buyer review */}
           {isBuyer && contract && order.status === "contract_pending" && (
             <ContractApproveReject
               orderId={order.id}
@@ -442,73 +503,67 @@ export default async function OrderDetailPage({ params }: PageProps) {
         </TabsContent>
 
         {/* Payment */}
-        <TabsContent value="payment" className="mt-4 space-y-4">
-          {order.payment_terms && (
-            <div className="rounded-lg border p-3 text-sm">
-              <p className="font-medium">
-                {order.payment_terms === "full_prepay"
-                  ? "Full Prepay"
-                  : `Net ${order.payment_due_days ?? "—"} days after arrival`}
-              </p>
-              {order.payment_terms === "net_after_arrival" && order.payment_due_date && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Final payment due by{" "}
-                  <span className="font-medium text-foreground">{order.payment_due_date}</span>
-                </p>
-              )}
-              {order.payment_terms === "full_prepay" && order.status === "contract_signed" && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Buyer must submit payment to begin production.
-                </p>
-              )}
-            </div>
-          )}
-
-          {payments.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground text-sm">
-              No payment submitted yet.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {payments.map((p) => (
-                <div key={p.id} className="rounded-lg border p-4 text-sm space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{p.amount} {p.currency} — {p.method.replace(/_/g, " ")}</span>
-                    <Badge
-                      variant="outline"
-                      className={
-                        p.status === "verified"
-                          ? "text-green-400 border-green-400/40"
-                          : p.status === "rejected"
-                          ? "text-red-400 border-red-400/40"
-                          : "text-yellow-400 border-yellow-400/40"
-                      }
-                    >
-                      {p.status}
-                    </Badge>
-                  </div>
-                  {p.tx_hash && <p className="text-muted-foreground text-xs font-mono">TX: {p.tx_hash}</p>}
-                  {p.proof_url && (
-                    <a href={p.proof_url} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">
-                      View proof
-                    </a>
-                  )}
-                  {p.admin_note && <p className="text-xs text-muted-foreground">Admin: {p.admin_note}</p>}
-                  <p className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleString()}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {(order.status === "payment_pending" || order.status === "contract_signed") && isBuyer && (
-            <OrderActions
+        <TabsContent value="payment" className="mt-4 space-y-6">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Payment Schedule</p>
+            <PaymentScheduleTable
               orderId={order.id}
-              status={order.status}
-              role="buyer"
-              totalAmount={order.total_amount}
-              currency={order.currency}
+              schedules={schedules}
+              role={myRoleForChild}
             />
-          )}
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Payment History</p>
+            {payments.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground text-sm">
+                No payment submitted yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {payments.map((p) => (
+                  <div key={p.id} className="rounded-lg border p-4 text-sm space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {p.amount} {p.currency} — {p.method.replace(/_/g, " ")}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          p.status === "verified"
+                            ? "text-green-400 border-green-400/40"
+                            : p.status === "rejected"
+                              ? "text-red-400 border-red-400/40"
+                              : "text-yellow-400 border-yellow-400/40"
+                        }
+                      >
+                        {p.status}
+                      </Badge>
+                    </div>
+                    {p.tx_hash && (
+                      <p className="text-muted-foreground text-xs font-mono">TX: {p.tx_hash}</p>
+                    )}
+                    {p.proof_url && (
+                      <a
+                        href={p.proof_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline text-xs"
+                      >
+                        View proof
+                      </a>
+                    )}
+                    {p.admin_note && (
+                      <p className="text-xs text-muted-foreground">Admin: {p.admin_note}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(p.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         {/* Shipment */}
@@ -517,15 +572,50 @@ export default async function OrderDetailPage({ params }: PageProps) {
             {[
               ["B/L No.", order.bl_no ?? "—"],
               ["B/L Date", order.bl_date ?? "—"],
-              ["Vessel", order.vessel_name ? `${order.vessel_name}${order.vessel_imo ? ` (IMO ${order.vessel_imo})` : ""}` : "—"],
-              ["Containers", order.container_numbers?.length ? order.container_numbers.join(", ") : "—"],
+              [
+                "Vessel",
+                order.vessel_name
+                  ? `${order.vessel_name}${order.vessel_imo ? ` (IMO ${order.vessel_imo})` : ""}`
+                  : "—",
+              ],
+              [
+                "Containers",
+                order.container_numbers?.length ? order.container_numbers.join(", ") : "—",
+              ],
               ["Departure Port", order.shipment_from ?? "—"],
               ["Destination Port", order.destination ?? "—"],
               ["ETD", order.etd ?? "—"],
               ["ATD", order.atd ?? "—"],
               ["ETA", order.shipment_eta ?? "—"],
               ["ATA", order.ata ?? "—"],
-              ["Customs Cleared", order.customs_cleared_at ? new Date(order.customs_cleared_at).toLocaleDateString() : "—"],
+              [
+                "Loaded onto Vessel",
+                order.loaded_at ? new Date(order.loaded_at).toLocaleDateString() : "—",
+              ],
+              [
+                "B/L Received",
+                order.bl_received_at
+                  ? new Date(order.bl_received_at).toLocaleDateString()
+                  : "—",
+              ],
+              [
+                "Goods Picked Up",
+                order.picked_up_at
+                  ? new Date(order.picked_up_at).toLocaleDateString()
+                  : "—",
+              ],
+              [
+                "Accepted by Buyer",
+                order.accepted_at
+                  ? new Date(order.accepted_at).toLocaleDateString()
+                  : "—",
+              ],
+              [
+                "Customs Cleared",
+                order.customs_cleared_at
+                  ? new Date(order.customs_cleared_at).toLocaleDateString()
+                  : "—",
+              ],
             ].map(([label, value]) => (
               <div key={label} className="flex items-start px-4 py-2">
                 <span className="w-40 text-muted-foreground shrink-0">{label}</span>

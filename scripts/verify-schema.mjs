@@ -1,0 +1,150 @@
+#!/usr/bin/env node
+// 一次性驗證 013/014 migration 已落地：
+//   - payment_schedules 表存在 + 必要欄位
+//   - orders 已加 incoterm + 9 個 milestone 時間戳
+//   - orders.payment_terms / payment_due_days / payment_due_date 已 drop
+//   - contracts.payment_terms / payment_due_days 已 drop
+//   - payments.schedule_id 已新增
+import { readFileSync } from "node:fs";
+
+const env = Object.fromEntries(
+  readFileSync(new URL("../.env.local", import.meta.url), "utf8")
+    .split(/\r?\n/)
+    .filter((l) => l && !l.startsWith("#") && l.includes("="))
+    .map((l) => {
+      const i = l.indexOf("=");
+      let v = l.slice(i + 1).trim();
+      if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1);
+      return [l.slice(0, i).trim(), v];
+    })
+);
+
+const token = env.SUPABASE_ACCESS_TOKEN;
+const ref = new URL(env.NEXT_PUBLIC_SUPABASE_URL).hostname.split(".")[0];
+
+async function q(sql) {
+  const res = await fetch(
+    `https://api.supabase.com/v1/projects/${ref}/database/query`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ query: sql }),
+    }
+  );
+  const body = await res.text();
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${body}`);
+  return JSON.parse(body);
+}
+
+let pass = 0;
+let fail = 0;
+function check(cond, label) {
+  if (cond) {
+    pass++;
+    console.log(`  ✓ ${label}`);
+  } else {
+    fail++;
+    console.log(`  ✗ ${label}`);
+  }
+}
+
+async function cols(table) {
+  const rows = await q(`
+    select column_name, data_type
+      from information_schema.columns
+     where table_schema = 'public' and table_name = '${table}'
+     order by column_name;
+  `);
+  return new Map(rows.map((r) => [r.column_name, r.data_type]));
+}
+
+async function main() {
+  console.log("=== payment_schedules ===");
+  const ps = await cols("payment_schedules");
+  for (const c of [
+    "id", "order_id", "sequence", "category", "milestone", "percentage",
+    "amount", "currency", "bl_offset_days", "due_date", "status",
+    "paid_payment_id", "notes", "created_at", "updated_at",
+  ]) {
+    check(ps.has(c), `payment_schedules.${c} exists`);
+  }
+
+  console.log("\n=== orders new columns ===");
+  const orders = await cols("orders");
+  for (const c of [
+    "incoterm",
+    "before_production_at", "before_shipment_at", "before_loading_at",
+    "loaded_at", "bl_received_at", "shipping_docs_received_at",
+    "bl_plus_insurance_received_at", "picked_up_at", "accepted_at",
+  ]) {
+    check(orders.has(c), `orders.${c} exists`);
+  }
+
+  console.log("\n=== legacy columns dropped ===");
+  for (const c of ["payment_terms", "payment_due_days", "payment_due_date"]) {
+    check(!orders.has(c), `orders.${c} dropped`);
+  }
+  const contracts = await cols("contracts");
+  for (const c of ["payment_terms", "payment_due_days"]) {
+    check(!contracts.has(c), `contracts.${c} dropped`);
+  }
+
+  console.log("\n=== payments.schedule_id ===");
+  const payments = await cols("payments");
+  check(payments.has("schedule_id"), "payments.schedule_id exists");
+
+  console.log("\n=== enums ===");
+  const enums = await q(`
+    select t.typname,
+           array_agg(e.enumlabel order by e.enumsortorder) as labels
+      from pg_type t
+      join pg_enum e on e.enumtypid = t.oid
+     where t.typname in (
+       'payment_category', 'payment_milestone', 'payment_schedule_status'
+     )
+     group by t.typname;
+  `);
+  const normalize = (labels) => {
+    if (Array.isArray(labels)) return labels;
+    if (typeof labels === "string") {
+      // PG array literal "{a,b,c}" → ["a","b","c"]
+      return labels.replace(/^[{"]|[}"]$/g, "").split(",").map((s) => s.trim());
+    }
+    return [];
+  };
+  const enumMap = new Map(enums.map((e) => [e.typname, normalize(e.labels)]));
+  const catActual = enumMap.get("payment_category") ?? [];
+  const catExpected = ["prepayment", "regular_payment", "postpayment"];
+  check(
+    catActual.length === catExpected.length &&
+      catExpected.every((v) => catActual.includes(v)),
+    `payment_category enum (${catActual.length} values)`
+  );
+
+  const milestoneExpected = [
+    "contract_signed", "before_production", "before_shipment", "before_loading",
+    "loaded_onto_vessel", "bl_received", "shipping_docs_received",
+    "bl_plus_insurance_received", "arrived_at_port", "goods_picked_up",
+    "accepted_by_buyer", "bl_date_plus_30", "bl_date_plus_60", "bl_date_plus_90",
+  ];
+  const msActual = enumMap.get("payment_milestone") ?? [];
+  check(
+    milestoneExpected.every((v) => msActual.includes(v)),
+    `payment_milestone enum has 14 expected values (got ${msActual.length})`
+  );
+
+  const ssExpected = ["scheduled", "due", "awaiting_review", "paid", "overdue", "waived"];
+  const ssActual = enumMap.get("payment_schedule_status") ?? [];
+  check(
+    ssExpected.every((v) => ssActual.includes(v)),
+    `payment_schedule_status enum (${ssActual.length} values)`
+  );
+
+  console.log(`\n==== ${pass} passed · ${fail} failed ====`);
+  process.exit(fail === 0 ? 0 : 1);
+}
+
+main().catch((err) => {
+  console.error("✗", err.message);
+  process.exit(2);
+});

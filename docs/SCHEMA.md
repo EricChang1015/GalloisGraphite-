@@ -23,6 +23,8 @@
 | `010_storage_order_documents.sql` | **Storage**：建立 `order-documents` private bucket（20 MB / PDF + image MIME 白名單）+ `storage.objects` 的 4 條 RLS（read / insert / update parties；delete admin）；解除合約簽名掃描、付款證明、發票 / B/L / 海關 / 檢驗等檔案的上傳阻塞 |
 | `011_platform_settings.sql` | **平台設定**：`platform_settings(key, value jsonb, updated_at, updated_by)`；seed `sms_notifications_enabled=false`；admin RLS |
 | `012_listings_categories_order_party_read.sql` | **訂單雙方讀取**：`listings` / `product_categories` 額外 RLS，允許訂單 buyer/seller 讀取關聯商品（即使 listing 已 pause 或 category 已下架） |
+| `013_payment_schedules.sql` | **付款抽離**：新增 enum `payment_category` / `payment_milestone` / `payment_schedule_status` + `payment_schedules` 表；`payments` 加 `schedule_id`；`orders` 加 `incoterm` + 9 個 milestone 時間戳；RLS 對 buyer/seller/admin 開放 select |
+| `014_drop_legacy_payment_terms.sql` | **Hard cutover**：truncate 所有 orders / contracts / payments / quotations / payment_schedules 測試資料；`orders` drop `payment_terms` / `payment_due_days` / `payment_due_date`；`contracts` drop `payment_terms` / `payment_due_days`。`payment_terms_type` enum + `order_status` 的 `payment_pending` / `paid` / `draft` / `contract_generated` 仍保留（PG 無法 drop enum value），但不再被任何 server action 寫入 |
 
 > ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >
@@ -187,33 +189,32 @@ MADA1 / MADA2 × {+35, +50, +80, +100, +150, -100} mesh + Custom Grade。
 | status | enum `order_status` | 見下表 |
 | timeline | jsonb | append-only 事件列表 |
 | created_at / updated_at | timestamptz | `updated_at` 由 005 加入 trigger 自動維護 |
-| **payment_terms** | enum `payment_terms_type` | 007 新增：full_prepay / net_after_arrival（簽合約時敲定） |
-| **payment_due_days** | int | 007 新增：付款窗口天數 |
-| **payment_due_date** | date | 007 新增：到港日 + payment_due_days 計算後寫入 |
+| ~~payment_terms / payment_due_days / payment_due_date~~ | — | **014 移除**；改用 `payment_schedules` |
+| **incoterm** | text | 013 新增：FOB / CFR / CIF；在合約 draft 時敲定，覆蓋 listing 的 incoterm |
 | **vessel_name / vessel_imo** | text | 007 新增 |
 | **container_numbers** | text[] | 007 新增 |
 | **bl_no / bl_date** | text / date | 007 新增：Bill of Lading |
 | **etd / atd / ata** | date | 007 新增：預計/實際 出航 + 預計/實際 到港 |
 | **customs_cleared_at** | timestamptz | 007 新增 |
+| **before_production_at / before_shipment_at / before_loading_at** | timestamptz | 013 新增：手動 milestone 時間戳（賣家觸發） |
+| **loaded_at / bl_received_at / shipping_docs_received_at / bl_plus_insurance_received_at** | timestamptz | 013 新增：船運 milestone（loaded_at 隨 markShipped 自動寫入；其餘三個由買家手動觸發） |
+| **picked_up_at / accepted_at** | timestamptz | 013 新增：買家手動 milestone |
 | **current_quotation_id** | uuid FK quotations | 007 新增：訂單採用的 quotation |
 
 索引：`(buyer_id, status)`, `(seller_id, status)`
 
-`order_status` 狀態機（完整定義見 `src/lib/order/stateMachine.ts`，分支由 `orders.payment_terms` 決定）:
+`order_status` 狀態機（完整定義見 `src/lib/order/stateMachine.ts`）— **付款已抽離為 `payment_schedules`，狀態機固定 12 階段線性**：
 
 ```
 quotation_pending → quoted ↔ negotiating
-  → contract_pending → contract_signed
-  ├── (full_prepay)        → payment_pending → paid → in_production
-  └── (net_after_arrival)  → in_production
-  → ready_to_ship → shipped → in_transit → arrived → customs_cleared
-  ├── (full_prepay)        → completed
-  └── (net_after_arrival)  → payment_pending → paid → completed
+  → contract_pending → contract_signed → in_production
+  → ready_to_ship → shipped → in_transit → arrived
+  → customs_cleared → completed
 任何節點 → disputed / cancelled
 disputed → cancelled / completed
 ```
 
-> 註：legacy `draft` / `contract_generated` 仍保留以相容舊資料，新流程不再進入。
+> 註：legacy enum 值 `draft` / `contract_generated` / `payment_pending` / `paid` 仍存在於 `order_status` enum（PG 限制），但 server actions 不再寫入；歷史 timeline 列若包含這些值，UI 用 `STATUS_LABEL` 兜底渲染。
 
 `timeline` 事件 schema:
 ```json
@@ -245,8 +246,7 @@ disputed → cancelled / completed
 | **revision_no** | int default 1 | 007 新增：重新起草時 +1 |
 | **buyer_approved_at / buyer_rejected_at** | timestamptz | 007 新增：合約審核回合制 |
 | **buyer_reject_reason** | text | 007 新增 |
-| **payment_terms** | enum `payment_terms_type` | 007 新增：合約上的付款條件（與 orders 同步） |
-| **payment_due_days** | int | 007 新增 |
+| ~~payment_terms / payment_due_days~~ | — | **014 移除**；改用 `payment_schedules` |
 
 ## 5. 付款
 
@@ -270,9 +270,48 @@ disputed → cancelled / completed
 | **admin_note** | text | 005 新增：admin 審核時的回覆 |
 | **reviewed_by** | uuid FK profiles | 005 新增（取代 verified_by） |
 | **reviewed_at** | timestamptz | 005 新增（取代 verified_at） |
+| **schedule_id** | uuid FK payment_schedules | 013 新增：本筆 payment 結算的 schedule 列；admin verify 後 schedule.paid_payment_id 回指此 row |
 | created_at | timestamptz | |
 
-索引：`(order_id, status)`
+索引：`(order_id, status)`, `(schedule_id)`
+
+## 5c. 付款排程 — `payment_schedules` (013 新增)
+
+把單筆「整訂單付款」拆成 1..N 筆 installment。每筆有自己的 `due_date`、
+`status` 與 milestone 觸發條件；當 milestone 達成時，server action 或 cron
+把 `scheduled` 推到 `due`，買家提交 payment 後變 `awaiting_review`，admin
+verify 後變 `paid`。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| id | uuid PK | |
+| order_id | uuid FK orders ON DELETE CASCADE | |
+| sequence | int | UI 排序用 |
+| category | enum `payment_category` | `prepayment` / `regular_payment` / `postpayment` |
+| milestone | enum `payment_milestone` | 13 個值；依 Incoterm 過濾（見 `src/lib/validations/payment-schedule.ts`） |
+| percentage | numeric(5,2) | > 0 且 ≤ 100；同訂單 SUM 必須 = 100 |
+| amount | numeric(18,4) | 建立時用 `order.total × pct / 100` 快照，避免日後改 unit_price 連動 |
+| currency | text | 與 order 同 |
+| bl_offset_days | int | 僅 `bl_date_plus_N` 用；未指定時用 milestone 內建預設 (30/60/90) |
+| due_date | date | milestone 觸發後寫入；time-based milestones 待 `orders.bl_date` 填入後由 cron 補算 |
+| status | enum `payment_schedule_status` | `scheduled` / `due` / `awaiting_review` / `paid` / `overdue` / `waived` |
+| paid_payment_id | uuid FK payments | admin verify 後寫回 |
+| notes | text | 簽合約時的備註 |
+| created_at / updated_at | timestamptz | `updated_at` 由 trigger 自動維護 |
+
+索引：`(order_id, sequence)`, `(status)`, `(due_date)` partial WHERE due_date IS NOT NULL。
+
+**Milestone enum** 共 13 個：
+- 共用 prepayment：`contract_signed` / `before_production` / `before_shipment` / `before_loading`
+- FOB regular：`loaded_onto_vessel` / `bl_received`
+- CFR regular：`loaded_onto_vessel` / `bl_received` / `shipping_docs_received`
+- CIF regular：`loaded_onto_vessel` / `bl_plus_insurance_received`
+- 共用 postpayment：`arrived_at_port` / `goods_picked_up` / `accepted_by_buyer` / `bl_date_plus_30` / `bl_date_plus_60` / `bl_date_plus_90`
+
+**RLS**：
+- select：order 的 buyer / seller 或 admin
+- update：僅 admin（一般寫入透過 server action + service-role 走過）
+- insert / delete：僅 service-role（無公開 policy）
 
 ## 5b. 訂單文件中心（007 新增）
 

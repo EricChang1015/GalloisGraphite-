@@ -18,13 +18,11 @@ import {
 import {
   STATUS_LABEL,
   type OrderStatus,
-  type PaymentTermsType,
 } from "@/lib/order/stateMachine";
 
 interface Props {
   orderId: string;
   currentStatus: OrderStatus;
-  paymentTerms: PaymentTermsType | null;
 }
 
 const ALL_STATUSES: OrderStatus[] = [

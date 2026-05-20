@@ -1,13 +1,20 @@
 /**
  * Contract HTML renderer.
  *
- * Tightly coupled with `docs/CONTRACT_TEMPLATE.md`. Subsequent prompts
- * should expand this to render the full contract from the template,
- * filling dynamic fields from the order / parties / platform settings.
+ * Tightly coupled with `docs/CONTRACT_TEMPLATE.md`. The "Download PDF"
+ * flow uses client-side `window.print()` on the rendered HTML — good
+ * enough for MVP.
  *
- * For MVP, "Download PDF" is achieved client-side via `window.print()`
- * over the rendered HTML page, which is good enough.
+ * Post-013/014 cutover: payment terms are no longer encoded as a single
+ * `full_prepay`/`net_after_arrival` flag. The renderer now emits a
+ * formal payment-schedule table from the array passed in.
  */
+
+import {
+  CATEGORY_LABEL,
+  MILESTONE_LABEL,
+  type PaymentScheduleEntry,
+} from "@/lib/validations/payment-schedule";
 
 export interface ContractContext {
   contract: {
@@ -25,17 +32,18 @@ export interface ContractContext {
     shipment_from?: string | null;
     shipment_eta?: string | null;
     created_at: string;
+    incoterm: string;
   };
   listing: {
     category_name: string;
     specs: Record<string, unknown>;
     origin_location: string;
     unit: string;
-    incoterm: string;
   };
   buyer: PartyInfo;
   seller: PartyInfo;
   platform: PlatformInfo;
+  paymentSchedule: PaymentScheduleEntry[];
   governing?: GoverningInfo;
 }
 
@@ -68,12 +76,26 @@ const DEFAULT_GOVERNING: GoverningInfo = {
 };
 
 /**
- * Render a printable contract HTML string. Subsequent iterations should
- * mirror the full template in `docs/CONTRACT_TEMPLATE.md`.
+ * Render a printable contract HTML string. Iterates the agreed
+ * payment-schedule entries to produce a per-installment table.
  */
 export function renderContractHtml(ctx: ContractContext): string {
   const governing = ctx.governing ?? DEFAULT_GOVERNING;
   const date = new Date(ctx.order.created_at).toISOString().slice(0, 10);
+
+  const scheduleRows = ctx.paymentSchedule
+    .map((entry, idx) => {
+      const amount = ((ctx.order.total_amount * entry.percentage) / 100).toFixed(2);
+      return `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${escapeHtml(CATEGORY_LABEL[entry.category])}</td>
+          <td>${escapeHtml(MILESTONE_LABEL[entry.milestone])}</td>
+          <td style="text-align:right">${entry.percentage.toFixed(2)}%</td>
+          <td style="text-align:right">${amount} ${escapeHtml(ctx.order.currency)}</td>
+        </tr>`;
+    })
+    .join("");
 
   return /* html */ `<!doctype html>
 <html lang="en">
@@ -123,13 +145,13 @@ export function renderContractHtml(ctx: ContractContext): string {
     <tr><th>Commodity</th><td>${escapeHtml(ctx.listing.category_name)}</td></tr>
     <tr><th>Specifications</th><td><pre>${escapeHtml(JSON.stringify(ctx.listing.specs, null, 2))}</pre></td></tr>
     <tr><th>Origin</th><td>${escapeHtml(ctx.listing.origin_location)}</td></tr>
-    <tr><th>Quantity</th><td>${ctx.order.quantity} ${escapeHtml(ctx.listing.unit)} (±5% at Seller's option)</td></tr>
+    <tr><th>Quantity</th><td>${ctx.order.quantity} ${escapeHtml(ctx.listing.unit)} (&plusmn;5% at Seller's option)</td></tr>
   </table>
 
   <h2>2. Price &amp; Total Value</h2>
   <p>
     Unit Price: <strong>${ctx.order.unit_price} ${escapeHtml(ctx.order.currency)} / ${escapeHtml(ctx.listing.unit)}</strong><br />
-    Incoterm: <strong>${escapeHtml(ctx.listing.incoterm)} ${escapeHtml(ctx.order.destination ?? "")}</strong><br />
+    Incoterm: <strong>${escapeHtml(ctx.order.incoterm)} ${escapeHtml(ctx.order.destination ?? "")}</strong><br />
     Total: <strong>${ctx.order.total_amount} ${escapeHtml(ctx.order.currency)}</strong>
   </p>
 
@@ -139,9 +161,21 @@ export function renderContractHtml(ctx: ContractContext): string {
     Latest Shipment Date: ${escapeHtml(ctx.order.shipment_eta ?? "TBD")}
   </p>
 
-  <h2>4. Payment Terms</h2>
-  <p>Buyer shall pay 100% within five (5) business days after both Parties sign
-  this Contract via one of the platform-designated channels.</p>
+  <h2>4. Payment Schedule</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:48px">#</th>
+        <th>Category</th>
+        <th>Milestone</th>
+        <th style="text-align:right">%</th>
+        <th style="text-align:right">Amount</th>
+      </tr>
+    </thead>
+    <tbody>${scheduleRows}</tbody>
+  </table>
+  <p>Buyer shall remit each installment via one of the platform-designated channels
+  once the corresponding milestone is reached:</p>
   <ul>
     ${ctx.platform.usdt_trc20 ? `<li>USDT (TRC20): <code>${escapeHtml(ctx.platform.usdt_trc20)}</code></li>` : ""}
     ${ctx.platform.usdt_erc20 ? `<li>USDT (ERC20): <code>${escapeHtml(ctx.platform.usdt_erc20)}</code></li>` : ""}
@@ -149,12 +183,12 @@ export function renderContractHtml(ctx: ContractContext): string {
     ${ctx.platform.mup_address ? `<li>MUP: <code>${escapeHtml(ctx.platform.mup_address)}</code></li>` : ""}
     ${ctx.platform.bank_info ? `<li>Bank Transfer: ${escapeHtml(ctx.platform.bank_info)}</li>` : ""}
   </ul>
-  <p>After payment, Buyer submits the transaction hash or remittance receipt
-  on the Platform. Funds are released to Seller after Buyer confirms receipt
-  of goods on the Platform.</p>
+  <p>After remitting, Buyer submits the transaction hash or remittance receipt
+  on the Platform; the installment is marked verified by an authorised
+  administrator before being released to Seller.</p>
 
-  <h2>5–8. Inspection / Tolerance / Force Majeure / Confidentiality</h2>
-  <p>(Per the master template — see docs/CONTRACT_TEMPLATE.md.)</p>
+  <h2>5&ndash;8. Inspection / Tolerance / Force Majeure / Confidentiality</h2>
+  <p>(Per the master template &mdash; see docs/CONTRACT_TEMPLATE.md.)</p>
 
   <h2>9. Governing Law &amp; Dispute Resolution</h2>
   <p>Disputes shall be administered by ${escapeHtml(governing.arbitration_body)},

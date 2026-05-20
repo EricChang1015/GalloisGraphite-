@@ -11,7 +11,12 @@ import {
   findCommercialProfileGaps,
 } from "@/lib/auth/commercial";
 import { SubmitPaymentSchema, type SubmitPaymentInput } from "@/lib/validations/forms";
+import { autoCompleteIfReady } from "./order";
 import type { ActionResult } from "./auth";
+import type { Database, Json } from "@/types/database";
+
+type PaymentScheduleStatus =
+  Database["public"]["Enums"]["payment_schedule_status"];
 
 export async function submitPayment(
   input: SubmitPaymentInput
@@ -33,9 +38,9 @@ export async function submitPayment(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, buyer_id, status, payment_terms")
+    .select("id, buyer_id, order_no")
     .eq("id", parsed.data.order_id)
-    .single<{ id: string; buyer_id: string; status: string; payment_terms: string | null }>();
+    .single<{ id: string; buyer_id: string; order_no: string }>();
 
   if (!order) return { data: null, error: { message: "Order not found." } };
   if (order.buyer_id !== user.id) return { data: null, error: { message: "Access denied." } };
@@ -52,18 +57,27 @@ export async function submitPayment(
     };
   }
 
-  // Buyer can submit payment in two contexts:
-  //  - full_prepay: order.status must be `contract_signed` (we'll move to payment_pending)
-  //  - net_after_arrival: order.status must be `payment_pending` (after customs cleared)
-  // For backward-compatibility we also allow legacy `signed`.
-  const validForSubmit =
-    order.status === "contract_signed" ||
-    order.status === "signed" ||
-    order.status === "payment_pending";
-  if (!validForSubmit) {
+  // Pull the schedule row and validate that it belongs to this order +
+  // is currently due (or overdue) so we don't double-charge a paid one.
+  const { data: schedule } = await supabase
+    .from("payment_schedules")
+    .select("id, order_id, status, amount, currency")
+    .eq("id", parsed.data.schedule_id)
+    .single<{
+      id: string;
+      order_id: string;
+      status: PaymentScheduleStatus;
+      amount: number;
+      currency: string;
+    }>();
+
+  if (!schedule || schedule.order_id !== parsed.data.order_id) {
+    return { data: null, error: { message: "Payment schedule not found for this order." } };
+  }
+  if (schedule.status !== "due" && schedule.status !== "overdue") {
     return {
       data: null,
-      error: { message: `Order status ${order.status} does not allow payment submission.` },
+      error: { message: `Schedule is in ${schedule.status} state; cannot accept payment.` },
     };
   }
 
@@ -74,6 +88,7 @@ export async function submitPayment(
     .insert({
       order_id: parsed.data.order_id,
       buyer_id: user.id,
+      schedule_id: parsed.data.schedule_id,
       method: parsed.data.method,
       amount: parsed.data.amount,
       currency: parsed.data.currency,
@@ -87,21 +102,20 @@ export async function submitPayment(
 
   if (error) return { data: null, error: { message: error.message } };
 
-  // Move order to payment_pending if it is not already there
-  if (order.status !== "payment_pending") {
-    await admin
-      .from("orders")
-      .update({ status: "payment_pending" })
-      .eq("id", parsed.data.order_id);
-  }
+  // Move the schedule into awaiting_review so the buyer can't submit
+  // a second payment for the same installment while admin reviews.
+  await admin
+    .from("payment_schedules")
+    .update({ status: "awaiting_review" })
+    .eq("id", parsed.data.schedule_id);
 
   // Notify admin
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     await notifyAdminEmail({
-      subject: `New payment pending review — Order ${parsed.data.order_id}`,
+      subject: `New payment pending review — Order ${order.order_no}`,
       html: `
-          <p>A new payment has been submitted for order <strong>${parsed.data.order_id}</strong>.</p>
+          <p>A new payment has been submitted for order <strong>${order.order_no}</strong>.</p>
           <p>Amount: <strong>${parsed.data.amount} ${parsed.data.currency}</strong></p>
           <p>Method: ${parsed.data.method}</p>
           <p>TX Hash: ${parsed.data.tx_hash ?? "—"}</p>
@@ -112,8 +126,6 @@ export async function submitPayment(
 
   revalidatePath(`/orders/${parsed.data.order_id}`);
   revalidatePath("/admin/payments");
-  // Bump the dashboard counter too so it shows "Action needed" the moment
-  // the buyer submits a new payment.
   revalidatePath("/admin");
 
   return { data: { paymentId: payment.id }, error: null };
@@ -142,84 +154,70 @@ export async function verifyPayment(
 
   const { data: payment } = await admin
     .from("payments")
-    .select("order_id, buyer_id, amount, currency")
+    .select("order_id, buyer_id, amount, currency, schedule_id")
     .eq("id", paymentId)
-    .single<{ order_id: string; buyer_id: string; amount: number; currency: string }>();
+    .single<{
+      order_id: string;
+      buyer_id: string;
+      amount: number;
+      currency: string;
+      schedule_id: string | null;
+    }>();
 
   if (!payment) return { data: null, error: { message: "Payment not found." } };
 
   const { error } = await admin
     .from("payments")
-    .update({ status: decision, admin_note: note ?? null, reviewed_by: user.id, reviewed_at: new Date().toISOString() })
+    .update({
+      status: decision,
+      admin_note: note ?? null,
+      reviewed_by: user.id,
+      reviewed_at: new Date().toISOString(),
+    })
     .eq("id", paymentId);
 
   if (error) return { data: null, error: { message: error.message } };
 
-  if (decision === "verified") {
-    // Look up order's payment terms to decide what state to move to.
-    const { data: orderRow } = await admin
-      .from("orders")
-      .select("payment_terms, status, timeline")
-      .eq("id", payment.order_id)
-      .single<{ payment_terms: string | null; status: string; timeline: unknown[] }>();
-
-    // payment_pending -> paid (always)
-    await admin
-      .from("orders")
-      .update({ status: "paid" })
-      .eq("id", payment.order_id);
-
-    // Append timeline event
-    const events = Array.isArray(orderRow?.timeline) ? orderRow!.timeline : [];
-    const entry = {
-      event: "paid",
-      at: new Date().toISOString(),
-      by: user.id,
-      from: "payment_pending",
-      to: "paid",
-      payment_id: paymentId,
-    };
-    await admin
-      .from("orders")
-      .update({ timeline: [...events, entry] as import("@/types/database").Json })
-      .eq("id", payment.order_id);
-
-    // For full_prepay: paid → in_production (auto)
-    // For net_after_arrival: paid → completed (auto)
-    if (orderRow?.payment_terms === "net_after_arrival") {
+  // Update the linked schedule row. If the payment was rejected, the
+  // schedule goes back to `due` so the buyer can re-submit.
+  if (payment.schedule_id) {
+    if (decision === "verified") {
       await admin
-        .from("orders")
-        .update({ status: "completed" })
-        .eq("id", payment.order_id);
-      const completedEntry = {
-        event: "completed",
-        at: new Date().toISOString(),
-        by: user.id,
-        from: "paid",
-        to: "completed",
-      };
-      await admin
-        .from("orders")
-        .update({ timeline: [...events, entry, completedEntry] as import("@/types/database").Json })
-        .eq("id", payment.order_id);
+        .from("payment_schedules")
+        .update({ status: "paid", paid_payment_id: paymentId })
+        .eq("id", payment.schedule_id);
     } else {
-      // Default to full_prepay branch: paid → in_production
       await admin
-        .from("orders")
-        .update({ status: "in_production" })
-        .eq("id", payment.order_id);
-      const ipEntry = {
-        event: "in_production",
-        at: new Date().toISOString(),
-        by: user.id,
-        from: "paid",
-        to: "in_production",
-      };
-      await admin
-        .from("orders")
-        .update({ timeline: [...events, entry, ipEntry] as import("@/types/database").Json })
-        .eq("id", payment.order_id);
+        .from("payment_schedules")
+        .update({ status: "due" })
+        .eq("id", payment.schedule_id);
     }
+  }
+
+  // Append a timeline event so the order timeline tab still shows
+  // payment activity (even though payment is no longer a stage).
+  const { data: orderRow } = await admin
+    .from("orders")
+    .select("timeline")
+    .eq("id", payment.order_id)
+    .single<{ timeline: unknown[] }>();
+  const events = Array.isArray(orderRow?.timeline) ? orderRow!.timeline : [];
+  const entry = {
+    event: decision === "verified" ? "payment_verified" : "payment_rejected",
+    at: new Date().toISOString(),
+    by: user.id,
+    payment_id: paymentId,
+    schedule_id: payment.schedule_id,
+  };
+  await admin
+    .from("orders")
+    .update({ timeline: [...events, entry] as Json })
+    .eq("id", payment.order_id);
+
+  // Auto-complete the order if customs cleared and this was the last
+  // outstanding installment.
+  if (decision === "verified") {
+    await autoCompleteIfReady(payment.order_id, user.id);
   }
 
   // Write audit log
@@ -228,7 +226,7 @@ export async function verifyPayment(
     action: decision === "verified" ? "payment_verified" : "payment_rejected",
     target_type: "payment",
     target_id: paymentId,
-    metadata: { order_id: payment.order_id, note } as import("@/types/database").Json,
+    metadata: { order_id: payment.order_id, schedule_id: payment.schedule_id, note } as Json,
   });
 
   // Notify buyer
@@ -245,8 +243,8 @@ export async function verifyPayment(
         : "Payment rejected — Mada Graphite";
     const html =
       decision === "verified"
-        ? `<p>Your payment of <strong>${payment.amount} ${payment.currency}</strong> has been verified. The order is now in progress.</p>`
-        : `<p>Your payment has been <strong>rejected</strong>. Admin note: ${note ?? "—"}. Please contact support.</p>`;
+        ? `<p>Your payment of <strong>${payment.amount} ${payment.currency}</strong> has been verified.</p>`
+        : `<p>Your payment has been <strong>rejected</strong>. Admin note: ${note ?? "—"}. Please re-submit or contact support.</p>`;
     const smsText =
       decision === "verified"
         ? `Mada Graphite: Payment of ${payment.amount} ${payment.currency} verified.`
@@ -262,9 +260,6 @@ export async function verifyPayment(
   } catch (_) {}
 
   revalidatePath("/admin/payments");
-  // The admin dashboard renders the pending-payments count card and was
-  // showing a stale "1 Action needed" badge after the last pending row
-  // had been verified. Force a refresh of that card too.
   revalidatePath("/admin");
   revalidatePath(`/orders/${payment.order_id}`);
 

@@ -45,7 +45,7 @@
 ### 2. Price & Total Value
 
 - Unit Price: **{{order.unit_price}} {{order.currency}} / {{listing.unit}}**
-- Incoterm: **{{listing.incoterm}}** {{order.destination}}
+- Incoterm: **{{order.incoterm}}** {{order.destination}} (FOB / CFR / CIF only)
 - Total Contract Value: **{{order.total_amount}} {{order.currency}}**
 
 ### 3. Shipment
@@ -55,11 +55,16 @@
 - Partial shipment: not allowed unless agreed in writing.
 - Transhipment: allowed.
 
-### 4. Payment Terms
+### 4. Payment Schedule
 
-Buyer shall pay 100% of the Total Contract Value within five (5) business days
-after both Parties sign this Contract, via one of the following channels
-designated by the Platform:
+Buyer shall remit the Total Contract Value in the following installments. Each
+installment becomes payable when its associated milestone is reached.
+
+| # | Category | Milestone | % | Amount |
+|---|---|---|---|---|
+| (rendered dynamically from `paymentSchedule` array — see `src/lib/contract/template.ts`) |
+
+Designated platform settlement channels:
 
 - USDT (TRC20): `{{platform.usdt_trc20}}`
 - USDT (ERC20): `{{platform.usdt_erc20}}`
@@ -67,9 +72,11 @@ designated by the Platform:
 - MUP: `{{platform.mup_address}}`
 - Bank Transfer: {{platform.bank_info}}
 
-After payment, Buyer shall submit transaction hash or remittance receipt on
-the Platform for verification by the Platform's administrator. Funds are
-released to Seller after Buyer confirms receipt of goods on the Platform.
+After remitting each installment, Buyer shall submit the transaction hash or
+remittance receipt on the Platform for verification by the Platform's
+administrator. The installment is marked as paid only after the administrator
+verifies the proof. Funds are released to Seller per the milestone above; the
+overall order completes once every installment is verified.
 
 ### 5. Inspection
 
@@ -146,12 +153,13 @@ written or oral.
 
 | Key | Source |
 |---|---|
-| `contract.contract_no` | 自動生成,format `MG-{YY}-{order_no.suffix}` |
-| `order.*` | `orders` row |
+| `contract.contract_no` | 自動生成,format `CNT-{order_no}-R{revision}` |
+| `order.*` | `orders` row（含 `order.incoterm`，FOB/CFR/CIF 之一） |
 | `listing.*` | `listings` row(含 `category_name` join) |
 | `seller.*` / `buyer.*` | `profiles` row |
 | `platform.*` | 環境變數(見 `.env.example` 中 `PLATFORM_*`) |
 | `governing.*` | 平台設定常數(`src/lib/contract/constants.ts`) |
+| `paymentSchedule` | `PaymentScheduleEntry[]`（簽約時 seller 在 `<PaymentScheduleBuilder />` 配置）— 每筆有 category / milestone / percentage |
 
 > ⚠️ **重要**: 第一次正式上線前,必須由法務人員(或公司負責人)
 > 把原始 docx 的所有條款逐條核對到本模板,確認文意一致。

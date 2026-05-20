@@ -1,7 +1,14 @@
 import { z } from "zod";
 
+import {
+  IncotermSchema,
+  PaymentScheduleArraySchema,
+} from "./payment-schedule";
+
 export const SubmitPaymentSchema = z.object({
   order_id: z.string().uuid(),
+  /** Required: which schedule installment this payment settles. */
+  schedule_id: z.string().uuid(),
   method: z.enum([
     "usdt_trc20",
     "usdt_erc20",
@@ -35,8 +42,8 @@ export const ShipmentUpdateSchema = z.object({
 
 export const DraftContractSchema = z.object({
   order_id: z.string().uuid(),
-  payment_terms: z.enum(["full_prepay", "net_after_arrival"]),
-  payment_due_days: z.number().int().min(0).max(180),
+  incoterm: IncotermSchema,
+  payment_schedule: PaymentScheduleArraySchema,
 });
 
 export type DraftContractInput = z.infer<typeof DraftContractSchema>;
@@ -78,7 +85,7 @@ export const ListingInputSchema = z.object({
   available_to: z.string().optional(),
   unit_price: z.number().positive(),
   currency: z.string().default("USDT"),
-  incoterm: z.string().default("CFR"),
+  incoterm: IncotermSchema.default("CFR"),
   description: z.string().optional(),
   images: z.array(z.string().url()).default([]),
 });

@@ -220,7 +220,7 @@ export function ListingForm({ categories }: ListingFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {["CFR", "CIF", "FOB", "EXW", "DDP"].map((t) => (
+                    {["CFR", "CIF", "FOB"].map((t) => (
                       <SelectItem key={t} value={t}>
                         {t}
                       </SelectItem>

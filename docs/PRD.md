@@ -25,15 +25,15 @@
 | 5 | **賣家上貨**：選品類 → 規格 / 數量 / 出貨地 / 出貨時間區間 / 價格 / 幣別 / Incoterm | `/listings/new` |
 | 6 | **買家市場**：瀏覽 listings、篩選、單品詳情 | `/market` + `/market/[id]` |
 | 7 | **詢價 → 報價流程**：買家提交 inquiry → 賣家發 quotation（規格/價格/Incoterm/有效期）→ 雙方可 counter 來回議價 → buyer accept → 自動建立 order | `<InquiryDialog />` + `<QuotationForm />` + `acceptQuotation` |
-| 8 | **訂單狀態機（B2B 13 階段）**：Quotation Pending → Quoted ↔ Negotiating → Contract Pending → Contract Signed → (依 payment_terms 分支) → Payment Pending / Paid / In Production / Ready to Ship / Shipped / In Transit / Arrived / Customs Cleared / Completed；Disputed / Cancelled | `src/lib/order/stateMachine.ts` |
-| 9 | **合約生成 + 回合制審核**：賣家 draftContract（含 payment_terms：full_prepay 或 net_after_arrival）→ 買家 approve / reject（可重新起草，revision_no++） → 雙方上傳簽名掃描（私有 Storage） | `src/lib/contract/template.ts` + `<ContractDraftForm />` + `<ContractApproveReject />` |
-| 10 | **付款人工審核**：buyer 提交 tx_hash / proof_url，admin 在後台 verify/reject | `/admin/payments` |
+| 8 | **訂單狀態機（B2B 12 階段，付款已抽離）**：Quotation Pending → Quoted ↔ Negotiating → Contract Pending → Contract Signed → In Production → Ready to Ship → Shipped → In Transit → Arrived → Customs Cleared → Completed；Disputed / Cancelled。付款不再卡關訂單流程，獨立由 `payment_schedules` 管理（migration 013/014） | `src/lib/order/stateMachine.ts` |
+| 9 | **合約生成 + 多階段付款排程**：賣家 draftContract 選 Incoterm（FOB/CFR/CIF only） + 用 `<PaymentScheduleBuilder />` 拆出 prepayment / regular / postpayment 多筆 installment（總和 100%）；買家 approve / reject（revision_no++）；雙方上傳簽名掃描 | `src/lib/contract/template.ts` + `<ContractDraftForm />` + `<PaymentScheduleBuilder />` |
+| 10 | **多階段付款 + 人工審核**：每筆 schedule 在對應 milestone 觸發（粗節點隨訂單狀態自動；細節點由買賣方手動 button；`bl_date_plus_N` 由 Vercel Cron 排程）→ schedule.status `scheduled → due → awaiting_review → paid`；admin 在後台 verify/reject 每筆 payment | `/admin/payments` + `<PaymentScheduleTable />` + `<MilestoneActionButtons />` + `/api/cron/payment-schedule` |
 | 11 | **訂單時間軸**：每次狀態轉換 append timeline 事件 | `appendTimeline()` |
 | 12 | **Audit log**：所有 admin 動作寫入 `audit_logs` | `writeAuditLog()` |
 | 13 | **Email + SMS 通知**：詢價/報價/合約/出貨/付款等 10 個 user 事件（SMS 需 Admin 開關 + env + `profiles.phone`）；admin 事件僅 Email | `src/lib/notifications/dispatch.ts` + `src/lib/sms/client.ts`；詳見 [ARCHITECTURE §8](./ARCHITECTURE.md#8-通知系統) |
 | 14 | **使用者 Dashboard**：active orders + pending inquiries 快速概覽 + 角色相關快捷 | `/dashboard` |
 | 15 | **三主題 UI**：light / dark / editorial（next-themes） | `<ThemeToggle />` |
-| 16 | **訂單進度條**：依 payment_terms 動態顯示 11–13 階段，已完成綠色、進行中金色、未到灰色 | `<OrderProgressBar />` |
+| 16 | **訂單進度條**：固定 12 階段線性進度（付款已抽離），右上 micro-badge 顯示 Payments: X/Y paid | `<OrderProgressBar />` |
 | 17 | **訂單文件中心**：13 種文件類型分組（Contract / Invoice / Logistics / Inspection / Customs / Payment / Other）+ 每個 type 多檔上傳 + admin 核驗徽章 | `<OrderDocumentsTab />` + `<DocumentUploader />` |
 | 18 | **B/L + Vessel 追蹤**：賣家 markShipped 時填 B/L No、vessel name/IMO、container numbers、ETD/ATD/ETA；任一方可 markArrived（記 ATA）；買家 markCustomsCleared | `<ShipmentForm />` + `<OrderPhaseActions />` |
 | 19 | **Disputed / Cancelled UI**：所有非終止狀態都可 raiseDispute / cancelOrder，admin 收 email + audit log | `<OrderPhaseActions />` |
@@ -109,35 +109,55 @@
 3. 賣家收到 Email 通知 + 在 `/inquiries` Received Tab 看到
 4. 賣家「Accept」 → 自動建立 `orders.status='draft'`，inquiry.status='converted'，導向訂單頁
 
-### 4.4 訂單核心流程（B2B 13 階段，分支由 `payment_terms` 決定）
+### 4.4 訂單核心流程（B2B 12 階段，付款已抽離）
 
 ```
 quotation_pending → quoted ↔ negotiating
   └─ buyer accept quotation
        └─ contract_pending  ←─────── 賣家可重新起草（revision_no++）─┐
             └─ buyer approve + 雙方上傳簽名掃描                      │
-                 └─ contract_signed                                  │
-                      ├── (full_prepay)        → payment_pending → paid → in_production
-                      └── (net_after_arrival)                       → in_production
-                          → ready_to_ship → shipped → in_transit → arrived → customs_cleared
-                              ├── (full_prepay)        → completed
-                              └── (net_after_arrival)  → payment_pending → paid → completed
+                 └─ contract_signed → in_production
+                      → ready_to_ship → shipped → in_transit
+                      → arrived → customs_cleared → completed
 ```
 
-任何非終止狀態都可進入 `disputed` 或 `cancelled`（雙方 + admin 可觸發；admin 另可
-`forceTransitionOrder` 繞過狀態機，全程寫 `audit_logs`）。完整定義見
-[`src/lib/order/stateMachine.ts`](../src/lib/order/stateMachine.ts) 與
-[`ARCHITECTURE.md`](./ARCHITECTURE.md) §4.4「訂單狀態機」。
+付款不再卡關訂單流程；installment 改由 `payment_schedules` 表 1..N 筆紀錄
+（見 §4.5）。`customs_cleared → completed` 由 `verifyPayment` 在「所有 schedule
+皆 paid」時自動推進。任何非終止狀態都可進入 `disputed` 或 `cancelled`
+（雙方 + admin 可觸發；admin 另可 `forceTransitionOrder` 繞過狀態機，全程寫
+`audit_logs`）。完整定義見 [`src/lib/order/stateMachine.ts`](../src/lib/order/stateMachine.ts)
+與 [`ARCHITECTURE.md`](./ARCHITECTURE.md) §4.4「訂單狀態機」。
 
-### 4.5 付款（MVP 簡化 — 雙分支）
+### 4.5 付款（多階段排程）
 
-- 平台顯示自有錢包/帳戶資訊（USDT TRC20/ERC20、USDI、MUP、銀行）
-- 買家在訂單頁 Payment Tab 提交：method / amount / currency / tx_hash / proof_url / note
-- `payments.status='pending'` → `orders.status='payment_pending'` → 寄信通知 admin
-- admin 在 `/admin/payments` 審核 → verified；驗證通過後依 `orders.payment_terms` 自動推進：
-  - `full_prepay`：`payment_pending → paid → in_production`（之後賣家走出貨流程）
-  - `net_after_arrival`：`payment_pending → paid → completed`（在到港 + 通關之後才會進入此分支）
-- 寄信通知 buyer，並寫 `audit_logs`
+**Incoterm 範圍**：只支援 `FOB` / `CFR` / `CIF`（EXW / DDP 已移除）。
+
+**Schedule 結構**：每張訂單在簽約時由賣家透過 `<PaymentScheduleBuilder />`
+拆出 1..10 筆 `payment_schedules` 列，每筆有：
+
+- `category`：`prepayment` / `regular_payment` / `postpayment`
+- `milestone`：13 個值，依 Incoterm 過濾（例如 CIF 才能用 `bl_plus_insurance_received`）
+- `percentage` + `amount`（金額 = order.total × pct / 100）
+- `status`：`scheduled → due → awaiting_review → paid` (`overdue` / `waived` 為旁支)
+
+**Milestone 觸發策略**（hybrid manual + auto + cron）：
+
+| Trigger 類型 | 例子 | 來源 |
+|---|---|---|
+| 自動（隨訂單狀態） | `contract_signed`、`loaded_onto_vessel`（隨 `markShipped`）、`arrived_at_port`、`accepted_by_buyer`（隨 `markCustomsCleared`） | `src/actions/order.ts` 內呼叫 `triggerMilestone()` |
+| 手動（賣家按鈕） | `before_production` / `before_shipment` / `before_loading` | `<MilestoneActionButtons />` |
+| 手動（買家按鈕） | `bl_received` / `shipping_docs_received` / `bl_plus_insurance_received` / `goods_picked_up` | `<MilestoneActionButtons />` |
+| 時間（cron） | `bl_date_plus_30 / 60 / 90` | `/api/cron/payment-schedule` 每日 04:00 UTC |
+
+**買家付款流程**：在 Payment tab `<PaymentScheduleTable />` 看到 `due` 列
+→ 點 Submit Payment 開 dialog（method / tx_hash / proof_url / note）→
+`payments.status='pending'` + `schedule.status='awaiting_review'` →
+admin 在 `/admin/payments` 審核 → verified 時 `schedule.status='paid'` +
+`schedule.paid_payment_id`。
+
+**自動 completion**：`verifyPayment` 在「所有 schedule paid 且
+`order.status='customs_cleared'`」時呼叫 `autoCompleteIfReady()` 把訂單
+推到 `completed`。
 
 ### 4.6 站內 IM ⚠️ 待實作（A2）
 - 建立訂單時自動建 `chat_rooms (type='order')` + `chat_members(buyer, seller)`
@@ -184,3 +204,4 @@ quotation_pending → quoted ↔ negotiating
 | 2026-05-15 | fix(orders) 1620d8e：合約簽名後預覽 / Save-as-PDF 內嵌雙方簽名掃描；`<PaymentForm />` 對 `bank_transfer / usdi / mup` 加 remittance proof uploader；`/admin/payments` 用對 FK hint（`payments_payer_id_fkey`） |
 | 2026-05-15 | fix(admin) 768cfbc：`/admin` 計數器與 `/admin/payments` 同步（`dynamic = "force-dynamic"` + 於 `verifyPayment` / `submitPayment` revalidate） |
 | 2026-05-15 | docs 773411c：完成 full-prepay 端到端走測（`ORD-TEST-MP6PL7MZ`）；A4 關閉，A7 full-prepay happy path 勾選；OrderProgressBar 在 `completed` 狀態 polish |
+| 2026-05-19 | refactor(orders) decouple-payment：付款從訂單時間軸抽離，新增 `payment_schedules`（migration 013/014）；訂單狀態機簡化為 12 階段線性；Incoterm 限縮 FOB/CFR/CIF；新增 `<PaymentScheduleBuilder />`、`<PaymentScheduleTable />`、`<MilestoneActionButtons />`、`/api/cron/payment-schedule`；移除 `payment_terms` / `payment_due_days` 欄位（hard cutover，舊測試資料清空） |

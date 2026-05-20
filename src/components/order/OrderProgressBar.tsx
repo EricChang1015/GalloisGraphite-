@@ -6,18 +6,27 @@ import {
   getStageIndex,
   STATUS_LABEL,
   type OrderStatus,
-  type PaymentTermsType,
 } from "@/lib/order/stateMachine";
 
 interface OrderProgressBarProps {
   status: OrderStatus;
-  paymentTerms: PaymentTermsType | null | undefined;
+  /** Optional payment progress summary rendered as a micro-badge. */
+  paymentsSummary?: {
+    paid: number;
+    total: number;
+  };
   className?: string;
 }
 
+/**
+ * Linear 12-step progress bar for an order. Payment is intentionally not
+ * a step in this bar — it lives on `payment_schedules` and is surfaced
+ * separately. Pass `paymentsSummary` to show a `Payments: 1 / 3 paid`
+ * micro-badge alongside the stage counter.
+ */
 export function OrderProgressBar({
   status,
-  paymentTerms,
+  paymentsSummary,
   className,
 }: OrderProgressBarProps) {
   const isOffTrack = status === "disputed" || status === "cancelled";
@@ -41,23 +50,27 @@ export function OrderProgressBar({
     );
   }
 
-  const stages = getProgressStages(paymentTerms);
-  const currentIdx = getStageIndex(status, paymentTerms);
-  // When the order is `completed`, treat ALL stages (including "Completed")
-  // as done so the bar reads as fully green instead of leaving the last
-  // step in a "current" state.
+  const stages = getProgressStages();
+  const currentIdx = getStageIndex(status);
   const isFullyDone = status === "completed";
 
   return (
     <div className={cn("space-y-3", className)}>
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex items-center justify-between text-xs text-muted-foreground gap-2 flex-wrap">
         <span>
           Stage <span className="font-medium text-foreground">{Math.max(0, currentIdx) + 1}</span>{" "}
           / {stages.length}
         </span>
-        {paymentTerms && (
-          <span className="rounded border border-border/60 px-2 py-0.5">
-            {paymentTerms === "full_prepay" ? "Full Prepay" : "Net After Arrival"}
+        {paymentsSummary && paymentsSummary.total > 0 && (
+          <span
+            className={cn(
+              "rounded border px-2 py-0.5 text-[11px]",
+              paymentsSummary.paid === paymentsSummary.total
+                ? "border-emerald-400/40 text-emerald-400"
+                : "border-amber-400/40 text-amber-400"
+            )}
+          >
+            Payments: {paymentsSummary.paid} / {paymentsSummary.total} paid
           </span>
         )}
       </div>

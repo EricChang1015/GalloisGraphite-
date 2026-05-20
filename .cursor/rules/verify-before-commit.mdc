@@ -1,0 +1,70 @@
+---
+description: Verification discipline before declaring code ready or committing
+globs: src/**,supabase/**
+alwaysApply: false
+---
+
+# Verify before commit — no guessing allowed
+
+Every claim of "done", "works", or "fixed" MUST be backed by a reproducible
+command. Vibes / overlays / "should work" are not evidence.
+
+## 1. Build gate (mandatory)
+
+```powershell
+npm run build   # must exit 0; fix all TS / import errors before staging
+```
+
+## 2. Browser walkthrough — log discipline
+
+When using `cursor-ide-browser` MCP or running `npm run dev`:
+
+1. After **every** navigation or action, call `browser_console_messages` and
+   read the dev server terminal file. Do **not** rely on the red issues badge
+   alone.
+2. For any hydration / SSR warning, **never** assume "MCP injection" or
+   "browser extension". Prove it:
+
+   ```powershell
+   node scripts/probe-ssr.mjs http://localhost:<port>/<path>
+   # hits: 0  → MCP-injected, ignore
+   # hits: >0 → real SSR/CSR mismatch, must fix
+   ```
+3. Dev server log greps to run before declaring success:
+
+   ```powershell
+   rg "Error|TypeError|Unhandled|⨯" .next\dev\logs\next-development.log
+   ```
+
+## 3. Migration verification
+
+A migration file existing is NOT proof it ran. After `npm run db:migrate`:
+
+```powershell
+node scripts/apply-migrations.mjs --status   # all rows ✓ applied
+node scripts/verify-schema.mjs               # actual columns/enums match expected
+npm run db:types                             # regenerate TS types
+```
+
+If the migration adds a table / column / enum used by code, write or extend
+`scripts/verify-schema.mjs` to assert it exists in the live DB.
+
+## 4. End-to-end smoke for cross-cutting changes
+
+For changes that touch server actions + DB + UI (e.g. order state, payments,
+auth flow):
+
+- A passing `npm run build` is necessary but **not sufficient**.
+- Write or update a `scripts/smoke-*.mjs` that mutates real rows through the
+  same code paths and asserts the resulting DB state. Walk the full happy
+  path: form submit → server action → DB row → admin verify → terminal state.
+- Run with `--cleanup` when possible to keep the DB tidy.
+
+## 5. Forbidden phrases without evidence
+
+- "should work" / "looks fine" / "probably fine"
+- "this is unrelated to my change"
+- "the warning is just a [tool] artifact"
+
+For each of the above, attach the command output that proves it. If you
+cannot prove it, treat it as a real bug and investigate.

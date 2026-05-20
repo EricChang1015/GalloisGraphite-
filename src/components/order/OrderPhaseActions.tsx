@@ -27,14 +27,31 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { OrderStatus } from "@/lib/order/stateMachine";
 
+import { MilestoneActionButtons } from "./MilestoneActionButtons";
+
 interface Props {
   orderId: string;
   status: OrderStatus;
   role: "buyer" | "seller" | "admin";
   ata?: string | null;
+  milestoneTimestamps?: {
+    before_production_at: string | null;
+    before_shipment_at: string | null;
+    before_loading_at: string | null;
+    bl_received_at: string | null;
+    shipping_docs_received_at: string | null;
+    bl_plus_insurance_received_at: string | null;
+    picked_up_at: string | null;
+  };
 }
 
-export function OrderPhaseActions({ orderId, status, role, ata }: Props) {
+export function OrderPhaseActions({
+  orderId,
+  status,
+  role,
+  ata,
+  milestoneTimestamps,
+}: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [arriveAta, setArriveAta] = useState(ata ?? new Date().toISOString().slice(0, 10));
@@ -59,9 +76,11 @@ export function OrderPhaseActions({ orderId, status, role, ata }: Props) {
   const isSeller = role === "seller";
   const isBuyer = role === "buyer";
 
-  // Active state buttons
-  const showInProduction =
-    isSeller && (status === "contract_signed" || status === "paid");
+  // Active state buttons. Payment is decoupled from the order timeline
+  // so "in production" follows directly from "contract_signed" (the
+  // contract-signing flow already auto-steps into in_production today,
+  // so this button is mostly a safety hatch for orders manually held).
+  const showInProduction = isSeller && status === "contract_signed";
   const showReadyToShip = isSeller && status === "in_production";
   const showInTransit = isSeller && status === "shipped";
   const showArrived =
@@ -69,9 +88,9 @@ export function OrderPhaseActions({ orderId, status, role, ata }: Props) {
   const showCustomsCleared = isBuyer && status === "arrived";
 
   const cancellableStates: OrderStatus[] = [
-    "draft", "quotation_pending", "quoted", "negotiating",
+    "quotation_pending", "quoted", "negotiating",
     "contract_pending", "contract_signed",
-    "payment_pending", "in_production", "ready_to_ship",
+    "in_production", "ready_to_ship",
     "disputed",
   ];
   const showCancel = cancellableStates.includes(status);
@@ -83,6 +102,14 @@ export function OrderPhaseActions({ orderId, status, role, ata }: Props) {
 
   return (
     <div className="space-y-3">
+      {milestoneTimestamps && (role === "buyer" || role === "seller") && (
+        <MilestoneActionButtons
+          orderId={orderId}
+          status={status}
+          role={role}
+          timestamps={milestoneTimestamps}
+        />
+      )}
       {anyPrimary && (
         <div className="rounded-lg border p-4 space-y-2">
           <p className="text-sm font-medium">Next step</p>
@@ -145,7 +172,7 @@ export function OrderPhaseActions({ orderId, status, role, ata }: Props) {
                         onChange={(e) => setArriveAta(e.target.value)}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Payment due date will be computed from this date for net-after-arrival terms.
+                        Any B/L-offset postpayment installments will use this date as their anchor.
                       </p>
                     </div>
                     <div className="flex justify-end gap-2">

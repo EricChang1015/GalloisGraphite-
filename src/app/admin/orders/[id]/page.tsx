@@ -14,8 +14,15 @@ import { AdminOrderActions } from "@/components/admin/AdminOrderActions";
 import {
   STATUS_LABEL,
   type OrderStatus,
-  type PaymentTermsType,
 } from "@/lib/order/stateMachine";
+import {
+  CATEGORY_LABEL,
+  MILESTONE_LABEL,
+  SCHEDULE_STATUS_LABEL,
+  type PaymentCategory,
+  type PaymentMilestone,
+  type PaymentScheduleStatus,
+} from "@/lib/validations/payment-schedule";
 import type { DocumentType } from "@/lib/validations/document";
 
 interface PageProps {
@@ -53,8 +60,9 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
       buyer:profiles!orders_buyer_id_fkey(id, full_name, company_name, email, country),
       seller:profiles!orders_seller_id_fkey(id, full_name, company_name, email, country),
       listings(title, origin_location, unit, incoterm, product_categories(name)),
-      contracts(id, contract_no, buyer_signed_url, seller_signed_url, buyer_approved_at, buyer_rejected_at, buyer_reject_reason, payment_terms, payment_due_days, revision_no),
-      payments(id, method, amount, currency, status, created_at, admin_note, reviewed_by, reviewed_at)
+      contracts(id, contract_no, buyer_signed_url, seller_signed_url, buyer_approved_at, buyer_rejected_at, buyer_reject_reason, revision_no),
+      payments(id, method, amount, currency, status, created_at, admin_note, reviewed_by, reviewed_at, schedule_id),
+      payment_schedules(id, sequence, category, milestone, percentage, amount, currency, due_date, status, paid_payment_id)
     `)
     .eq("id", id)
     .single<{
@@ -68,9 +76,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
       total_amount: number;
       currency: string;
       destination: string | null;
-      payment_terms: PaymentTermsType | null;
-      payment_due_days: number | null;
-      payment_due_date: string | null;
+      incoterm: string | null;
       bl_no: string | null;
       vessel_name: string | null;
       ata: string | null;
@@ -97,8 +103,6 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         buyer_approved_at: string | null;
         buyer_rejected_at: string | null;
         buyer_reject_reason: string | null;
-        payment_terms: PaymentTermsType | null;
-        payment_due_days: number | null;
         revision_no: number;
       } | null;
       payments: {
@@ -111,6 +115,19 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         admin_note: string | null;
         reviewed_by: string | null;
         reviewed_at: string | null;
+        schedule_id: string | null;
+      }[] | null;
+      payment_schedules: {
+        id: string;
+        sequence: number;
+        category: PaymentCategory;
+        milestone: PaymentMilestone;
+        percentage: number;
+        amount: number;
+        currency: string;
+        due_date: string | null;
+        status: PaymentScheduleStatus;
+        paid_payment_id: string | null;
       }[] | null;
     }>();
 
@@ -155,9 +172,9 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold">{order.order_no}</h1>
           <Badge variant="outline">{STATUS_LABEL[order.status]}</Badge>
-          {order.payment_terms && (
+          {order.incoterm && (
             <Badge variant="outline" className="text-xs">
-              {order.payment_terms === "full_prepay" ? "Full Prepay" : `Net ${order.payment_due_days ?? "—"}d`}
+              {order.incoterm}
             </Badge>
           )}
           <Link
@@ -169,13 +186,15 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      <OrderProgressBar status={order.status} paymentTerms={order.payment_terms} />
-
-      <AdminOrderActions
-        orderId={order.id}
-        currentStatus={order.status}
-        paymentTerms={order.payment_terms}
+      <OrderProgressBar
+        status={order.status}
+        paymentsSummary={{
+          paid: (order.payment_schedules ?? []).filter((s) => s.status === "paid").length,
+          total: (order.payment_schedules ?? []).length,
+        }}
       />
+
+      <AdminOrderActions orderId={order.id} currentStatus={order.status} />
 
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="rounded-lg border p-4 space-y-1 text-sm">
@@ -197,9 +216,6 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
           <p className="text-xs">Qty: <span className="font-medium">{order.quantity}</span></p>
           <p className="text-xs">Total: <span className="font-medium">{order.total_amount} {order.currency}</span></p>
           <p className="text-xs">Created: {new Date(order.created_at).toLocaleDateString()}</p>
-          {order.payment_due_date && (
-            <p className="text-xs">Due: <span className="font-medium">{order.payment_due_date}</span></p>
-          )}
         </div>
       </div>
 
@@ -213,11 +229,6 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         ) : (
           <div className="rounded-lg border p-3 text-sm space-y-1">
             <p className="font-medium">{contract.contract_no} (revision {contract.revision_no})</p>
-            {contract.payment_terms && (
-              <p className="text-xs text-muted-foreground">
-                Terms: {contract.payment_terms} · {contract.payment_due_days}d
-              </p>
-            )}
             <p className="text-xs">
               Buyer signed: {contract.buyer_signed_url ? "✓" : "—"} ·
               {" "}Seller signed: {contract.seller_signed_url ? "✓" : "—"} ·
@@ -228,6 +239,47 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                 Rejected: {contract.buyer_reject_reason}
               </p>
             )}
+          </div>
+        )}
+      </section>
+
+      {/* Payment schedule */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">Payment Schedule</h2>
+        {!order.payment_schedules || order.payment_schedules.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No schedule defined.</p>
+        ) : (
+          <div className="rounded-lg border overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/30 text-muted-foreground">
+                <tr>
+                  <th className="text-left px-3 py-2 w-8">#</th>
+                  <th className="text-left px-3 py-2">Category</th>
+                  <th className="text-left px-3 py-2">Milestone</th>
+                  <th className="text-right px-3 py-2">%</th>
+                  <th className="text-right px-3 py-2">Amount</th>
+                  <th className="text-left px-3 py-2">Due</th>
+                  <th className="text-left px-3 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...order.payment_schedules]
+                  .sort((a, b) => a.sequence - b.sequence)
+                  .map((s) => (
+                    <tr key={s.id} className="border-t border-border/50">
+                      <td className="px-3 py-2 text-muted-foreground">{s.sequence + 1}</td>
+                      <td className="px-3 py-2">{CATEGORY_LABEL[s.category]}</td>
+                      <td className="px-3 py-2">{MILESTONE_LABEL[s.milestone]}</td>
+                      <td className="px-3 py-2 text-right">{s.percentage.toFixed(2)}%</td>
+                      <td className="px-3 py-2 text-right">
+                        {s.amount.toFixed(2)} {s.currency}
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground">{s.due_date ?? "—"}</td>
+                      <td className="px-3 py-2">{SCHEDULE_STATUS_LABEL[s.status]}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

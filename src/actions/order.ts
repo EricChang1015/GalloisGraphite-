@@ -9,6 +9,11 @@ import { renderContractHtml } from "@/lib/contract/template";
 import { notifyAdminEmail, notifyUser } from "@/lib/notifications/dispatch";
 import { canTransition, nextAfter } from "@/lib/order/stateMachine";
 import {
+  BL_OFFSET_DAYS,
+  MILESTONE_LABEL,
+  assertSchedulesCompatibleWithIncoterm,
+} from "@/lib/validations/payment-schedule";
+import {
   ShipmentUpdateSchema,
   DraftContractSchema,
   RejectContractSchema,
@@ -21,7 +26,7 @@ import type { ActionResult } from "./auth";
 import type { Database, Json } from "@/types/database";
 
 type OrderStatus = Database["public"]["Enums"]["order_status"];
-type PaymentTermsType = Database["public"]["Enums"]["payment_terms_type"];
+type PaymentMilestone = Database["public"]["Enums"]["payment_milestone"];
 
 // NOTE: Next.js 16 forbids non-async-function exports from `"use server"`
 // modules. Schemas live in `@/lib/validations/*`; import them directly
@@ -57,12 +62,11 @@ async function transitionOrder(
   orderId: string,
   from: OrderStatus,
   to: OrderStatus,
-  paymentTerms: PaymentTermsType | null | undefined,
   actorId: string,
   meta?: Record<string, unknown>
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  if (!canTransition(from, to, paymentTerms)) {
-    return { ok: false, message: `Illegal transition: ${from} ??${to}` };
+  if (!canTransition(from, to)) {
+    return { ok: false, message: `Illegal transition: ${from} -> ${to}` };
   }
   const admin = createAdminClient();
   const { error } = await admin
@@ -73,6 +77,138 @@ async function transitionOrder(
   if (error) return { ok: false, message: error.message };
   await appendTimeline(orderId, to, actorId, { from, to, ...meta });
   return { ok: true };
+}
+
+/**
+ * Mark all schedules attached to a given milestone as `due` (from
+ * `scheduled`). Also computes the due_date for time-based milestones
+ * if the milestone is a B/L-offset one and `bl_date` is known.
+ *
+ * Returns the number of schedules that became due, so the caller can
+ * decide whether to fire a notification.
+ */
+async function triggerMilestone(
+  orderId: string,
+  milestone: PaymentMilestone,
+  actorId: string,
+  blDate?: string | null
+): Promise<number> {
+  const admin = createAdminClient();
+
+  // Read affected schedules so we know how many became due (and can
+  // compute due_date for time-based milestones).
+  const { data: schedules } = await admin
+    .from("payment_schedules")
+    .select("id, status, bl_offset_days")
+    .eq("order_id", orderId)
+    .eq("milestone", milestone)
+    .returns<
+      Array<{
+        id: string;
+        status: Database["public"]["Enums"]["payment_schedule_status"];
+        bl_offset_days: number | null;
+      }>
+    >();
+
+  if (!schedules || schedules.length === 0) return 0;
+
+  let dueDate: string | null = null;
+  if (
+    blDate &&
+    (milestone === "bl_date_plus_30" ||
+      milestone === "bl_date_plus_60" ||
+      milestone === "bl_date_plus_90")
+  ) {
+    const d = new Date(blDate);
+    const offset =
+      schedules[0]?.bl_offset_days ?? BL_OFFSET_DAYS[milestone];
+    d.setDate(d.getDate() + offset);
+    dueDate = d.toISOString().slice(0, 10);
+  } else {
+    // Non-time-based milestones become due immediately.
+    dueDate = new Date().toISOString().slice(0, 10);
+  }
+
+  let promoted = 0;
+  for (const s of schedules) {
+    if (s.status !== "scheduled") continue;
+    const { error } = await admin
+      .from("payment_schedules")
+      .update({ status: "due", due_date: dueDate })
+      .eq("id", s.id)
+      .eq("status", "scheduled");
+    if (!error) promoted++;
+  }
+
+  if (promoted > 0) {
+    await appendTimeline(orderId, "payment_schedule_due", actorId, {
+      milestone,
+      count: promoted,
+      due_date: dueDate,
+    });
+
+    // Notify buyer once per call (no per-schedule spam)
+    try {
+      const { data: order } = await admin
+        .from("orders")
+        .select(
+          "id, buyer_id, order_no, buyer:profiles!orders_buyer_id_fkey(email, full_name, phone)"
+        )
+        .eq("id", orderId)
+        .single<{
+          id: string;
+          buyer_id: string;
+          order_no: string;
+          buyer: { email: string; full_name: string; phone: string | null } | null;
+        }>();
+      if (order?.buyer?.email) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+        const label = MILESTONE_LABEL[milestone];
+        await notifyUser({
+          email: order.buyer.email,
+          phone: order.buyer.phone,
+          subject: `Payment installment due — ${order.order_no}`,
+          html: `
+              <p>Hi ${order.buyer.full_name || "Buyer"},</p>
+              <p>A payment installment for order <strong>${order.order_no}</strong>
+                 is now due (milestone: <strong>${label}</strong>).</p>
+              <p>${promoted > 1 ? `${promoted} installments triggered.` : ""}</p>
+              ${dueDate ? `<p>Please settle by <strong>${dueDate}</strong>.</p>` : ""}
+              <p><a href="${appUrl}/orders/${order.id}">Open order to pay</a></p>
+            `,
+          smsText: `Mada Graphite: Payment installment due (${label}). ${appUrl}/orders/${order.id}`,
+        });
+      }
+    } catch (_) {}
+  }
+
+  return promoted;
+}
+
+/** Auto-complete the order if every schedule is paid AND customs cleared. */
+async function maybeAutoComplete(orderId: string, actorId: string) {
+  const admin = createAdminClient();
+
+  const { data: order } = await admin
+    .from("orders")
+    .select("id, status")
+    .eq("id", orderId)
+    .single<{ id: string; status: OrderStatus }>();
+  if (!order || order.status !== "customs_cleared") return;
+
+  const { data: pending } = await admin
+    .from("payment_schedules")
+    .select("id", { count: "exact", head: true })
+    .eq("order_id", orderId)
+    .neq("status", "paid")
+    .neq("status", "waived");
+
+  // `pending` is { count } when head:true is used; treat undefined as zero.
+  type CountWrap = { count: number | null } | null;
+  const remaining = (pending as unknown as CountWrap)?.count ?? 0;
+  if (remaining > 0) return;
+
+  await transitionOrder(orderId, "customs_cleared", "completed", actorId);
 }
 
 type LoadResult =
@@ -86,9 +222,9 @@ type LoadResult =
         buyer_id: string;
         seller_id: string;
         status: OrderStatus;
-        payment_terms: PaymentTermsType | null;
-        payment_due_days: number | null;
         ata: string | null;
+        bl_date: string | null;
+        incoterm: string | null;
       };
       isBuyer: boolean;
       isSeller: boolean;
@@ -117,18 +253,16 @@ async function loadActorAndOrder(
 
   const { data: order } = await supabase
     .from("orders")
-    .select(
-      "id, buyer_id, seller_id, status, payment_terms, payment_due_days, ata"
-    )
+    .select("id, buyer_id, seller_id, status, ata, bl_date, incoterm")
     .eq("id", orderId)
     .single<{
       id: string;
       buyer_id: string;
       seller_id: string;
       status: OrderStatus;
-      payment_terms: PaymentTermsType | null;
-      payment_due_days: number | null;
       ata: string | null;
+      bl_date: string | null;
+      incoterm: string | null;
     }>();
 
   if (!order) return { ok: false, error: "Order not found." };
@@ -153,9 +287,10 @@ async function loadActorAndOrder(
 // =====================================================================
 
 /**
- * Seller drafts (or re-drafts) the contract. Sets payment_terms +
- * payment_due_days on both order and contract; renders HTML; bumps
- * `revision_no` on re-drafts. Order moves into / stays in `contract_pending`.
+ * Seller drafts (or re-drafts) the contract. Sets the Incoterm + payment
+ * schedule on the order; renders the contract HTML embedding the
+ * installment table; bumps `revision_no` on re-drafts; rebuilds the
+ * `payment_schedules` rows for the order.
  */
 export async function draftContract(
   input: z.infer<typeof DraftContractSchema>
@@ -168,13 +303,19 @@ export async function draftContract(
     };
   }
 
+  const incompat = assertSchedulesCompatibleWithIncoterm(
+    parsed.data.payment_schedule,
+    parsed.data.incoterm
+  );
+  if (incompat) return { data: null, error: { message: incompat } };
+
   const ctx = await loadActorAndOrder(parsed.data.order_id, "seller");
   if (!ctx.ok) return { data: null, error: { message: ctx.error } };
 
   const { user, order } = ctx;
 
-  // Allowed in: contract_pending (re-draft), draft, quoted, negotiating
-  const draftableStates: OrderStatus[] = ["draft", "quoted", "negotiating", "contract_pending"];
+  // Allowed in: contract_pending (re-draft) or earlier negotiation states.
+  const draftableStates: OrderStatus[] = ["quoted", "negotiating", "contract_pending"];
   if (!draftableStates.includes(order.status)) {
     return { data: null, error: { message: `Cannot draft contract from status ${order.status}.` } };
   }
@@ -188,7 +329,7 @@ export async function draftContract(
       *,
       buyer:profiles!orders_buyer_id_fkey(full_name, company_name, email, country, phone),
       seller:profiles!orders_seller_id_fkey(full_name, company_name, email, country, phone),
-      listings(title, origin_location, unit, incoterm, specs, product_categories(name))
+      listings(title, origin_location, unit, specs, product_categories(name))
     `)
     .eq("id", parsed.data.order_id)
     .single<{
@@ -210,7 +351,6 @@ export async function draftContract(
         title: string;
         origin_location: string;
         unit: string;
-        incoterm: string;
         specs: Record<string, unknown>;
         product_categories: { name: string } | null;
       } | null;
@@ -241,13 +381,13 @@ export async function draftContract(
       shipment_from: full.shipment_from,
       shipment_eta: full.shipment_eta,
       created_at: full.created_at,
+      incoterm: parsed.data.incoterm,
     },
     listing: {
       category_name: full.listings?.product_categories?.name ?? "Graphite",
       specs: full.listings?.specs ?? {},
       origin_location: full.listings?.origin_location ?? "",
       unit: full.listings?.unit ?? "MT",
-      incoterm: full.listings?.incoterm ?? "CFR",
     },
     buyer: full.buyer,
     seller: full.seller,
@@ -256,6 +396,7 @@ export async function draftContract(
       usdt_erc20: process.env.PLATFORM_USDT_ERC20,
       bank_info: process.env.PLATFORM_BANK_INFO,
     },
+    paymentSchedule: parsed.data.payment_schedule,
   });
 
   let contractId: string;
@@ -266,8 +407,6 @@ export async function draftContract(
         contract_no: contractNo,
         content_html: html,
         revision_no: revision,
-        payment_terms: parsed.data.payment_terms,
-        payment_due_days: parsed.data.payment_due_days,
         // Reset signature & approval state for the new revision
         buyer_signed_url: null,
         seller_signed_url: null,
@@ -288,8 +427,6 @@ export async function draftContract(
         contract_no: contractNo,
         content_html: html,
         revision_no: revision,
-        payment_terms: parsed.data.payment_terms,
-        payment_due_days: parsed.data.payment_due_days,
       })
       .select("id")
       .single<{ id: string }>();
@@ -297,14 +434,45 @@ export async function draftContract(
     contractId = created.id;
   }
 
-  // Snapshot payment terms onto the order so downstream actions can branch
+  // Snapshot the Incoterm onto the order; rebuild schedule rows. A
+  // re-draft wipes any prior schedule that hasn't been paid yet; paid
+  // installments are preserved so admins can audit them.
+  await admin.from("orders").update({ incoterm: parsed.data.incoterm }).eq("id", full.id);
+
   await admin
-    .from("orders")
-    .update({
-      payment_terms: parsed.data.payment_terms,
-      payment_due_days: parsed.data.payment_due_days,
-    })
-    .eq("id", full.id);
+    .from("payment_schedules")
+    .delete()
+    .eq("order_id", full.id)
+    .neq("status", "paid");
+
+  const scheduleRows = parsed.data.payment_schedule.map((entry, idx) => {
+    const amount = Number(
+      ((full.total_amount * entry.percentage) / 100).toFixed(4)
+    );
+    return {
+      order_id: full.id,
+      sequence: idx,
+      category: entry.category,
+      milestone: entry.milestone,
+      percentage: entry.percentage,
+      amount,
+      currency: full.currency,
+      bl_offset_days:
+        entry.bl_offset_days ??
+        (entry.milestone === "bl_date_plus_30"
+          ? 30
+          : entry.milestone === "bl_date_plus_60"
+            ? 60
+            : entry.milestone === "bl_date_plus_90"
+              ? 90
+              : null),
+      status: "scheduled" as const,
+      notes: entry.notes ?? null,
+    };
+  });
+  if (scheduleRows.length > 0) {
+    await admin.from("payment_schedules").insert(scheduleRows);
+  }
 
   // Move into contract_pending if not already
   if (order.status !== "contract_pending") {
@@ -312,7 +480,6 @@ export async function draftContract(
       full.id,
       order.status,
       "contract_pending",
-      parsed.data.payment_terms,
       user.id,
       { revision }
     );
@@ -330,7 +497,7 @@ export async function draftContract(
       html: `
         <p>Hi ${full.buyer.full_name || "Buyer"},</p>
         <p>The seller has drafted contract <strong>${contractNo}</strong> (revision ${revision}).
-           Please review and approve, or send it back with comments.</p>
+           Please review the payment schedule and approve, or send it back with comments.</p>
         <p><a href="${appUrl}/orders/${full.id}">Open order</a></p>
       `,
       smsText: `Mada Graphite: Contract ${full.order_no} ready for review. ${appUrl}/orders/${full.id}`,
@@ -427,8 +594,9 @@ export async function rejectContract(
 
 /**
  * Both parties upload their signed scans; once both present (and buyer
- * has approved), order auto-advances to `contract_signed` then onto the
- * payment-terms-specific next state.
+ * has approved), order auto-advances contract_pending -> contract_signed
+ * -> in_production. Also fires the `contract_signed` payment milestone
+ * so any prepayment installments tied to it become due.
  */
 export async function uploadSignedScan(
   orderId: string,
@@ -477,23 +645,14 @@ export async function uploadSignedScan(
     contract?.buyer_approved_at &&
     ctx.order.status === "contract_pending"
   ) {
-    // Move to contract_signed, then auto-step to next branch state
-    await transitionOrder(
-      orderId,
-      "contract_pending",
-      "contract_signed",
-      ctx.order.payment_terms,
-      ctx.user.id
-    );
-    const next = nextAfter("contract_signed", ctx.order.payment_terms);
+    // Move to contract_signed, fire its milestone, then auto-step to
+    // in_production. Payment installments tied to subsequent
+    // milestones stay `scheduled` until those events fire.
+    await transitionOrder(orderId, "contract_pending", "contract_signed", ctx.user.id);
+    await triggerMilestone(orderId, "contract_signed", ctx.user.id);
+    const next = nextAfter("contract_signed");
     if (next) {
-      await transitionOrder(
-        orderId,
-        "contract_signed",
-        next,
-        ctx.order.payment_terms,
-        ctx.user.id
-      );
+      await transitionOrder(orderId, "contract_signed", next, ctx.user.id);
     }
   }
 
@@ -511,12 +670,10 @@ export async function markInProduction(orderId: string): Promise<ActionResult<tr
   const ctx = await loadActorAndOrder(orderId, "seller");
   if (!ctx.ok) return { data: null, error: { message: ctx.error } };
 
-  // Allowed sources differ by payment_terms (full_prepay needs paid first)
   const result = await transitionOrder(
     orderId,
     ctx.order.status,
     "in_production",
-    ctx.order.payment_terms,
     ctx.user.id
   );
   if (!result.ok) return { data: null, error: { message: result.message } };
@@ -533,7 +690,6 @@ export async function markReadyToShip(orderId: string): Promise<ActionResult<tru
     orderId,
     ctx.order.status,
     "ready_to_ship",
-    ctx.order.payment_terms,
     ctx.user.id
   );
   if (!result.ok) return { data: null, error: { message: result.message } };
@@ -544,7 +700,9 @@ export async function markReadyToShip(orderId: string): Promise<ActionResult<tru
 
 /**
  * Seller marks shipment, capturing B/L + vessel + container + ETD/ATD/ETA
- * details. Order ??`shipped`.
+ * details. Order -> `shipped`. Also fires the `loaded_onto_vessel`
+ * milestone (and back-fills bl_date_plus_N due dates if bl_date was
+ * provided).
  */
 export async function markShipped(
   input: z.infer<typeof ShipmentUpdateSchema>
@@ -561,6 +719,7 @@ export async function markShipped(
   if (!ctx.ok) return { data: null, error: { message: ctx.error } };
 
   const admin = createAdminClient();
+  const now = new Date().toISOString();
   const { error } = await admin
     .from("orders")
     .update({
@@ -573,6 +732,7 @@ export async function markShipped(
       container_numbers: parsed.data.container_numbers ?? null,
       etd: parsed.data.etd ?? null,
       atd: parsed.data.atd ?? null,
+      loaded_at: now,
     })
     .eq("id", parsed.data.order_id);
   if (error) return { data: null, error: { message: error.message } };
@@ -581,11 +741,38 @@ export async function markShipped(
     parsed.data.order_id,
     ctx.order.status,
     "shipped",
-    ctx.order.payment_terms,
     ctx.user.id,
     { bl_no: parsed.data.bl_no, vessel_name: parsed.data.vessel_name }
   );
   if (!result.ok) return { data: null, error: { message: result.message } };
+
+  // Trigger loaded_onto_vessel milestone
+  await triggerMilestone(parsed.data.order_id, "loaded_onto_vessel", ctx.user.id);
+
+  // Back-fill due_date for any bl_date_plus_N schedules now that bl_date is known
+  if (parsed.data.bl_date) {
+    const { data: timeBased } = await admin
+      .from("payment_schedules")
+      .select("id, milestone, bl_offset_days")
+      .eq("order_id", parsed.data.order_id)
+      .in("milestone", ["bl_date_plus_30", "bl_date_plus_60", "bl_date_plus_90"])
+      .is("due_date", null)
+      .returns<
+        Array<{
+          id: string;
+          milestone: "bl_date_plus_30" | "bl_date_plus_60" | "bl_date_plus_90";
+          bl_offset_days: number | null;
+        }>
+      >();
+    for (const s of timeBased ?? []) {
+      const d = new Date(parsed.data.bl_date);
+      d.setDate(d.getDate() + (s.bl_offset_days ?? BL_OFFSET_DAYS[s.milestone]));
+      await admin
+        .from("payment_schedules")
+        .update({ due_date: d.toISOString().slice(0, 10) })
+        .eq("id", s.id);
+    }
+  }
 
   // Notify buyer
   try {
@@ -627,7 +814,6 @@ export async function markInTransit(
     parsed.data.order_id,
     ctx.order.status,
     "in_transit",
-    ctx.order.payment_terms,
     ctx.user.id,
     { note: parsed.data.note }
   );
@@ -638,8 +824,8 @@ export async function markInTransit(
 }
 
 /**
- * Vessel arrived at destination port. Computes `payment_due_date` based on
- * payment_terms + payment_due_days for net_after_arrival flow.
+ * Vessel arrived at destination port. Fires the `arrived_at_port`
+ * payment milestone (which may make some post-payment installments due).
  */
 export async function markArrived(
   input: z.infer<typeof MarkArrivedSchema>
@@ -652,24 +838,9 @@ export async function markArrived(
 
   const admin = createAdminClient();
 
-  // Compute payment_due_date for net_after_arrival
-  const ata = new Date(parsed.data.ata);
-  let due: string | null = null;
-  if (
-    ctx.order.payment_terms === "net_after_arrival" &&
-    typeof ctx.order.payment_due_days === "number"
-  ) {
-    const d = new Date(ata);
-    d.setDate(d.getDate() + ctx.order.payment_due_days);
-    due = d.toISOString().slice(0, 10);
-  }
-
   const { error: updErr } = await admin
     .from("orders")
-    .update({
-      ata: parsed.data.ata,
-      payment_due_date: due,
-    })
+    .update({ ata: parsed.data.ata })
     .eq("id", parsed.data.order_id);
   if (updErr) return { data: null, error: { message: updErr.message } };
 
@@ -677,20 +848,24 @@ export async function markArrived(
     parsed.data.order_id,
     ctx.order.status,
     "arrived",
-    ctx.order.payment_terms,
     ctx.user.id,
-    { ata: parsed.data.ata, payment_due_date: due, note: parsed.data.note }
+    { ata: parsed.data.ata, note: parsed.data.note }
   );
   if (!result.ok) return { data: null, error: { message: result.message } };
+
+  await triggerMilestone(parsed.data.order_id, "arrived_at_port", ctx.user.id);
 
   revalidatePath(`/orders/${parsed.data.order_id}`);
   return { data: true, error: null };
 }
 
 /**
- * Buyer confirms customs cleared. For `full_prepay`, auto-completes the
- * order. For `net_after_arrival`, moves to `payment_pending` and notifies
- * admin to expect buyer's payment.
+ * Buyer confirms customs cleared. Fires the `accepted_by_buyer`
+ * milestone and auto-completes the order if every payment schedule is
+ * settled. Order does NOT auto-complete while any installment remains
+ * outstanding — the UI surfaces a "payments outstanding" banner until
+ * the final installment is verified, then `verifyPayment` calls
+ * `maybeAutoComplete()` to flip the order.
  */
 export async function markCustomsCleared(orderId: string): Promise<ActionResult<true>> {
   const ctx = await loadActorAndOrder(orderId, "buyer");
@@ -699,63 +874,81 @@ export async function markCustomsCleared(orderId: string): Promise<ActionResult<
   const admin = createAdminClient();
   await admin
     .from("orders")
-    .update({ customs_cleared_at: new Date().toISOString() })
+    .update({ customs_cleared_at: new Date().toISOString(), accepted_at: new Date().toISOString() })
     .eq("id", orderId);
 
   const result = await transitionOrder(
     orderId,
     ctx.order.status,
     "customs_cleared",
-    ctx.order.payment_terms,
     ctx.user.id
   );
   if (!result.ok) return { data: null, error: { message: result.message } };
 
-  // Auto-step downstream
-  const next = nextAfter("customs_cleared", ctx.order.payment_terms);
-  if (next) {
-    await transitionOrder(
-      orderId,
-      "customs_cleared",
-      next,
-      ctx.order.payment_terms,
-      ctx.user.id
-    );
-
-    if (next === "completed") {
-      // Notify admin for record-keeping (buyer already prepaid)
-      try {
-        await notifyAdminEmail({
-          subject: `Order ${orderId.slice(0, 8)} completed — buyer cleared customs`,
-          html: `<p>Order <strong>${orderId}</strong> auto-completed (full prepayment, customs cleared).</p>`,
-        });
-      } catch (_) {}
-    } else if (next === "payment_pending") {
-      // Notify buyer that final payment is due
-      try {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-        const { data: buyer } = await admin
-          .from("profiles")
-          .select("email, full_name, phone")
-          .eq("id", ctx.order.buyer_id)
-          .single<{ email: string; full_name: string; phone: string | null }>();
-        await notifyUser({
-          email: buyer?.email,
-          phone: buyer?.phone,
-          subject: `Final payment due — Order ${orderId.slice(0, 8)}`,
-          html: `
-              <p>Hi ${buyer?.full_name || "Buyer"},</p>
-              <p>Customs cleared. Please submit final payment per the agreed terms.</p>
-              <p><a href="${appUrl}/orders/${orderId}">Submit payment</a></p>
-            `,
-          smsText: `Mada Graphite: Final payment due. ${appUrl}/orders/${orderId}`,
-        });
-      } catch (_) {}
-    }
-  }
+  await triggerMilestone(orderId, "accepted_by_buyer", ctx.user.id);
+  await maybeAutoComplete(orderId, ctx.user.id);
 
   revalidatePath(`/orders/${orderId}`);
   return { data: true, error: null };
+}
+
+// =====================================================================
+// Manual milestone triggers (fine-grained events not bound to an order
+// status change). Each writes a timestamp on `orders` and calls
+// `triggerMilestone` to promote any matching schedule rows.
+// =====================================================================
+
+async function manualMilestone(
+  orderId: string,
+  milestone: PaymentMilestone,
+  field:
+    | "before_production_at"
+    | "before_shipment_at"
+    | "before_loading_at"
+    | "bl_received_at"
+    | "shipping_docs_received_at"
+    | "bl_plus_insurance_received_at"
+    | "picked_up_at",
+  requireParty: "buyer" | "seller"
+): Promise<ActionResult<true>> {
+  const ctx = await loadActorAndOrder(orderId, requireParty);
+  if (!ctx.ok) return { data: null, error: { message: ctx.error } };
+
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+  const patch: Record<string, string> = { [field]: now };
+  await admin
+    .from("orders")
+    .update(patch as never)
+    .eq("id", orderId);
+
+  await appendTimeline(orderId, `milestone_${milestone}`, ctx.user.id);
+  await triggerMilestone(orderId, milestone, ctx.user.id, ctx.order.bl_date);
+
+  revalidatePath(`/orders/${orderId}`);
+  return { data: true, error: null };
+}
+
+export async function markBeforeProduction(orderId: string) {
+  return manualMilestone(orderId, "before_production", "before_production_at", "seller");
+}
+export async function markBeforeShipment(orderId: string) {
+  return manualMilestone(orderId, "before_shipment", "before_shipment_at", "seller");
+}
+export async function markBeforeLoading(orderId: string) {
+  return manualMilestone(orderId, "before_loading", "before_loading_at", "seller");
+}
+export async function markBlReceived(orderId: string) {
+  return manualMilestone(orderId, "bl_received", "bl_received_at", "buyer");
+}
+export async function markShippingDocsReceived(orderId: string) {
+  return manualMilestone(orderId, "shipping_docs_received", "shipping_docs_received_at", "buyer");
+}
+export async function markBlPlusInsuranceReceived(orderId: string) {
+  return manualMilestone(orderId, "bl_plus_insurance_received", "bl_plus_insurance_received_at", "buyer");
+}
+export async function markGoodsPickedUp(orderId: string) {
+  return manualMilestone(orderId, "goods_picked_up", "picked_up_at", "buyer");
 }
 
 // =====================================================================
@@ -829,13 +1022,11 @@ export async function cancelOrder(
 
   // Cancellable only in pre-shipment states
   const cancellable: OrderStatus[] = [
-    "draft",
     "quotation_pending",
     "quoted",
     "negotiating",
     "contract_pending",
     "contract_signed",
-    "payment_pending",
     "in_production",
     "ready_to_ship",
     "disputed",
@@ -930,51 +1121,15 @@ export async function forceTransitionOrder(
 }
 
 // =====================================================================
-// Backwards-compat wrappers (used by existing UI until migrated)
+// Cross-action helpers (re-exported as async wrappers because
+// `"use server"` modules can only export async functions)
 // =====================================================================
 
 /**
- * Legacy buyer-facing "confirm receipt" ??equivalent to markCustomsCleared.
- * Retained so existing OrderActions.tsx continues to compile during the
- * UI migration window.
+ * Wrapper around the internal `maybeAutoComplete` helper. Called by
+ * `verifyPayment` after the final installment is verified, so the
+ * order can flip to `completed` once customs is already cleared.
  */
-export async function confirmReceipt(orderId: string): Promise<ActionResult<true>> {
-  return markCustomsCleared(orderId);
-}
-
-/**
- * Legacy seller-facing "update shipment" ??alias for markShipped.
- */
-export async function updateShipment(
-  input: z.infer<typeof ShipmentUpdateSchema>
-): Promise<ActionResult<true>> {
-  return markShipped(input);
-}
-
-/**
- * Legacy seller-facing "mark delivered" ??equivalent to markArrived (with
- * today's date) followed by markCustomsCleared in the seller view. Kept as
- * a no-op alias for compatibility; new UI should call markArrived directly.
- */
-export async function markDelivered(orderId: string): Promise<ActionResult<true>> {
-  return markArrived({
-    order_id: orderId,
-    ata: new Date().toISOString().slice(0, 10),
-  });
-}
-
-/**
- * Legacy "generate contract" ??defaults to full_prepay / 5 days. New UI
- * should call draftContract with explicit terms.
- */
-export async function generateContract(
-  orderId: string
-): Promise<ActionResult<{ contractId: string }>> {
-  const result = await draftContract({
-    order_id: orderId,
-    payment_terms: "full_prepay",
-    payment_due_days: 5,
-  });
-  if (result.error) return { data: null, error: result.error };
-  return { data: { contractId: result.data!.contractId }, error: null };
+export async function autoCompleteIfReady(orderId: string, actorId: string): Promise<void> {
+  return maybeAutoComplete(orderId, actorId);
 }

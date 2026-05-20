@@ -1,25 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import type { z } from "zod";
 
 import { draftContract } from "@/actions/order";
-import { DraftContractSchema } from "@/lib/validations/forms";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -27,42 +14,70 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  INCOTERMS,
+  PaymentScheduleArraySchema,
+  assertSchedulesCompatibleWithIncoterm,
+  type Incoterm,
+  type PaymentScheduleEntry,
+} from "@/lib/validations/payment-schedule";
 
-type Input = z.infer<typeof DraftContractSchema>;
+import { PaymentScheduleBuilder } from "./PaymentScheduleBuilder";
 
 interface ContractDraftFormProps {
   orderId: string;
-  /** existing payment_terms; renders re-draft mode if defined */
-  currentPaymentTerms?: "full_prepay" | "net_after_arrival" | null;
-  currentPaymentDueDays?: number | null;
-  /** when re-drafting, current revision number to show */
+  totalAmount: number;
+  currency: string;
+  /** Currently snapshot incoterm on the order, if any. */
+  currentIncoterm?: Incoterm | null;
+  /** Existing payment-schedule snapshot for re-draft mode. */
+  currentSchedule?: PaymentScheduleEntry[];
+  /** When re-drafting, current revision number to display. */
   currentRevision?: number;
 }
 
 export function ContractDraftForm({
   orderId,
-  currentPaymentTerms,
-  currentPaymentDueDays,
+  totalAmount,
+  currency,
+  currentIncoterm,
+  currentSchedule,
   currentRevision,
 }: ContractDraftFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const isRedraft = (currentRevision ?? 0) >= 1;
 
-  const form = useForm<Input>({
-    resolver: zodResolver(DraftContractSchema),
-    defaultValues: {
-      order_id: orderId,
-      payment_terms: currentPaymentTerms ?? "full_prepay",
-      payment_due_days: currentPaymentDueDays ?? 0,
-    },
-  });
+  const [incoterm, setIncoterm] = useState<Incoterm>(currentIncoterm ?? "CFR");
+  const [schedule, setSchedule] = useState<PaymentScheduleEntry[]>(
+    currentSchedule && currentSchedule.length > 0
+      ? currentSchedule
+      : [{ category: "prepayment", milestone: "contract_signed", percentage: 100 }]
+  );
 
-  const watchedTerms = form.watch("payment_terms");
+  const sum = schedule.reduce((a, e) => a + (Number(e.percentage) || 0), 0);
+  const sumOk = Math.abs(sum - 100) < 0.01;
 
-  function onSubmit(values: Input) {
+  function onSubmit() {
+    // Local validation before round-trip
+    const arrayParse = PaymentScheduleArraySchema.safeParse(schedule);
+    if (!arrayParse.success) {
+      const first = arrayParse.error.issues[0];
+      toast.error(first?.message ?? "Schedule is invalid.");
+      return;
+    }
+    const incompat = assertSchedulesCompatibleWithIncoterm(arrayParse.data, incoterm);
+    if (incompat) {
+      toast.error(incompat);
+      return;
+    }
+
     startTransition(async () => {
-      const result = await draftContract(values);
+      const result = await draftContract({
+        order_id: orderId,
+        incoterm,
+        payment_schedule: arrayParse.data,
+      });
       if (result.error) {
         toast.error(result.error.message);
         return;
@@ -80,71 +95,61 @@ export function ContractDraftForm({
     <div className="rounded-lg border p-4 space-y-4">
       <div>
         <p className="text-sm font-medium">
-          {isRedraft ? `Re-draft Contract (Revision ${(currentRevision ?? 0) + 1})` : "Draft Contract"}
+          {isRedraft
+            ? `Re-draft Contract (Revision ${(currentRevision ?? 0) + 1})`
+            : "Draft Contract"}
         </p>
         <p className="text-xs text-muted-foreground">
-          Choose payment terms before generating the contract. The buyer must approve
-          the terms before either party can upload signed scans.
+          Pick the Incoterm and break the payment into multiple installments. Each
+          installment becomes payable when its milestone is reached.
         </p>
       </div>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="payment_terms"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Payment Terms</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="full_prepay">Full prepay (100% before production)</SelectItem>
-                    <SelectItem value="net_after_arrival">Net after arrival (pay N days after vessel ATA)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="payment_due_days"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  {watchedTerms === "net_after_arrival" ? "Days after arrival" : "Days to pay (window)"}
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={180}
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value || "0", 10))}
-                  />
-                </FormControl>
-                <FormDescription className="text-xs">
-                  {watchedTerms === "net_after_arrival"
-                    ? "e.g. 5 / 30 — payment_due_date will be computed when ATA is recorded."
-                    : "Buyer must submit payment within this many days of contract signing."}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button type="submit" size="sm" disabled={isPending}>
-            {isPending
-              ? "Drafting…"
-              : isRedraft
+
+      <div className="grid gap-2 sm:max-w-xs">
+        <Label className="text-xs">Incoterm</Label>
+        <Select
+          value={incoterm}
+          onValueChange={(v) => setIncoterm(v as Incoterm)}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {INCOTERMS.map((i) => (
+              <SelectItem key={i} value={i}>
+                {i}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">
+          Changing the Incoterm filters which Regular-Payment milestones are
+          available; you may need to revise rows below.
+        </p>
+      </div>
+
+      <PaymentScheduleBuilder
+        incoterm={incoterm}
+        value={schedule}
+        onChange={setSchedule}
+        totalAmount={totalAmount}
+        currency={currency}
+      />
+
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          size="sm"
+          onClick={onSubmit}
+          disabled={isPending || !sumOk || schedule.length === 0}
+        >
+          {isPending
+            ? "Drafting…"
+            : isRedraft
               ? "Re-draft Contract"
               : "Draft Contract"}
-          </Button>
-        </form>
-      </Form>
+        </Button>
+      </div>
     </div>
   );
 }
