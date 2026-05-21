@@ -184,6 +184,25 @@ async function main() {
   `);
   check(partyIdx.length > 0, "idx_chat_rooms_party_pair exists");
 
+  console.log("\n=== profiles.avatar_url ===");
+  const profiles = await cols("profiles");
+  check(profiles.has("avatar_url"), "profiles.avatar_url exists");
+
+  console.log("\n=== avatars storage bucket ===");
+  const buckets = await q(`
+    select id, public, file_size_limit
+      from storage.buckets
+     where id = 'avatars';
+  `);
+  check(buckets.length === 1, "avatars bucket exists");
+  if (buckets[0]) {
+    check(buckets[0].public === true, "avatars bucket is public");
+    check(
+      buckets[0].file_size_limit === 2097152,
+      "avatars file_size_limit is 2 MB"
+    );
+  }
+
   console.log(`\n==== ${pass} passed · ${fail} failed ====`);
   process.exit(fail === 0 ? 0 : 1);
 }

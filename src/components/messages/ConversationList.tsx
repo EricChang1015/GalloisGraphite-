@@ -1,8 +1,7 @@
 import Link from "next/link";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/profile/UserAvatar";
 import type { ConversationSummary } from "@/lib/chat/types";
-import { profileInitials } from "@/lib/chat/display";
 
 interface Props {
   conversations: ConversationSummary[];
@@ -28,16 +27,16 @@ export function ConversationList({ conversations }: Props) {
             href={`/messages/${c.counterpartyId}`}
             className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
           >
-            <Avatar size="lg">
-              <AvatarFallback className="bg-primary/15 text-primary font-medium">
-                {profileInitials({
-                  id: c.counterpartyId,
-                  full_name: null,
-                  company_name: c.counterpartyLabel,
-                  country: c.counterpartyCountry,
-                })}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              size="lg"
+              profile={{
+                id: c.counterpartyId,
+                full_name: null,
+                company_name: c.counterpartyLabel,
+                country: c.counterpartyCountry,
+                avatar_url: c.counterpartyAvatarUrl,
+              }}
+            />
             <div className="min-w-0 flex-1">
               <p className="font-medium truncate">{c.counterpartyLabel}</p>
               {c.counterpartyCountry ? (

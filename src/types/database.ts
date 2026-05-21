@@ -923,6 +923,41 @@ export type Database = {
           },
         ]
       }
+      phone_otp_challenges: {
+        Row: {
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_otp_challenges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_settings: {
         Row: {
           key: string
@@ -981,6 +1016,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           company_name: string | null
           country: string | null
           created_at: string
@@ -990,11 +1026,13 @@ export type Database = {
           kyc_docs: Json
           kyc_level: number
           phone: string | null
+          phone_verified_at: string | null
           role: Database["public"]["Enums"]["user_role"]
           status: Database["public"]["Enums"]["user_status"]
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           company_name?: string | null
           country?: string | null
           created_at?: string
@@ -1004,11 +1042,13 @@ export type Database = {
           kyc_docs?: Json
           kyc_level?: number
           phone?: string | null
+          phone_verified_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           company_name?: string | null
           country?: string | null
           created_at?: string
@@ -1018,6 +1058,7 @@ export type Database = {
           kyc_docs?: Json
           kyc_level?: number
           phone?: string | null
+          phone_verified_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string

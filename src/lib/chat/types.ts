@@ -12,6 +12,7 @@ export type ChatMessageRow = {
   sender?: {
     full_name: string | null;
     company_name: string | null;
+    avatar_url?: string | null;
   } | null;
 };
 
@@ -20,6 +21,7 @@ export type ConversationSummary = {
   counterpartyId: string;
   counterpartyLabel: string;
   counterpartyCountry: string | null;
+  counterpartyAvatarUrl: string | null;
   lastMessageAt: string | null;
   lastMessagePreview: string | null;
 };

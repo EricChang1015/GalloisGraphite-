@@ -3,6 +3,7 @@ export type CounterpartyProfile = {
   full_name: string | null;
   company_name: string | null;
   country: string | null;
+  avatar_url?: string | null;
 };
 
 export function counterpartyLabel(p: CounterpartyProfile): string {

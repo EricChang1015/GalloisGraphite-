@@ -1,7 +1,6 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/profile/UserAvatar";
 import {
   counterpartyLabel,
-  profileInitials,
   type CounterpartyProfile,
 } from "@/lib/chat/display";
 import { cn } from "@/lib/utils";
@@ -21,11 +20,7 @@ export function CounterpartyCard({ profile, subtitle, className, children }: Pro
         className
       )}
     >
-      <Avatar size="lg">
-        <AvatarFallback className="bg-primary/15 text-primary font-medium">
-          {profileInitials(profile)}
-        </AvatarFallback>
-      </Avatar>
+      <UserAvatar profile={profile} size="lg" />
       <div className="min-w-0 flex-1">
         <p className="font-medium truncate">{counterpartyLabel(profile)}</p>
         <p className="text-xs text-muted-foreground truncate">

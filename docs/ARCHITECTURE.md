@@ -150,7 +150,7 @@ provider 為 POE OpenAI-compatible endpoint，回傳 `toUIMessageStreamResponse(
 
 | Bucket | 用途 | 訪問模式 | 現況 |
 |---|---|---|---|
-| `avatars` | 使用者頭像 | public read, self write | ⚠️ 待建立 |
+| `avatars` | 使用者頭像 | public read, self write | ✅ 已建立 — `019_avatars.sql` |
 | `kyc` | KYC 證件 | private（owner + admin） | ⚠️ 待建立 |
 | `contracts` | 合約簽名掃描（legacy） | private（訂單雙方 + admin） | ⚠️ 待建立（已被 `order-documents` 取代） |
 | **`order-documents`** | 訂單通用文件中心（合約簽名、發票、B/L、檢驗、付款證明…） | private（owner / 訂單雙方 / admin） | ✅ 已建立 — `010_storage_order_documents.sql` |
