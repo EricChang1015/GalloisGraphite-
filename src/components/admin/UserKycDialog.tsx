@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -41,10 +40,11 @@ export function UserKycDialog({ userId, userLabel, currentKycLevel }: Props) {
   const [loading, setLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (!open) return;
-    setKycLevel(String(currentKycLevel));
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) return;
     setLoading(true);
+    setDocuments([]);
     void getUserKycForAdmin(userId).then((result) => {
       setLoading(false);
       if (result.error) {
@@ -54,7 +54,7 @@ export function UserKycDialog({ userId, userLabel, currentKycLevel }: Props) {
       setDocuments(result.data?.documents ?? []);
       setKycLevel(String(result.data?.kycLevel ?? currentKycLevel));
     });
-  }, [open, userId, currentKycLevel]);
+  }
 
   function handleSave() {
     startTransition(async () => {
@@ -74,7 +74,7 @@ export function UserKycDialog({ userId, userLabel, currentKycLevel }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
           <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" />

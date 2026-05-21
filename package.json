@@ -17,6 +17,8 @@
     "qa:seed-order": "node scripts/seed-test-order.mjs",
     "qa:cleanup": "node scripts/cleanup-test-data.mjs",
     "qa:chat": "node scripts/qa-chat-buyer-seller.mjs",
+    "qa:kyc": "node scripts/qa-kyc.mjs",
+    "qa:kyc:e2e": "node scripts/e2e-kyc.mjs",
     "qa:e2e-full": "node scripts/e2e-full-trading.mjs"
   },
   "dependencies": {
@@ -63,6 +65,7 @@
     "@types/topojson-specification": "^1.0.5",
     "eslint": "^9",
     "eslint-config-next": "16.2.5",
+    "playwright": "^1.60.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

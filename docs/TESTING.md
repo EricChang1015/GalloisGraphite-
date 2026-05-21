@@ -107,6 +107,14 @@ npm run qa:chat
 
 **通過標準**：7 項全過（單一 party thread、RLS 雙向讀寫、`chat_rooms` denorm）。詳見 **§3.5**。
 
+改動 **KYC（A6）** 時，額外執行：
+
+```bash
+npm run qa:kyc
+```
+
+**通過標準**：16 項全過（bucket、門檻預設 0、self-level guard、上傳、`kyc_docs`、admin override、gate 邏輯）。詳見 **§3.6**。
+
 ### Tier 1 — 靜態與型別
 
 ```bash
@@ -192,6 +200,55 @@ npm run qa:chat
 **不應出現**：訂單頁 Communication Tab、`?tab=communication`。
 
 測試帳號見 §1（Buyer / Seller 同密碼 `a1234567`）。
+
+---
+
+## 3.6 KYC（A6）— 合併 main 前必跑
+
+**模型**：`profiles.kyc_level` 僅 Admin 可改；使用者上傳寫入 `kyc_docs` 不自動升級。
+平台門檻存 `platform_settings`：`kyc_min_level_inquiry` / `kyc_min_level_listing`（調試預設 **0**）。
+
+### 自動化（Tier 0+）
+
+```bash
+npm run qa:kyc
+```
+
+| TC | 斷言 |
+|---|---|
+| TC-KYC-00 | 門檻預設 0；`kyc` bucket 私有；`trg_profiles_guard_kyc_level` |
+| TC-KYC-01 | 使用者 UPDATE `kyc_level` 被 trigger 還原 |
+| TC-KYC-02 | Seller 可 upload + append `kyc_docs`；level 不變 |
+| TC-KYC-03 | Service role 可設 `kyc_level` |
+| TC-KYC-04 | `min_level_listing=1` 時 level 0 被擋、level 1 通過 |
+
+**依賴 migration**：`019_kyc_storage_and_settings`（`npm run db:migrate`）。
+
+`verify-schema.mjs` 另含 5 項 KYC schema 斷言（Tier 0 `qa:preflight`）。
+
+### UI 自動化（需 production `start`）
+
+```bash
+npm run build && npm run start
+# 另一終端：
+E2E_BASE_URL=http://127.0.0.1:3000 npm run qa:kyc:e2e
+```
+
+| TC | 斷言 |
+|---|---|
+| TC-KYC-UI-01 | Seller `/settings/kyc` 可載入 |
+| TC-KYC-UI-02 | Buyer `/settings/kyc` 可載入 |
+| TC-KYC-UI-03 | Admin `/admin/settings` 門檻表單；`/admin/users` KYC dialog |
+
+### 手動 UI（約 5 分鐘）
+
+| # | 角色 | 動作 | 預期 |
+|---|---|---|---|
+| K1 | Seller | `/settings/kyc` 上傳 PDF | Toast 成功；列表出現檔名；level 仍 0 |
+| K2 | Admin | `/admin/users` → **KYC** → level 1 → Save | Seller level 變 1；`audit_logs` 有紀錄 |
+| K3 | Admin | `/admin/settings` 將 inquiry min 設 **1** | |
+| K4 | Buyer (level 0) | Market 詢價 | Toast `KYC_REQUIRED`；導向 `/settings/kyc` |
+| K5 | Admin | 門檻恢復 **0** | 詢價可送出 |
 
 ---
 
