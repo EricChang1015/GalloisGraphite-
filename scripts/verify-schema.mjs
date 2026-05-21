@@ -140,6 +140,12 @@ async function main() {
     `payment_schedule_status enum (${ssActual.length} values)`
   );
 
+  console.log("\n=== chat_rooms denorm columns ===");
+  const chatRooms = await cols("chat_rooms");
+  for (const c of ["last_message_at", "last_message_preview"]) {
+    check(chatRooms.has(c), `chat_rooms.${c} exists`);
+  }
+
   console.log(`\n==== ${pass} passed · ${fail} failed ====`);
   process.exit(fail === 0 ? 0 : 1);
 }

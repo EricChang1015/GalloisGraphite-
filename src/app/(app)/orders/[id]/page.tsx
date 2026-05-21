@@ -1,7 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 
+import { getChatMessages, getOrderChatRoom } from "@/actions/chat";
+import { OrderChat } from "@/components/order/OrderChat";
+import { OrderDetailTabs } from "@/components/order/OrderDetailTabs";
 import { getCurrentUser } from "@/lib/auth/session";
+import type { ChatMessageRow } from "@/lib/chat/types";
 import { createServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,6 +35,7 @@ import type { DocumentType } from "@/lib/validations/document";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }
 
 const statusColor: Record<string, string> = {
@@ -156,8 +161,9 @@ type OrderDetailRow = {
   } | null;
 };
 
-export default async function OrderDetailPage({ params }: PageProps) {
+export default async function OrderDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { tab: tabParam } = await searchParams;
   const user = await getCurrentUser();
   if (!user) {
     redirect(`/login?next=${encodeURIComponent(`/orders/${id}`)}`);
@@ -205,6 +211,17 @@ export default async function OrderDetailPage({ params }: PageProps) {
     : isSeller
       ? "seller"
       : "other";
+  const canPostChat = isBuyer || isSeller;
+
+  let chatRoomId: string | null = null;
+  let chatMessages: ChatMessageRow[] = [];
+  const roomResult = await getOrderChatRoom(order.id);
+  if (roomResult.data?.roomId) {
+    chatRoomId = roomResult.data.roomId;
+    const msgResult = await getChatMessages({ roomId: chatRoomId, limit: 50 });
+    chatMessages = msgResult.data?.messages ?? [];
+  }
+
   const contract = order.contracts ?? null;
   const payments = order.payments ?? [];
 
@@ -279,7 +296,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
       <OrderProgressBar status={order.status} paymentsSummary={paymentsSummary} />
 
-      <Tabs defaultValue="overview">
+      <OrderDetailTabs initialTab={tabParam}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="quotation">Quotation</TabsTrigger>
@@ -287,6 +304,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
           <TabsTrigger value="payment">Payment</TabsTrigger>
           <TabsTrigger value="shipment">Shipment</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="communication">Communication</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
 
@@ -655,6 +673,23 @@ export default async function OrderDetailPage({ params }: PageProps) {
           )}
         </TabsContent>
 
+        {/* Communication */}
+        <TabsContent value="communication" className="mt-4">
+          {chatRoomId ? (
+            <OrderChat
+              roomId={chatRoomId}
+              orderId={order.id}
+              currentUserId={user.id}
+              initialMessages={chatMessages}
+              canPost={canPostChat}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {roomResult.error?.message ?? "Chat room is not available for this order."}
+            </p>
+          )}
+        </TabsContent>
+
         {/* Documents */}
         <TabsContent value="documents" className="mt-4">
           <OrderDocumentsTab
@@ -688,7 +723,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
             </ol>
           )}
         </TabsContent>
-      </Tabs>
+      </OrderDetailTabs>
     </div>
   );
 }
