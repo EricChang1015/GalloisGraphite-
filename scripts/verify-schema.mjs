@@ -142,9 +142,47 @@ async function main() {
 
   console.log("\n=== chat_rooms denorm columns ===");
   const chatRooms = await cols("chat_rooms");
-  for (const c of ["last_message_at", "last_message_preview"]) {
+  for (const c of [
+    "last_message_at",
+    "last_message_preview",
+    "party_user_low",
+    "party_user_high",
+  ]) {
     check(chatRooms.has(c), `chat_rooms.${c} exists`);
   }
+
+  console.log("\n=== messages context columns ===");
+  const messages = await cols("messages");
+  for (const c of ["context_type", "context_id"]) {
+    check(messages.has(c), `messages.${c} exists`);
+  }
+
+  console.log("\n=== party chat enums ===");
+  const chatEnums = await q(`
+    select t.typname,
+           array_agg(e.enumlabel order by e.enumsortorder) as labels
+      from pg_type t
+      join pg_enum e on e.enumtypid = t.oid
+     where t.typname in ('chat_type', 'chat_message_context_type')
+     group by t.typname;
+  `);
+  const chatEnumMap = new Map(
+    chatEnums.map((e) => [e.typname, normalize(e.labels)])
+  );
+  const chatType = chatEnumMap.get("chat_type") ?? [];
+  check(chatType.includes("party"), `chat_type includes party (got ${chatType.join(",")})`);
+  const ctxType = chatEnumMap.get("chat_message_context_type") ?? [];
+  check(
+    ["listing", "inquiry", "order"].every((v) => ctxType.includes(v)),
+    `chat_message_context_type has listing/inquiry/order (${ctxType.length} values)`
+  );
+
+  const partyIdx = await q(`
+    select indexname from pg_indexes
+     where schemaname = 'public' and tablename = 'chat_rooms'
+       and indexname = 'idx_chat_rooms_party_pair';
+  `);
+  check(partyIdx.length > 0, "idx_chat_rooms_party_pair exists");
 
   console.log(`\n==== ${pass} passed · ${fail} failed ====`);
   process.exit(fail === 0 ? 0 : 1);

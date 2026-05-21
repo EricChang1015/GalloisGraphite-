@@ -9,7 +9,6 @@ const VALID_TABS = new Set([
   "payment",
   "shipment",
   "documents",
-  "communication",
   "timeline",
 ]);
 

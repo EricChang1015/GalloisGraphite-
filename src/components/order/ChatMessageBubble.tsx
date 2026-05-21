@@ -1,6 +1,7 @@
 import { FileText } from "lucide-react";
 import Link from "next/link";
 
+import { formatContextLabel } from "@/lib/chat/context-label";
 import { cn } from "@/lib/utils";
 import type { ChatMessageRow } from "@/lib/chat/types";
 
@@ -32,6 +33,11 @@ export function ChatMessageBubble({ message, isOwn }: Props) {
         <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
           {isOwn ? "You" : label}
         </p>
+        {message.context_type && message.context_id ? (
+          <p className="text-[10px] text-primary/80">
+            Re: {formatContextLabel(message.context_type)}
+          </p>
+        ) : null}
         {message.content ? (
           <p className="whitespace-pre-wrap break-words">{message.content}</p>
         ) : null}

@@ -302,12 +302,6 @@ export async function acceptQuotation(
 
   if (orderError) return { data: null, error: { message: orderError.message } };
 
-  const { ensureOrderChatRoom } = await import("@/lib/chat/ensure-room");
-  const chatEnsured = await ensureOrderChatRoom(order.id);
-  if ("error" in chatEnsured && process.env.NODE_ENV === "development") {
-    console.error("[acceptQuotation] chat room:", chatEnsured.error);
-  }
-
   // Mark quotation accepted
   await admin
     .from("quotations")

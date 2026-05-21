@@ -163,6 +163,8 @@ export type Database = {
           last_message_at: string | null
           last_message_preview: string | null
           order_id: string | null
+          party_user_high: string | null
+          party_user_low: string | null
           type: Database["public"]["Enums"]["chat_type"]
         }
         Insert: {
@@ -171,6 +173,8 @@ export type Database = {
           last_message_at?: string | null
           last_message_preview?: string | null
           order_id?: string | null
+          party_user_high?: string | null
+          party_user_low?: string | null
           type: Database["public"]["Enums"]["chat_type"]
         }
         Update: {
@@ -179,6 +183,8 @@ export type Database = {
           last_message_at?: string | null
           last_message_preview?: string | null
           order_id?: string | null
+          party_user_high?: string | null
+          party_user_low?: string | null
           type?: Database["public"]["Enums"]["chat_type"]
         }
         Relationships: [
@@ -187,6 +193,20 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_rooms_party_user_high_fkey"
+            columns: ["party_user_high"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_rooms_party_user_low_fkey"
+            columns: ["party_user_low"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -403,6 +423,10 @@ export type Database = {
         Row: {
           attachment_url: string | null
           content: string | null
+          context_id: string | null
+          context_type:
+            | Database["public"]["Enums"]["chat_message_context_type"]
+            | null
           created_at: string
           id: string
           room_id: string
@@ -411,6 +435,10 @@ export type Database = {
         Insert: {
           attachment_url?: string | null
           content?: string | null
+          context_id?: string | null
+          context_type?:
+            | Database["public"]["Enums"]["chat_message_context_type"]
+            | null
           created_at?: string
           id?: string
           room_id: string
@@ -419,6 +447,10 @@ export type Database = {
         Update: {
           attachment_url?: string | null
           content?: string | null
+          context_id?: string | null
+          context_type?:
+            | Database["public"]["Enums"]["chat_message_context_type"]
+            | null
           created_at?: string
           id?: string
           room_id?: string
@@ -1121,7 +1153,8 @@ export type Database = {
       }
     }
     Enums: {
-      chat_type: "order" | "support" | "ai"
+      chat_message_context_type: "listing" | "inquiry" | "order"
+      chat_type: "order" | "support" | "ai" | "party"
       document_type:
         | "contract_signed_buyer"
         | "contract_signed_seller"
@@ -1331,7 +1364,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      chat_type: ["order", "support", "ai"],
+      chat_message_context_type: ["listing", "inquiry", "order"],
+      chat_type: ["order", "support", "ai", "party"],
       document_type: [
         "contract_signed_buyer",
         "contract_signed_seller",

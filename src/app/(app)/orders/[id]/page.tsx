@@ -1,11 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 
-import { getChatMessages, getOrderChatRoom } from "@/actions/chat";
-import { OrderChat } from "@/components/order/OrderChat";
 import { OrderDetailTabs } from "@/components/order/OrderDetailTabs";
+import { OrderPartyCards } from "@/components/order/OrderPartyCards";
 import { getCurrentUser } from "@/lib/auth/session";
-import type { ChatMessageRow } from "@/lib/chat/types";
 import { createServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -213,15 +211,6 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
       : "other";
   const canPostChat = isBuyer || isSeller;
 
-  let chatRoomId: string | null = null;
-  let chatMessages: ChatMessageRow[] = [];
-  const roomResult = await getOrderChatRoom(order.id);
-  if (roomResult.data?.roomId) {
-    chatRoomId = roomResult.data.roomId;
-    const msgResult = await getChatMessages({ roomId: chatRoomId, limit: 50 });
-    chatMessages = msgResult.data?.messages ?? [];
-  }
-
   const contract = order.contracts ?? null;
   const payments = order.payments ?? [];
 
@@ -304,26 +293,38 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
           <TabsTrigger value="payment">Payment</TabsTrigger>
           <TabsTrigger value="shipment">Shipment</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="communication">Communication</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
 
         {/* Overview */}
         <TabsContent value="overview" className="mt-4 space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border p-4 space-y-1 text-sm">
-              <p className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Buyer</p>
-              <p className="font-medium">{order.buyer?.company_name ?? "—"}</p>
-              <p className="text-muted-foreground text-xs">{order.buyer?.full_name} · {order.buyer?.email}</p>
-              <p className="text-muted-foreground text-xs">{order.buyer?.country}</p>
-            </div>
-            <div className="rounded-lg border p-4 space-y-1 text-sm">
-              <p className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Seller</p>
-              <p className="font-medium">{order.seller?.company_name ?? "—"}</p>
-              <p className="text-muted-foreground text-xs">{order.seller?.full_name} · {order.seller?.email}</p>
-              <p className="text-muted-foreground text-xs">{order.seller?.country}</p>
-            </div>
-          </div>
+          <OrderPartyCards
+            buyer={{
+              profile: {
+                id: order.buyer_id,
+                full_name: order.buyer?.full_name ?? null,
+                company_name: order.buyer?.company_name ?? null,
+                country: order.buyer?.country ?? null,
+              },
+              subtitle: `Buyer · ${order.buyer?.email ?? ""}`,
+            }}
+            seller={{
+              profile: {
+                id: order.seller_id,
+                full_name: order.seller?.full_name ?? null,
+                company_name: order.seller?.company_name ?? null,
+                country: order.seller?.country ?? null,
+              },
+              subtitle: `Seller · ${order.seller?.email ?? ""}`,
+            }}
+            currentUserId={user.id}
+            orderContext={{
+              type: "order",
+              id: order.id,
+              label: order.order_no,
+            }}
+            canPost={canPostChat}
+          />
 
           <div className="rounded-lg border divide-y text-sm">
             {[
@@ -670,23 +671,6 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
 
           {isSeller && order.status === "ready_to_ship" && (
             <ShipmentForm orderId={order.id} />
-          )}
-        </TabsContent>
-
-        {/* Communication */}
-        <TabsContent value="communication" className="mt-4">
-          {chatRoomId ? (
-            <OrderChat
-              roomId={chatRoomId}
-              orderId={order.id}
-              currentUserId={user.id}
-              initialMessages={chatMessages}
-              canPost={canPostChat}
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {roomResult.error?.message ?? "Chat room is not available for this order."}
-            </p>
           )}
         </TabsContent>
 

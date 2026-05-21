@@ -9,21 +9,13 @@ import { createClient } from "@/lib/supabase/client";
 const POLL_MS = 15_000;
 const REALTIME_STALE_MS = 12_000;
 
-function mergeMessages(prev: ChatMessageRow[], incoming: ChatMessageRow[]): ChatMessageRow[] {
-  const map = new Map(prev.map((m) => [m.id, m]));
-  for (const m of incoming) map.set(m.id, m);
-  return [...map.values()].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  );
-}
-
 type Options = {
   roomId: string;
   initialMessages: ChatMessageRow[];
   enabled?: boolean;
 };
 
-export function useOrderMessages({ roomId, initialMessages, enabled = true }: Options) {
+export function usePartyMessages({ roomId, initialMessages, enabled = true }: Options) {
   const [messages, setMessages] = useState<ChatMessageRow[]>(initialMessages);
   const lastRealtimeAt = useRef(Date.now());
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -60,12 +52,10 @@ export function useOrderMessages({ roomId, initialMessages, enabled = true }: Op
       )
       .subscribe();
 
-    const poll = () => {
+    pollingRef.current = setInterval(() => {
       if (Date.now() - lastRealtimeAt.current < REALTIME_STALE_MS) return;
       void refresh();
-    };
-
-    pollingRef.current = setInterval(poll, POLL_MS);
+    }, POLL_MS);
 
     const onVisibility = () => {
       if (document.visibilityState === "visible") void refresh();
@@ -80,7 +70,13 @@ export function useOrderMessages({ roomId, initialMessages, enabled = true }: Op
   }, [roomId, enabled, refresh]);
 
   const appendMessage = useCallback((message: ChatMessageRow) => {
-    setMessages((prev) => mergeMessages(prev, [message]));
+    setMessages((prev) => {
+      const map = new Map(prev.map((m) => [m.id, m]));
+      map.set(message.id, message);
+      return [...map.values()].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+    });
   }, []);
 
   return { messages, refresh, appendMessage };
