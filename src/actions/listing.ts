@@ -8,6 +8,8 @@ import {
   describeCommercialGap,
   findCommercialProfileGaps,
 } from "@/lib/auth/commercial";
+import { checkKycGate } from "@/lib/kyc/gate";
+import { describeKycGateFailure } from "@/lib/kyc/messages";
 import { ListingInputSchema, type ListingInput } from "@/lib/validations/forms";
 import type { ActionResult } from "./auth";
 
@@ -51,6 +53,23 @@ export async function createListing(
           message: describeCommercialGap(missing),
           code: "PROFILE_INCOMPLETE",
           fields: missing,
+        },
+      };
+    }
+
+    const kycGate = await checkKycGate(user.id, "create_listing");
+    if (!kycGate.ok) {
+      return {
+        data: null,
+        error: {
+          message: describeKycGateFailure(
+            kycGate.requiredLevel,
+            kycGate.currentLevel,
+            kycGate.action
+          ),
+          code: "KYC_REQUIRED",
+          requiredLevel: kycGate.requiredLevel,
+          currentLevel: kycGate.currentLevel,
         },
       };
     }

@@ -568,6 +568,10 @@ supabase/migrations/
   013_payment_schedules.sql        ← 付款抽離：新增 payment_schedules + payments.schedule_id + orders.incoterm + 9 個 milestone 時間戳；3 個新 enum
   014_drop_legacy_payment_terms.sql ← Hard cutover：清測試資料 + drop orders/contracts.payment_terms 欄位（enum 值保留）
   015_payment_seller_verify.sql     ← Payment 審核權限改寫：drop policy `payments_admin_update`、改建 `payments_seller_or_admin_update`（order 的 seller 或 admin/super_admin 都可 update）；新增 idx `payments_status_pending` / `payments_order_status`
+  016_chat_room_denorm.sql          ← chat_rooms last_message 反規範化
+  017_party_chat_enums.sql          ← chat_type 加 party；chat_message_context_type enum
+  018_party_chat.sql                ← Party DM thread + 合併 legacy order rooms
+  019_kyc_storage_and_settings.sql  ← kyc bucket + platform_settings 門檻 seed（inquiry/listing min=0）+ profiles kyc_level 防自改 trigger
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）

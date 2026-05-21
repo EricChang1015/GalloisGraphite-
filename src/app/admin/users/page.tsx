@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { UserActions } from "@/components/admin/UserActions";
+import { UserKycDialog } from "@/components/admin/UserKycDialog";
 
 export const metadata = { title: "Admin · Users" };
 
@@ -91,13 +92,20 @@ export default async function AdminUsersPage() {
                   {new Date(u.created_at).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
-                  {u.role !== "super_admin" && (
-                    <UserActions
+                  <div className="flex flex-wrap items-center gap-2">
+                    <UserKycDialog
                       userId={u.id}
-                      currentRole={u.role}
-                      currentStatus={u.status}
+                      userLabel={u.company_name || u.full_name || u.email}
+                      currentKycLevel={u.kyc_level}
                     />
-                  )}
+                    {u.role !== "super_admin" && (
+                      <UserActions
+                        userId={u.id}
+                        currentRole={u.role}
+                        currentStatus={u.status}
+                      />
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

@@ -62,6 +62,14 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
               onClick: () => router.push("/settings?prompt=incomplete"),
             },
           });
+        } else if (result.error.code === "KYC_REQUIRED") {
+          toast.error(result.error.message, {
+            duration: 8000,
+            action: {
+              label: "KYC page",
+              onClick: () => router.push("/settings/kyc"),
+            },
+          });
         } else {
           toast.error(result.error.message);
         }
