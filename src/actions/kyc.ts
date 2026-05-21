@@ -7,6 +7,7 @@ import type { ActionResult } from "@/actions/auth";
 import { levelAfterPhoneVerify } from "@/lib/kyc/levels";
 import { issuePhoneOtp, verifyPhoneOtp } from "@/lib/kyc/phone-otp";
 import { parseKycDocs, type KycDocEntry } from "@/lib/kyc/types";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import {
   RegisterKycDocumentSchema,
@@ -121,20 +122,42 @@ export async function verifyPhoneOtpCode(
   if (!check.ok) return { data: null, error: { message: check.message } };
 
   const nextLevel = levelAfterPhoneVerify(profile.kyc_level ?? 0);
-  const { error: updateErr } = await supabase
+  const verifiedAt = new Date().toISOString();
+
+  // Service role: trigger blocks self-updates to kyc_level / phone_verified_at.
+  const admin = createAdminClient();
+  const { error: updateErr } = await admin
     .from("profiles")
     .update({
-      phone_verified_at: new Date().toISOString(),
+      phone_verified_at: verifiedAt,
       kyc_level: nextLevel,
     })
     .eq("id", user.id);
 
   if (updateErr) return { data: null, error: { message: updateErr.message } };
 
+  const { data: saved, error: readBackErr } = await admin
+    .from("profiles")
+    .select("kyc_level, phone_verified_at")
+    .eq("id", user.id)
+    .maybeSingle<{ kyc_level: number; phone_verified_at: string | null }>();
+
+  if (readBackErr) return { data: null, error: { message: readBackErr.message } };
+  if (!saved?.phone_verified_at || (saved.kyc_level ?? 0) < 1) {
+    return {
+      data: null,
+      error: {
+        message:
+          "Verification could not be saved. Please try again or contact support.",
+      },
+    };
+  }
+
   revalidatePath("/settings");
   revalidatePath("/settings/kyc");
+  revalidatePath("/admin/users");
 
-  return { data: { kycLevel: nextLevel }, error: null };
+  return { data: { kycLevel: saved.kyc_level }, error: null };
 }
 
 export async function registerKycDocument(

@@ -246,6 +246,56 @@ async function main() {
   await admin.from("profiles").update({ kyc_level: 0 }).eq("id", buyerId);
   await setSetting("kyc_min_level_listing", savedListing ?? 0);
 
+  // TC-KYC-06 phone verify must use service role (trigger blocks self-update)
+  console.log("\n--- TC-KYC-06 電話驗證寫入（service role）---");
+  const testPhone = `+1555${String(Date.now()).slice(-7)}`;
+  const verifiedAt = new Date().toISOString();
+  const { sb: buyerSb } = await signIn(BUYER_EMAIL);
+
+  await buyerSb.from("profiles").update({ phone: testPhone }).eq("id", buyerId);
+
+  const { error: selfPhoneErr } = await buyerSb
+    .from("profiles")
+    .update({ phone_verified_at: verifiedAt, kyc_level: 1 })
+    .eq("id", buyerId);
+  check(!selfPhoneErr, "TC-KYC-06a", "buyer update call succeeds (trigger reverts)");
+
+  const { data: afterSelf } = await buyerSb
+    .from("profiles")
+    .select("kyc_level, phone_verified_at")
+    .eq("id", buyerId)
+    .single();
+  check(
+    !afterSelf?.phone_verified_at,
+    "TC-KYC-06b",
+    "buyer cannot self-set phone_verified_at"
+  );
+  check(
+    (afterSelf?.kyc_level ?? 0) < 1,
+    "TC-KYC-06c",
+    `buyer cannot self-raise kyc_level via phone path (level ${afterSelf?.kyc_level})`
+  );
+
+  const { error: adminPhoneErr } = await admin
+    .from("profiles")
+    .update({ phone_verified_at: verifiedAt, kyc_level: 1 })
+    .eq("id", buyerId);
+  check(!adminPhoneErr, "TC-KYC-06d", "service role sets phone_verified_at + level 1");
+
+  const { data: afterAdmin } = await admin
+    .from("profiles")
+    .select("kyc_level, phone_verified_at")
+    .eq("id", buyerId)
+    .single();
+  check(Boolean(afterAdmin?.phone_verified_at), "TC-KYC-06e", "phone_verified_at persisted");
+  check((afterAdmin?.kyc_level ?? 0) >= 1, "TC-KYC-06f", "kyc_level is at least 1");
+
+  await admin
+    .from("profiles")
+    .update({ phone_verified_at: null, kyc_level: 0, phone: null })
+    .eq("id", buyerId);
+  check(true, "TC-KYC-06g", "restored buyer phone/kyc after phone verify QA");
+
   // TC-KYC-05 cleanup QA storage + doc row
   console.log("\n--- TC-KYC-05 清理 QA 資料 ---");
   const cleaned = (reread?.kyc_docs ?? []).filter((d) => d?.id !== docId);
