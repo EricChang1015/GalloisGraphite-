@@ -228,11 +228,22 @@ npm run qa:kyc
 
 ### UI 自動化（需 production `start`）
 
+**先**在終端 A 啟動（確認 3000 未被佔用；若 `EADDRINUSE` 先關閉舊 process）：
+
 ```bash
 npm run build && npm run start
-# 另一終端：
+```
+
+**再**在終端 B 跑（腳本會檢查 server 可連線；auth cookie 會依 Supabase 規則自動分塊 >3180B）：
+
+```bash
 E2E_BASE_URL=http://127.0.0.1:3000 npm run qa:kyc:e2e
 ```
+
+> 不要用 `npm run dev` 跑此腳本（與 `e2e-full-trading` 相同，production `start` 才穩定）。
+>
+> **常見失敗**：改 code 後沒有重新 `build` + 重啟 `start`，瀏覽器會出現
+> `This page couldn't load` / chunk 500 — 與 KYC 功能無關，重啟即可。
 
 | TC | 斷言 |
 |---|---|
