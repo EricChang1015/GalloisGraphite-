@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { Paperclip, Send } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,9 +37,12 @@ export function PartyChatPanel({
   const [draft, setDraft] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [, startTransition] = useTransition();
+  const [isSending, setIsSending] = useState(false);
+  const sendingRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const inputLocked = isSending || isUploading;
 
   const { messages, appendMessage } = usePartyMessages({
     roomId,
@@ -90,17 +93,22 @@ export function PartyChatPanel({
   }
 
   async function handleSend() {
+    if (sendingRef.current || inputLocked) return;
+
     const text = draft.trim();
     if (!text && !attachmentFile) return;
 
-    let attachmentUrl: string | undefined;
-    if (attachmentFile) {
-      const url = await uploadAttachment(attachmentFile);
-      if (!url && !text) return;
-      attachmentUrl = url ?? undefined;
-    }
+    sendingRef.current = true;
+    setIsSending(true);
 
-    startTransition(async () => {
+    try {
+      let attachmentUrl: string | undefined;
+      if (attachmentFile) {
+        const url = await uploadAttachment(attachmentFile);
+        if (!url && !text) return;
+        attachmentUrl = url ?? undefined;
+      }
+
       const result = await sendChatMessage({
         roomId,
         content: text || undefined,
@@ -108,15 +116,20 @@ export function PartyChatPanel({
         contextType: pendingContext?.type,
         contextId: pendingContext?.id,
       });
+
       if (result.error) {
         toast.error(result.error.message);
         return;
       }
+
       appendMessage(result.data!.message);
       setDraft("");
       setAttachmentFile(null);
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    });
+    } finally {
+      sendingRef.current = false;
+      setIsSending(false);
+    }
   }
 
   return (
@@ -161,13 +174,14 @@ export function PartyChatPanel({
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Type a message…"
+            placeholder={isSending ? "Sending…" : "Type a message…"}
             rows={2}
             className="resize-none"
+            disabled={inputLocked}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                void handleSend();
+                if (!inputLocked) void handleSend();
               }
             }}
           />
@@ -184,6 +198,7 @@ export function PartyChatPanel({
               variant="outline"
               size="icon"
               aria-label="Attach file"
+              disabled={inputLocked}
               onClick={() => fileInputRef.current?.click()}
             >
               <Paperclip className="size-4" />
@@ -191,11 +206,13 @@ export function PartyChatPanel({
             <Button
               type="button"
               className="ml-auto gap-1"
-              disabled={isUploading || (!draft.trim() && !attachmentFile)}
+              disabled={
+                inputLocked || (!draft.trim() && !attachmentFile)
+              }
               onClick={() => void handleSend()}
             >
               <Send className="size-4" />
-              Send
+              {isSending ? "Sending…" : "Send"}
             </Button>
           </div>
         </div>
