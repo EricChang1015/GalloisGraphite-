@@ -81,7 +81,7 @@ flowchart LR
 
 ## 2. QA 流程（分層）
 
-每次發版或改動 **訂單 / 付款 / 合約** 相關程式時，依序執行下列層級。**不可**只做 `npm run build` 就宣告交易流程通過。
+每次發版或改動 **訂單 / 付款 / 合約 / 站內信** 相關程式時，依序執行下列層級。**不可**只做 `npm run build` 就宣告交易流程通過。
 
 ### Tier 0 — 環境與 schema（約 2 分鐘）
 
@@ -98,6 +98,14 @@ node scripts/verify-schema.mjs
 ```
 
 **通過標準**：build exit 0；所有 migration 已套用；`payment_schedules` 存在、`orders.payment_terms` 已不存在。
+
+改動 **站內信（A2）** 時，額外執行：
+
+```bash
+npm run qa:chat
+```
+
+**通過標準**：7 項全過（單一 party thread、RLS 雙向讀寫、`chat_rooms` denorm）。詳見 **§3.5**。
 
 ### Tier 1 — 靜態與型別
 
@@ -147,6 +155,43 @@ node scripts/seed-test-order.mjs
 ```
 
 會建立 `contract_pending` 訂單（`ORD-TEST-*`），輸出 `order_id` 後直接開 `/orders/{id}`。
+
+---
+
+## 3.5 站內信（Party DM）— 合併 main 前必跑
+
+**模型**：同一 buyer + seller 僅一條 `chat_rooms.type='party'` thread；訊息可帶
+`context_type`（listing / inquiry / order），不另開房。可在無訂單前從 Market 開聊。
+
+### 自動化（Tier 0+）
+
+```bash
+npm run qa:chat
+```
+
+| TC | 斷言 |
+|---|---|
+| TC-IM-00 | 該 pair 僅一個 party room；無 legacy `type=order` room |
+| TC-IM-01 | Buyer RLS insert |
+| TC-IM-02 | Seller 讀取 + 回覆 |
+| TC-IM-03 | Buyer 看到回覆 |
+| TC-IM-04 | `last_message_preview`、party 欄位、無 `order_id` |
+
+**依賴 migration**：`016_chat_room_denorm` → `018_party_chat`（`npm run db:migrate`）。
+
+### 手動 UI（約 5 分鐘，建議合併前跑一次）
+
+| # | 角色 | 動作 | 預期 |
+|---|---|---|---|
+| M1 | Buyer | `/market` → 任一 listing → **Message** | Sheet 開啟；可送出文字 |
+| M2 | Seller | `/messages` | 列表出現 Buyer；點進 thread 可見 M1 訊息 |
+| M3 | Seller | 回覆一則 | Buyer 重新開 Sheet 或 `/messages/{buyerId}` 可見 |
+| M4 | Buyer | 已有訂單 → `/orders/{id}` Overview → **Message** 賣方 | **同一 thread**（非新房） |
+| M5 | Buyer | `/messages/{sellerId}` 全頁 | 與 Sheet 訊息連續；附件僅 image/PDF ≤5MB |
+
+**不應出現**：訂單頁 Communication Tab、`?tab=communication`。
+
+測試帳號見 §1（Buyer / Seller 同密碼 `a1234567`）。
 
 ---
 
@@ -268,7 +313,7 @@ select o.order_no, o.status, o.incoterm,
 | 手動 milestone | `<MilestoneActionButtons />` | 可選 | 可選 | 依排程設計 |
 | 進度條 | `<OrderProgressBar />` | ✅ | ✅ | 12 階段 + Payments X/Y |
 | 文件中心 | `<OrderDocumentsTab />` | 可選 | 可選 | |
-| 站內 IM | `/messages` | — | — | **未實作（A2）** |
+| 站內 IM | `MessageCounterpartyButton` / `/messages` | ✅ | ✅ | Party DM；`npm run qa:chat` |
 | KYC 上傳 | — | — | — | **未實作（A6）** |
 
 ---
@@ -289,7 +334,7 @@ select o.order_no, o.status, o.incoterm,
 
 | # | 項目 | 影響 |
 |---|---|---|
-| 1 | 站內 IM（A2） | 訂單頁無 Communication Tab |
+| 1 | ~~站內 IM（A2）~~ | ✅ 已實作（party DM）；合併前跑 §3.5 + `qa:chat` |
 | 2 | KYC 上傳（A6） | 僅 commercial profile gate，無 `kyc_level` 升級 UI |
 | 3 | 情境 B 正式走測紀錄 | 邏輯已實作，文件化腳本在本版補上，待人工跑一輪寫入 §8 |
 | 4 | dispute / cancel / force | 待 Tier 3 |
@@ -312,6 +357,15 @@ select o.order_no, o.status, o.incoterm,
 - `autoCompleteIfReady` count 修正
 - `/admin/settings` Send test email 成功
 
+### 2026-05-20 — 站內信 Party DM（API QA）
+
+| 欄位 | 值 |
+|---|---|
+| 分支 | `cursor/order-im-ad65` → main |
+| 自動化 | `npm run qa:preflight` + `npm run qa:chat` — **7/7 pass** |
+| 手動 UI | 待填（§3.5 M1–M5） |
+| 備註 | migration 016–018；舊 order-room 已合併 |
+
 ### （待填）— 情境 B 分期走測
 
 | 欄位 | 值 |
@@ -330,6 +384,7 @@ select o.order_no, o.status, o.incoterm,
 | 2026-05-15 | 初版：測試帳號、舊 full_prepay 腳本 |
 | 2026-05-20 | Payment seller-review、SES、走測紀錄 |
 | 2026-05-20 | **重寫**：對齊 migration 014 / `payment_schedules`；新增 §0–§2 QA 分層、情境 A/B、regression 矩陣、SQL 快查；移除過時 `net_after_arrival` 章節 |
+| 2026-05-20 | 站內信 A2：§3.5 party DM QA、`qa:chat`、regression 矩陣更新 |
 
 ---
 
@@ -340,7 +395,8 @@ select o.order_no, o.status, o.incoterm,
 | `scripts/seed-test-order.mjs` | 建立 `contract_pending` 測試訂單 |
 | `scripts/cleanup-test-data.mjs` | 清除 TEST/SMOKE/BROWSER 前綴資料 |
 | `scripts/check-dev-errors.mjs` | 分析 `.next/dev/logs/next-development.log` |
-| `scripts/verify-schema.mjs` | 斷言 014 cutover 後 schema |
+| `scripts/verify-schema.mjs` | 斷言 014 + party chat schema |
 | `scripts/apply-migrations.mjs --status` | migration 套用狀態 |
+| `scripts/qa-chat-buyer-seller.mjs` | Buyer↔Seller party DM RLS（§3.5） |
 
-`package.json` 捷徑：`npm run qa:preflight`、`npm run qa:cleanup`、`npm run qa:seed-order`。
+`package.json` 捷徑：`npm run qa:preflight`、`npm run qa:chat`、`npm run qa:cleanup`、`npm run qa:seed-order`。

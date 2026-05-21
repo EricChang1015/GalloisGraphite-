@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 
+import { OrderDetailTabs } from "@/components/order/OrderDetailTabs";
+import { OrderPartyCards } from "@/components/order/OrderPartyCards";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +33,7 @@ import type { DocumentType } from "@/lib/validations/document";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }
 
 const statusColor: Record<string, string> = {
@@ -156,8 +159,9 @@ type OrderDetailRow = {
   } | null;
 };
 
-export default async function OrderDetailPage({ params }: PageProps) {
+export default async function OrderDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { tab: tabParam } = await searchParams;
   const user = await getCurrentUser();
   if (!user) {
     redirect(`/login?next=${encodeURIComponent(`/orders/${id}`)}`);
@@ -205,6 +209,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
     : isSeller
       ? "seller"
       : "other";
+  const canPostChat = isBuyer || isSeller;
+
   const contract = order.contracts ?? null;
   const payments = order.payments ?? [];
 
@@ -279,7 +285,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
       <OrderProgressBar status={order.status} paymentsSummary={paymentsSummary} />
 
-      <Tabs defaultValue="overview">
+      <OrderDetailTabs initialTab={tabParam}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="quotation">Quotation</TabsTrigger>
@@ -292,20 +298,33 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
         {/* Overview */}
         <TabsContent value="overview" className="mt-4 space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border p-4 space-y-1 text-sm">
-              <p className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Buyer</p>
-              <p className="font-medium">{order.buyer?.company_name ?? "—"}</p>
-              <p className="text-muted-foreground text-xs">{order.buyer?.full_name} · {order.buyer?.email}</p>
-              <p className="text-muted-foreground text-xs">{order.buyer?.country}</p>
-            </div>
-            <div className="rounded-lg border p-4 space-y-1 text-sm">
-              <p className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Seller</p>
-              <p className="font-medium">{order.seller?.company_name ?? "—"}</p>
-              <p className="text-muted-foreground text-xs">{order.seller?.full_name} · {order.seller?.email}</p>
-              <p className="text-muted-foreground text-xs">{order.seller?.country}</p>
-            </div>
-          </div>
+          <OrderPartyCards
+            buyer={{
+              profile: {
+                id: order.buyer_id,
+                full_name: order.buyer?.full_name ?? null,
+                company_name: order.buyer?.company_name ?? null,
+                country: order.buyer?.country ?? null,
+              },
+              subtitle: `Buyer · ${order.buyer?.email ?? ""}`,
+            }}
+            seller={{
+              profile: {
+                id: order.seller_id,
+                full_name: order.seller?.full_name ?? null,
+                company_name: order.seller?.company_name ?? null,
+                country: order.seller?.country ?? null,
+              },
+              subtitle: `Seller · ${order.seller?.email ?? ""}`,
+            }}
+            currentUserId={user.id}
+            orderContext={{
+              type: "order",
+              id: order.id,
+              label: order.order_no,
+            }}
+            canPost={canPostChat}
+          />
 
           <div className="rounded-lg border divide-y text-sm">
             {[
@@ -688,7 +707,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
             </ol>
           )}
         </TabsContent>
-      </Tabs>
+      </OrderDetailTabs>
     </div>
   );
 }

@@ -99,6 +99,26 @@ await q(`
 `);
 console.log("✓ order (contract_pending):", orderId);
 
+// 4b) Party DM thread (one per buyer+seller pair)
+const low = BUYER < SELLER ? BUYER : SELLER;
+const high = BUYER < SELLER ? SELLER : BUYER;
+const existingRoom = await q(`
+  select id from public.chat_rooms
+   where type = 'party' and party_user_low = '${low}' and party_user_high = '${high}'
+   limit 1;
+`);
+const roomId = existingRoom[0]?.id ?? randomUUID();
+if (!existingRoom[0]?.id) {
+  await q(`
+    insert into public.chat_rooms (id, type, party_user_low, party_user_high)
+    values ('${roomId}', 'party', '${low}', '${high}');
+    insert into public.chat_members (room_id, user_id)
+    values ('${roomId}', '${BUYER}'), ('${roomId}', '${SELLER}')
+    on conflict do nothing;
+  `);
+}
+console.log("✓ party chat:", roomId);
+
 // 5) Mark inquiry as converted
 await q(`update public.inquiries set status = 'converted' where id = '${inquiryId}';`);
 

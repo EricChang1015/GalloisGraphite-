@@ -16,6 +16,7 @@
     "qa:check-dev": "node scripts/check-dev-errors.mjs",
     "qa:seed-order": "node scripts/seed-test-order.mjs",
     "qa:cleanup": "node scripts/cleanup-test-data.mjs",
+    "qa:chat": "node scripts/qa-chat-buyer-seller.mjs",
     "qa:e2e-full": "node scripts/e2e-full-trading.mjs"
   },
   "dependencies": {

@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/session";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { InquiryDialog } from "@/components/listing/InquiryDialog";
+import { CounterpartyCard } from "@/components/messages/CounterpartyCard";
+import { MessageCounterpartyButton } from "@/components/messages/MessageCounterpartyButton";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -21,6 +24,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function ListingDetailPage({ params }: PageProps) {
   const { id } = await params;
+  const user = await getCurrentUser();
   const supabase = await createServerClient();
 
   const { data: listing } = await supabase
@@ -29,7 +33,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
       `id, seller_id, category_id, title, specs, quantity, unit, unit_price, currency,
        incoterm, origin_location, available_from, available_to, description, images, status,
        product_categories(name),
-       profiles!listings_seller_id_fkey(company_name, country)`
+       profiles!listings_seller_id_fkey(id, full_name, company_name, country)`
     )
     .eq("id", id)
     .single<{
@@ -50,7 +54,12 @@ export default async function ListingDetailPage({ params }: PageProps) {
       images: string[] | null;
       status: string;
       product_categories: { name: string } | null;
-      profiles: { company_name: string; country: string } | null;
+      profiles: {
+        id: string;
+        full_name: string | null;
+        company_name: string | null;
+        country: string | null;
+      } | null;
     }>();
 
   if (!listing || listing.status !== "active") notFound();
@@ -67,10 +76,27 @@ export default async function ListingDetailPage({ params }: PageProps) {
           </Badge>
         </div>
         <h1 className="text-3xl font-bold tracking-tight">{listing.title}</h1>
-        <p className="text-muted-foreground">
-          Seller: {listing.profiles?.company_name ?? "—"} · {listing.profiles?.country ?? ""}
-        </p>
       </div>
+
+      {listing.profiles && user ? (
+        <CounterpartyCard profile={listing.profiles} subtitle="Seller">
+          <MessageCounterpartyButton
+            counterparty={listing.profiles}
+            currentUserId={user.id}
+            variant="card"
+            context={{
+              type: "listing",
+              id: listing.id,
+              label: listing.title,
+            }}
+          />
+        </CounterpartyCard>
+      ) : (
+        <p className="text-muted-foreground text-sm">
+          Seller: {listing.profiles?.company_name ?? "—"} ·{" "}
+          {listing.profiles?.country ?? ""}
+        </p>
+      )}
 
       {(listing.images ?? []).length > 0 && (
         // eslint-disable-next-line @next/next/no-img-element
