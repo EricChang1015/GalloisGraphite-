@@ -57,6 +57,12 @@ export function ListingForm({ categories }: ListingFormProps) {
     startTransition(async () => {
       const result = await createListing(values);
       if (result.error) {
+        if (result.error.fieldErrors) {
+          for (const [field, messages] of Object.entries(result.error.fieldErrors)) {
+            const msg = Array.isArray(messages) ? messages[0] : messages;
+            if (msg) form.setError(field as keyof ListingInput, { message: String(msg) });
+          }
+        }
         if (result.error.code === "PROFILE_INCOMPLETE") {
           toast.error(result.error.message, {
             duration: 8000,

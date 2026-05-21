@@ -720,6 +720,11 @@ export async function markShipped(
   const ctx = await loadActorAndOrder(parsed.data.order_id, "seller");
   if (!ctx.ok) return { data: null, error: { message: ctx.error } };
 
+  const emptyToNull = (v?: string) => (v?.trim() ? v.trim() : null);
+  const blDate = emptyToNull(parsed.data.bl_date);
+  const etd = emptyToNull(parsed.data.etd);
+  const atd = emptyToNull(parsed.data.atd);
+
   const admin = createAdminClient();
   const now = new Date().toISOString();
   const { error } = await admin
@@ -727,13 +732,13 @@ export async function markShipped(
     .update({
       shipment_from: parsed.data.shipment_from,
       shipment_eta: parsed.data.shipment_eta,
-      bl_no: parsed.data.bl_no ?? null,
-      bl_date: parsed.data.bl_date ?? null,
-      vessel_name: parsed.data.vessel_name ?? null,
-      vessel_imo: parsed.data.vessel_imo ?? null,
+      bl_no: emptyToNull(parsed.data.bl_no),
+      bl_date: blDate,
+      vessel_name: emptyToNull(parsed.data.vessel_name),
+      vessel_imo: emptyToNull(parsed.data.vessel_imo),
       container_numbers: parsed.data.container_numbers ?? null,
-      etd: parsed.data.etd ?? null,
-      atd: parsed.data.atd ?? null,
+      etd,
+      atd,
       loaded_at: now,
     })
     .eq("id", parsed.data.order_id);
@@ -752,7 +757,7 @@ export async function markShipped(
   await triggerMilestone(parsed.data.order_id, "loaded_onto_vessel", ctx.user.id);
 
   // Back-fill due_date for any bl_date_plus_N schedules now that bl_date is known
-  if (parsed.data.bl_date) {
+  if (blDate) {
     const { data: timeBased } = await admin
       .from("payment_schedules")
       .select("id, milestone, bl_offset_days")
@@ -767,7 +772,7 @@ export async function markShipped(
         }>
       >();
     for (const s of timeBased ?? []) {
-      const d = new Date(parsed.data.bl_date);
+      const d = new Date(blDate);
       d.setDate(d.getDate() + (s.bl_offset_days ?? BL_OFFSET_DAYS[s.milestone]));
       await admin
         .from("payment_schedules")
