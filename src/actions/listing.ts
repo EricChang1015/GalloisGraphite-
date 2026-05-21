@@ -56,6 +56,9 @@ export async function createListing(
     }
   }
 
+  const availableFrom = parsed.data.available_from?.trim() || null;
+  const availableTo = parsed.data.available_to?.trim() || null;
+
   const { data, error } = await supabase
     .from("listings")
     .insert({
@@ -63,8 +66,8 @@ export async function createListing(
       ...parsed.data,
       specs: parsed.data.specs as unknown as import("@/types/database").Json,
       images: parsed.data.images as unknown as import("@/types/database").Json,
-      available_from: parsed.data.available_from ?? null,
-      available_to: parsed.data.available_to ?? null,
+      available_from: availableFrom,
+      available_to: availableTo,
     })
     .select("id")
     .single<{ id: string }>();
