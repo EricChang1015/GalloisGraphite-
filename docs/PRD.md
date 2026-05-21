@@ -43,6 +43,7 @@
 | 23 | **簽名合約預覽**：`<ContractPreview />` 內嵌雙方 signed scan（image 或 PDF iframe），「Download signed contract」 把簽名注入到列印 HTML，PDF 輸出含簽名 | `<ContractPreview />` |
 | 24 | **`order-documents` Storage bucket**：private、20 MB / PDF + image 白名單、`storage.objects` 4 條 RLS（read/insert/update parties；delete admin） | `010_storage_order_documents.sql` |
 | 25 | **Commercial profile gate + Settings 頁**：`createInquiry` / `createListing`（seller）/ `submitPayment` 在 `profiles.{company_name,country}` 為空時回 `error.code='PROFILE_INCOMPLETE'`；UI 顯示 toast 含「Open Settings」action 跳到 `/settings?prompt=incomplete`；`<CommercialProfileForm />` 編輯 full_name / company_name / country / phone | `src/lib/auth/commercial.ts` + `src/actions/profile.ts` + `(app)/settings/page.tsx` |
+| 26 | **站內 Party DM**：同一 buyer+seller 一條 `type=party` thread；`/messages` 列表 + `/messages/[userId]` 全頁；market / order 上 `<MessageCounterpartyButton />`（Sheet）；Realtime + polling；訊息可標 `context_type`（listing/inquiry/order）；附件 `order-documents/party/{room_id}/` | `src/actions/chat.ts` + `src/components/messages/*` + migrations 016–018 |
 
 > 已實作但原 PRD 未列的項目（Dashboard、行銷頁 Geopolitics/Sustainability、Admin Console 統計、News slug 富文本等）見 [`ARCHITECTURE.md` §附錄 A](./ARCHITECTURE.md#附錄-a實作但-prd-未列項目)。
 
@@ -51,7 +52,7 @@
 詳見 [`ROADMAP.md` §A](./ROADMAP.md#a-mvp-補完項上線前必做)：
 
 - ~~**A1** Schema 對齊（payments / news / orders）~~ ✅ 已完成（migration 005）
-- **A2** 站內 IM（schema 已就位，但 `/messages` 與 `OrderChat` 待實作）
+- ~~**A2** 站內 IM（Party DM）~~ ✅ 已完成（`/messages`、`MessageCounterpartyButton`、migrations 016–018；QA 見 [`TESTING.md` §3.5](./TESTING.md)）
 - ~~**A3** 合約簽名掃描上傳 UI~~ ✅ 已完成（009 + `<SignedScanUploader />`，並可嵌入簽名後 PDF 預覽下載）
 - ~~**A4** `order-documents` Storage bucket + RLS~~ ✅ 已完成（migration 010）；其餘 buckets（avatars / kyc / listings / chat）依需要時補
 - ~~**A5** Disputed / Cancelled UI 觸發點~~ ✅ 已完成（009 + `<OrderPhaseActions />`）
@@ -173,11 +174,14 @@ quotation_pending → quoted ↔ negotiating
 > 部分情況回傳 size hint 為 0 導致沒付完款的訂單被誤推到 `completed`（ORD-260520-601b6b
 > 案例）。現改為 `select("id", { count: "exact", head: true })` 取真實 count。
 
-### 4.6 站內 IM ⚠️ 待實作（A2）
-- 建立訂單時自動建 `chat_rooms (type='order')` + `chat_members(buyer, seller)`
-- Realtime via Supabase `postgres_changes` event on `messages`
-- 支援文字 + 圖片附件（Storage `chat` bucket，A4 待建）
-- Admin 可選擇加入
+### 4.6 站內 Party DM ✅ 已實作（A2）
+- **模型**：每對 `(buyer, seller)` 僅一條 `chat_rooms.type='party'`（`party_user_low` / `party_user_high` 唯一）；可在 inquiry/order **之前**開聊
+- **入口**：`/messages` 列表、`/messages/[userId]` 全頁、market listing 卡 / 詳情、訂單 `<OrderPartyCards />` 上的 Message 按鈕（Sheet）
+- **Realtime**：`usePartyMessages` 訂閱 `messages` INSERT；15s polling fallback
+- **附件**：`order-documents/party/{room_id}/`（image/PDF ≤5MB），非獨立 `chat` bucket
+- **Context**：訊息可選填 `context_type` + `context_id`（listing / inquiry / order），UI 顯示「Replying in context: …」
+- **Admin**：可讀任意 room 訊息，**不可**在 party thread 發言（view-only）
+- Legacy `type=order` room 已由 migration 018 合併至 party thread
 
 ## 5. 非功能需求
 
@@ -220,3 +224,4 @@ quotation_pending → quoted ↔ negotiating
 | 2026-05-15 | docs 773411c：完成 full-prepay 端到端走測（`ORD-TEST-MP6PL7MZ`）；A4 關閉，A7 full-prepay happy path 勾選；OrderProgressBar 在 `completed` 狀態 polish |
 | 2026-05-19 | refactor(orders) decouple-payment：付款從訂單時間軸抽離，新增 `payment_schedules`（migration 013/014）；訂單狀態機簡化為 12 階段線性；Incoterm 限縮 FOB/CFR/CIF；新增 `<PaymentScheduleBuilder />`、`<PaymentScheduleTable />`、`<MilestoneActionButtons />`、`/api/cron/payment-schedule`；移除 `payment_terms` / `payment_due_days` 欄位（hard cutover，舊測試資料清空） |
 | 2026-05-20 | feat(payment/email/shipment) seller-review-and-ses：(1) Payment 改 seller 主審 admin 覆審（migration 015 `payments_seller_or_admin_update`，`<PaymentVerifyActions />` 抽到 `src/components/order/` 雙處使用）；(2) Email 從 Resend 改 nodemailer + AWS SES SMTP（`src/lib/email/smtp.ts`，`/admin/settings` 加「Send test email」）；(3) `acceptQuotation` 寫入 `orders.incoterm = q.incoterm`，解決議價更動後合約 draft 仍用 listing 原 Incoterm 的 bug；(4) `<ShipmentForm />` 加 optional B/L + Inspection Report 上傳；(5) `submitPayment` 接受 `scheduled` 期讓買家「Pay Early」；(6) `autoCompleteIfReady` 修正 Supabase count 用法（`{ count: "exact", head: true }`），解決 ORD-260520-601b6b 未付完款就被推到 completed 的 bug；(7) seller `getUserActionCounts` 加 `paymentsAwaitingMyReview` |
+| 2026-05-21 | feat(chat) party DM（A2）：migrations 016–018；`/messages` + `MessageCounterpartyButton`；`src/actions/chat.ts`；`npm run qa:chat`；文檔 ARCHITECTURE / PRD / ROADMAP / SCHEMA 對齊 |

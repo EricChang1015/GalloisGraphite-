@@ -119,7 +119,7 @@ scripts/
   seed-test-order.mjs   Seed a `contract_pending` order between test buyer/seller
   q.mjs                 One-shot Supabase query helper (for smoke tests)
 supabase/
-  migrations/           Versioned SQL (001 → 010, run via `npm run db:migrate`)
+  migrations/           Versioned SQL (001 → 018, run via `npm run db:migrate`)
 docs/                   ARCHITECTURE / PRD / SCHEMA / ROADMAP / TESTING /
                         AI_PROMPT / CONTRACT_TEMPLATE / LEGACY_CONTENT /
                         COPY_DRAFTS / Requirements
@@ -134,7 +134,7 @@ verified through Completed on 2026-05-15 (see [`docs/TESTING.md`](./docs/TESTING
 Implemented:
 
 - [x] Next.js 16 (App Router, `proxy.ts`) + Tailwind v4 + shadcn/ui base-nova
-- [x] Supabase Auth + Postgres + RLS (migrations 001 → 010)
+- [x] Supabase Auth + Postgres + RLS (migrations 001 → 018)
 - [x] Auto-apply migration runner via Supabase Management API
       (`npm run db:migrate`) — see
       [`.cursor/rules/migrations.mdc`](./.cursor/rules/migrations.mdc)

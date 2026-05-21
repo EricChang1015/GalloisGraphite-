@@ -26,8 +26,11 @@
 | `013_payment_schedules.sql` | **付款抽離**：新增 enum `payment_category` / `payment_milestone` / `payment_schedule_status` + `payment_schedules` 表；`payments` 加 `schedule_id`；`orders` 加 `incoterm` + 9 個 milestone 時間戳；RLS 對 buyer/seller/admin 開放 select |
 | `014_drop_legacy_payment_terms.sql` | **Hard cutover**：truncate 所有 orders / contracts / payments / quotations / payment_schedules 測試資料；`orders` drop `payment_terms` / `payment_due_days` / `payment_due_date`；`contracts` drop `payment_terms` / `payment_due_days`。`payment_terms_type` enum + `order_status` 的 `payment_pending` / `paid` / `draft` / `contract_generated` 仍保留（PG 無法 drop enum value），但不再被任何 server action 寫入 |
 | `015_payment_seller_verify.sql` | **Payment 審核權限改寫**：drop legacy `payments_admin_update`，新建 `payments_seller_or_admin_update`，允許 update 的條件為「auth.uid() 是該 payment.order 的 seller_id，或 `current_user_role()` ∈ {admin, super_admin}」。順手加 `idx_payments_status_pending` (partial, status='pending') 與 `idx_payments_order_status`，加速 seller / admin 查詢待審 payment |
+| `016_chat_room_denorm.sql` | **IM 列表優化**：`chat_rooms.last_message_at` / `last_message_preview`；為既有 orders backfill `type=order` room（018 前過渡） |
+| `017_party_chat_enums.sql` | `chat_type` 加 `party`；新建 enum `chat_message_context_type`（listing / inquiry / order） |
+| `018_party_chat.sql` | **Party DM**：`party_user_low` / `party_user_high` 唯一索引；合併 legacy order rooms；`messages.context_*`；`order-documents/party/{room_id}/` Storage RLS |
 
-> ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
+> ⚠️ **注意**：007/009 與 017/018 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >
 > **執行方式**：用 `npm run db:migrate`（Supabase Management API，免 DB password）。詳見 [`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc) 與 [`scripts/apply-migrations.mjs`](../scripts/apply-migrations.mjs)。
 
@@ -363,19 +366,25 @@ verify 後變 `paid`。
 - delete：admin only（避免買賣方手滑刪掉合約 / 付款證明，保留稽核線索）
 - bucket 設 private、20 MB 上限、僅允許 PDF 與常見圖片 MIME（jpg/png/webp/heic）
 
-## 6. 即時通訊
+## 6. 即時通訊（Party DM）
+
+### 模型
+- **現行**：每對 `(user_low, user_high)` 僅一條 `chat_rooms.type='party'`（UUID 字典序決定 low/high）
+- **已廢止**：每張 order 一個 `type=order` room — migration 018 將既有 order room 訊息合併進 party room 後刪除
+- 可在 listing / inquiry / order 建立**之前**開聊；訊息可選帶 `context_type` + `context_id` 標記業務情境
 
 ### `chat_rooms` / `chat_members` / `messages`
-每張 order 對應一個 chat_room (type='order'),admin 可選加入。
 
-`messages` 用 Supabase Realtime 訂閱,`postgres_changes` event。
+`messages` 用 Supabase Realtime 訂閱 `postgres_changes`（`INSERT`）；客戶端 `usePartyMessages` 另備 15s polling。
 
 | chat_rooms 欄位 | 說明 |
 |---|---|
 | id | uuid PK |
-| type | enum `chat_type` | order / support / ai |
-| order_id | FK orders ON DELETE CASCADE | nullable（support / ai 不綁訂單） |
-| created_at | timestamptz |
+| type | enum `chat_type` | **`party`**（現行 DM）/ order（018 已合併）/ support / ai |
+| order_id | FK orders | legacy；party room 為 null |
+| **party_user_low** / **party_user_high** | FK profiles | party 專用；唯一索引 `(low, high) where type=party` |
+| **last_message_at** / **last_message_preview** | timestamptz / text | 016 denorm，供 `/messages` 列表排序 |
+| created_at | timestamptz | |
 
 | chat_members 欄位 | 說明 |
 |---|---|
@@ -389,13 +398,15 @@ verify 後變 `paid`。
 | id | uuid PK |
 | room_id | FK chat_rooms ON DELETE CASCADE |
 | sender_id | FK profiles |
-| content | text(可空,純圖片訊息) |
-| attachment_url | text(`chat` bucket Storage URL) |
+| content | text（可空，純附件訊息） |
+| attachment_url | text（signed URL；檔案在 `order-documents/party/{room_id}/...`） |
+| **context_type** | enum `chat_message_context_type` | listing / inquiry / order（可空） |
+| **context_id** | uuid | 對應 listing / inquiry / order id（可空） |
 | created_at | timestamptz |
 
 索引：`messages(room_id, created_at desc)`
 
-> ⚠️ 表結構就緒，但 `OrderChat` 組件、自動建房邏輯、`/messages` 列表頁待實作（見 ROADMAP §A2）。
+**UI / Actions**：`src/actions/chat.ts`、`/messages`、`MessageCounterpartyButton`；QA 見 [`TESTING.md` §3.5](./TESTING.md)。
 
 ## 7. 內容
 
@@ -503,7 +514,7 @@ AI 助手每個 Q&A turn 的 server-side audit trail。append-only。
 | `avatars` | public read, self write | 使用者頭像 | ⚠️ 待建立 |
 | `kyc` | private（owner + admin） | KYC 證件 | ⚠️ 待建立（與 ROADMAP §A6 一起） |
 | `listings` | public read, seller write | 商品圖 | ⚠️ 待建立 |
-| `chat` | private（chat members） | 聊天室附件 | ⚠️ 待建立（與 ROADMAP §A2 一起） |
+| ~~`chat`~~ | — | （legacy）獨立聊天 bucket | ❌ 不再建立；party 附件用 **`order-documents/party/{room_id}/`**（018） |
 | ~~`contracts`~~ | — | （legacy 規劃）合約簽名掃描 | ❌ 不再建立，`order-documents` 已涵蓋 |
 | ~~`payments`~~ | — | （legacy 規劃）付款憑證 | ❌ 不再建立，`order-documents` `payment_proof` 子路徑已涵蓋 |
 

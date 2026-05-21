@@ -86,8 +86,13 @@
 | `/inquiries/[id]` | **Inquiry detail**：quotation 歷史 timeline、`<QuotationForm />`（seller）、`<QuotationActions />`（accept / counter / decline） |
 | `/orders` | 買賣雙視角訂單列表 |
 | `/orders/[id]` | 7 個 Tab + **OrderProgressBar**：**Overview** / **Quotation** / **Contract**（含 buyer approve/reject + signed-scan upload） / **Payment** / **Shipment**（B/L、vessel、container、ETD/ATD/ETA/ATA） / **Documents**（13 種類型分組上傳） / **Timeline** |
-| `/messages` | ⚠️ **Placeholder（A2 待補）**：將顯示房間列表 |
+| `/messages` | **Party DM 對話列表**：`listMyConversations()` → `<ConversationList />`（依 `last_message_at` 排序；每個交易對手一條 thread） |
+| `/messages/[userId]` | 與指定對手的全頁 thread：`<CounterpartyCard />` + `<PartyChatPanel />`（Realtime + 15s polling fallback） |
 | `/settings` | 帳戶設定：commercial profile（full_name / company_name / country / phone）+ role/status/kyc badges +「Change password」連結；若 `?prompt=incomplete` 或 `profiles.{company_name,country}` 為空，最上方顯示黃色提示 banner |
+
+**站內信入口（不必先建 inquiry/order）**：
+- `/market`、`/market/[id]`、訂單詳情 `<OrderPartyCards />` 上的 `<MessageCounterpartyButton />`（Sheet 內嵌 `<PartyChatPanel />`，可帶 `context` 標記 listing/inquiry/order）
+- 同一 buyer+seller 僅一條 `chat_rooms.type='party'` thread（`party_user_low` / `party_user_high` 唯一索引）；legacy `type=order` room 已由 migration 018 合併
 
 **Layout**：`(app)/layout.tsx` → 左側 sidebar nav；側欄項目從 `src/lib/notifications/counts.ts` 取 `getUserActionCounts()`，於 Inquiries / Orders 顯示金色數字 badge（`inquiriesNeedingMyResponse` / `ordersNeedingMyAction`），Orders 額外在有 disputed 時補上紅色「!」badge，Settings 在 commercial profile 缺欄時顯示紅點。Counter helper 用 `React.cache()` per-request 記憶化，所以 sidebar + dashboard 共用一次查詢。
 
@@ -156,7 +161,7 @@ provider 為 POE OpenAI-compatible endpoint，回傳 `toUIMessageStreamResponse(
 | **`order-documents`** | 訂單通用文件中心（合約簽名、發票、B/L、檢驗、付款證明…） | private（owner / 訂單雙方 / admin） | ✅ 已建立 — `010_storage_order_documents.sql` |
 | `payments` | 付款憑證圖 | private（buyer + admin） | ✅ 由 `order-documents` 內 `payment_proof` 路徑覆蓋（單一 bucket，路徑命名分類） |
 | `listings` | 商品圖 | public read, seller write | ⚠️ 待建立 |
-| `chat` | 聊天室附件 | private（chat members） | ⚠️ 待建立 |
+| `chat` | （legacy 規劃）獨立聊天附件 bucket | — | ❌ 不再建立；party DM 附件走 `order-documents/party/{room_id}/`（018 Storage RLS） |
 
 > 剩餘 buckets（avatars / kyc / listings / chat）待寫成 migration，請參考 [`ROADMAP.md` §A4](./ROADMAP.md)。
 > `010_storage_order_documents.sql` 已建立 `order-documents` bucket（private）並設好 RLS：
@@ -172,8 +177,8 @@ provider 為 POE OpenAI-compatible endpoint，回傳 `toUIMessageStreamResponse(
 alter publication supabase_realtime add table public.messages;
 ```
 
-→ 客戶端用 `supabase.channel('messages:room_id={uuid}')` + `postgres_changes` 監聽。
-**（`OrderChat` 組件待實作 — 見 ROADMAP §A2）**
+→ 客戶端用 `supabase.channel('messages:room:{roomId}')` + `postgres_changes`（`INSERT` on `messages`）監聽。
+**已實作**：`src/hooks/usePartyMessages.ts`（Realtime + 15s polling fallback + tab 可見時 refresh）；UI 為 `<PartyChatPanel />`（重用 `<ChatMessageBubble />`）。
 
 ---
 
@@ -227,6 +232,9 @@ type ActionResult<T> =
 | **`document.ts`（007）** | `uploadOrderDocument` | parties + admin | insert `order_documents` row（檔案由 client 上傳到 `order-documents` bucket），timeline append |
 |  | `verifyOrderDocument` | admin only | 標記已核驗，audit_logs |
 |  | `deleteOrderDocument` | uploader（1h, 未驗證）/ admin | delete row |
+| **`chat.ts`** | `openPartyChat` / `getPartyChatWithUser` | authenticated | `ensurePartyChat()` 建立或取得 `type=party` room + members |
+|  | `getChatMessages` / `sendChatMessage` | room member（admin 可讀不可發） | insert `messages`；更新 `chat_rooms.last_message_*`；附件存 `order-documents/party/{room_id}/...` |
+|  | `listMyConversations` | self | 列出所有 `type=party` membership，附 counterparty profile + last preview |
 | `admin.ts` | `freezeUser` / `unfreezeUser` | admin | profiles.status, audit_logs |
 |  | `setUserRole` | admin（promote 為 admin 需 super_admin） | profiles.role, audit_logs |
 |  | `upsertCategory` / `deleteCategory` | admin | product_categories, audit_logs |
@@ -446,13 +454,16 @@ src/components/
                 SignedScanUploader / ShipmentForm /
                 PaymentScheduleTable / PaymentScheduleBuilder /
                 MilestoneActionButtons / PaymentVerifyActions /
-                OrderDocumentsTab / DocumentUploader / DocumentVerifyButton
+                OrderDocumentsTab / DocumentUploader / DocumentVerifyButton /
+                ChatMessageBubble / OrderPartyCards
   admin/        UserActions / CategoryActions / NewsActions /
                 PaymentVerifyActions（re-export from order/）/
                 AdminOrderActions / SmsNotificationsToggle /
                 SendTestEmailButton
   chat/         AiChat / AiChatLauncher / FloatingAiChat /
                 ChatHistorySidebar / ChatPageBody / PinAiToggle
+  messages/     ConversationList / CounterpartyCard / PartyChatPanel /
+                MessageCounterpartyButton
   theme/        ThemeProvider / ThemeToggle
 ```
 
@@ -568,6 +579,9 @@ supabase/migrations/
   013_payment_schedules.sql        ← 付款抽離：新增 payment_schedules + payments.schedule_id + orders.incoterm + 9 個 milestone 時間戳；3 個新 enum
   014_drop_legacy_payment_terms.sql ← Hard cutover：清測試資料 + drop orders/contracts.payment_terms 欄位（enum 值保留）
   015_payment_seller_verify.sql     ← Payment 審核權限改寫：drop policy `payments_admin_update`、改建 `payments_seller_or_admin_update`（order 的 seller 或 admin/super_admin 都可 update）；新增 idx `payments_status_pending` / `payments_order_status`
+  016_chat_room_denorm.sql          ← `chat_rooms.last_message_at/preview`；為既有 orders backfill `type=order` room（018 前過渡用）
+  017_party_chat_enums.sql          ← `chat_type` 加 `party`；新建 `chat_message_context_type` enum（listing/inquiry/order）
+  018_party_chat.sql                ← party DM：`party_user_low/high`、合併 legacy order rooms、messages.context_*、`order-documents/party/{room_id}/` Storage RLS
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）
@@ -606,7 +620,7 @@ npm run db:types             # 重新生成 src/types/database.ts
 | 8 | 付款證明上傳（非加密貨幣方式） | ✅ 已完成 | `<PaymentForm />` 對 `bank_transfer / usdi / mup` 顯示檔案上傳 input，存到 `order-documents` |
 | 9 | Full-prepay 端到端流程煙霧測試 | ✅ 已驗證 | 2026-05-15 走測 `ORD-TEST-MP6PL7MZ`：quotation → contract draft/approve/sign → payment submit/verify → ready/shipped/in_transit/arrived → customs_cleared → completed |
 | 10 | Net-after-arrival 端到端流程煙霧測試 | ⚠️ 待執行 | UI / actions 路徑相同，僅分支跳轉時點不同；需要實際走一次驗證 |
-| 11 | 站內 IM（A2） | ⚠️ 待實作 | schema 已就位（`chat_rooms` / `chat_members` / `messages`）；`OrderChat` 元件、自動建房、`/messages` 列表頁都未做 |
+| 11 | 站內 IM（A2）— Party DM | ✅ 已完成 | `type=party` 一對一 thread、`/messages` 列表 + `/messages/[userId]`、`<MessageCounterpartyButton />`、Realtime + polling、`npm run qa:chat`；**未做**：sidebar 未讀 badge、新訊息 email 通知、admin 介入發言（admin 目前唯讀） |
 | 12 | 其餘 Storage buckets（avatars / kyc / listings / chat） | ⚠️ 待實作 | 用到該功能時補上 |
 | 13 | KYC 上傳 + lazy-collect commercial profile（A6） | 🟡 部分完成 | Commercial profile gate（`createInquiry` / `createListing` / `submitPayment` 缺欄位時回 `error.code='PROFILE_INCOMPLETE'`）、`/settings` 編輯頁、`<CommercialProfileForm />`、client toast 帶 "Open Settings" action 已完成；KYC 文件上傳 + admin 升級 kyc_level 仍待 |
 | 14 | `(app)` / `admin` layout 缺 Logout 按鈕 | ✅ 已完成 | `(app)/layout.tsx` 與 `admin/layout.tsx` 已掛上 `<Navbar />`，desktop 有 LogoutButton 在右上、mobile 有 `<MobileNav />` 抽屜 |
@@ -634,3 +648,4 @@ npm run db:types             # 重新生成 src/types/database.ts
 10. Audit log 完整覆蓋所有 admin mutations
 11. Payment 改由 seller 主審（admin 可覆審 / 介入）；buyer 可對 `scheduled` 期 Pay Early
 12. ShipmentForm 接受 optional 的 B/L 掃描 + Inspection Report（COA/SGS）上傳到 `order_documents`
+13. Party DM 站內信（A2）：`/messages`、market/order 上的 Message 按鈕、附件走 `order-documents/party/`

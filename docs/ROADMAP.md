@@ -27,14 +27,22 @@
 > 部署到 production 後仍需重跑 `npx supabase gen types typescript ... > src/types/database.ts`
 > 以對齊型別（屬 A7 部署清單）。
 
-### A2. 站內 IM（原 Step 7，schema 已就位但 UI 是 placeholder）
+### A2. ✅ 站內 Party DM（已完成 — 2026-05-21）
 
-- [ ] `acceptInquiry` 建單時自動建立 `chat_rooms (type='order')` + `chat_members`（buyer + seller）
-- [ ] `src/components/chat/OrderChat.tsx`：使用 Supabase Realtime `postgres_changes` 訂閱 `messages`
-- [ ] `(app)/orders/[id]` 加 「Communication」Tab 內嵌 `<OrderChat />`
-- [ ] `(app)/messages/page.tsx` 改為房間列表（依最後訊息時間排序）
-- [ ] 訊息附件上傳到 Supabase Storage `chat` bucket（`image/*`、`application/pdf`，limit 5MB）
-- [ ] 風險備案：若 Realtime 不穩定，fallback 為 SWR 5s polling（`src/hooks/useMessages.ts`）
+設計改為 **一對交易對手一條 thread**（`type=party`），不再每張 order 一個 room；legacy `type=order` 已由 migration 018 合併。
+
+- [x] migrations `016_chat_room_denorm` → `017_party_chat_enums` → `018_party_chat`
+- [x] `src/lib/chat/ensure-room.ts` + `src/actions/chat.ts`（`openPartyChat` / `sendChatMessage` / `listMyConversations`）
+- [x] `(app)/messages/page.tsx` 對話列表 + `(app)/messages/[userId]/page.tsx` 全頁 thread
+- [x] `<PartyChatPanel />` + `usePartyMessages`（Realtime + 15s polling fallback）
+- [x] `<MessageCounterpartyButton />` 掛在 market 卡、listing 詳情、`<OrderPartyCards />`
+- [x] 附件：`order-documents/party/{room_id}/`（image/PDF ≤5MB）
+- [x] QA：`npm run qa:chat`（見 [`TESTING.md` §3.5](./TESTING.md)）
+
+**Phase 2 可選增強（非 MVP 阻塞）**：
+- [ ] `/messages` sidebar 未讀數 badge
+- [ ] 新訊息 email / SMS 通知
+- [ ] Admin 在爭議訂單中可發言（目前 admin 唯讀）
 
 ### A3. ✅ 合約簽名掃描上傳 UI（已完成）
 
@@ -52,7 +60,7 @@
 - [ ] `avatars`（public read，self write）
 - [ ] `kyc`（private，僅 owner + admin 可讀，僅 owner 可寫）
 - [ ] `listings`（public read，seller 可寫）
-- [ ] `chat`（private，僅 chat_members 可讀寫）
+- [x] ~~`chat` bucket~~ — **不再規劃**；party 附件已用 `order-documents/party/`（018）
 
 > `contracts` / `payments` 兩顆 legacy bucket 不再規劃 — `order-documents` 已涵蓋。
 > 其餘 bucket 可於對應功能（avatar 上傳、KYC、商品圖、IM 附件）實作時補上。
@@ -94,7 +102,7 @@
 
 - [x] 推 GitHub
 - [x] Vercel import + env（含 POE / Resend / Supabase / 平台收款資訊）
-- [x] Supabase production schema：所有 10 個 migrations（001 → 010）都已透過 `scripts/apply-migrations.mjs` 套用，並由 `_agent_migrations` 追蹤表記錄
+- [x] Supabase production schema：所有 **18** 個 migrations（001 → 018）都已透過 `scripts/apply-migrations.mjs` 套用，並由 `_agent_migrations` 追蹤表記錄
   > 注意：未來如增量 migration，**enum add value 與使用該值必須分檔**（007/009 是現有範例：007 加 enum value、009 才使用）
 - [ ] RLS policy review（特別是 005 / 009 / 010 新增 / 修改的政策）
 - [x] ~~Resend domain DNS（或先用 `onboarding@resend.dev` 寄件）~~ — 2026-05-20 改用 **AWS SES SMTP**（`src/lib/email/smtp.ts`）；production env 需設 `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM_ADDRESS`（必須是 SES 已驗證 identity）
@@ -214,9 +222,11 @@ server actions / UI 元件實作：
 - PRD §2 OUT OF SCOPE 原因：「規格分散、單一報價偏差大」
 - 重新評估：以 listings 內部成交價聚合 + Benchmark Mineral Intelligence 公開指數
 
-### B3. 多語系
+### B3. 多語系（建議 MVP 缺口關閉後再開）
 - next-intl，預留 en / zh-Hant / fr key
-- 合約強制英文版
+- 合約與 admin 後台維持英文版（法律與營運一致性）
+- **建議順序**：先抽 public 行銷頁 + auth 字串 → 再 (app) 交易 UI → 最後才動 email 模板
+- **不建議現在就做**：MVP 仍缺 KYC（A6）、部分 E2E（A7）、字串全寫死在元件內，此時 i18n 會與功能迭代雙線搶改同一批檔案
 
 ### B4. PDF 真渲染（取代 `window.print()`）
 - 評估 `@react-pdf/renderer` 或 `puppeteer-core` + `chrome-aws-lambda`
@@ -256,12 +266,12 @@ server actions / UI 元件實作：
 ## D. Definition of Done（MVP 上線版）
 
 - [x] A1 schema 對齊全部完成（TS types 由 `npm run db:types` 重新生成）
-- [ ] A2 IM 可雙方即時對話 + 圖片附件
+- [x] A2 Party DM 可雙方即時對話 + 圖片/PDF 附件（`qa:chat`）
 - [x] A3 簽名掃描可上傳並推進到 `contract_signed` 狀態（009 完成）+ 雙方簽名嵌入 PDF 預覽（commit 1620d8e）
 - [x] A4 **`order-documents`** bucket 建立完成（`010_storage_order_documents.sql`）；avatars/kyc/listings/chat 依需要時補
 - [x] A5 dispute / cancel 流程可走通（009 完成）
 - [ ] A6 KYC 上傳可運作（admin 可升級 level） — commercial profile gate ✅；KYC 文件上傳仍待
-- [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，10 個 migration 已套用
+- [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，18 個 migration 已套用（001 → 018）
 - [x] A7 full_prepay 端到端 happy path 通過（2026-05-15 走測 `ORD-TEST-MP6PL7MZ`）
 - [ ] A7 net_after_arrival 端到端 happy path 通過 + dispute / cancel / force-transition 走測
 - [x] A8 B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心）已完成
