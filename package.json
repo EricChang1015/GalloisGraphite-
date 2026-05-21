@@ -11,7 +11,11 @@
     "db:migrate:status": "node scripts/apply-migrations.mjs --status",
     "db:migrate:bootstrap": "node scripts/apply-migrations.mjs --bootstrap",
     "db:migrate:dry": "node scripts/apply-migrations.mjs --dry-run",
-    "db:types": "node scripts/gen-types.mjs"
+    "db:types": "node scripts/gen-types.mjs",
+    "qa:preflight": "npm run build && node scripts/apply-migrations.mjs --status && node scripts/verify-schema.mjs",
+    "qa:check-dev": "node scripts/check-dev-errors.mjs",
+    "qa:seed-order": "node scripts/seed-test-order.mjs",
+    "qa:cleanup": "node scripts/cleanup-test-data.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.62",
