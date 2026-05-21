@@ -108,8 +108,8 @@ export async function submitQuotation(
       destination_port: parsed.data.destination_port ?? null,
       validity_until: parsed.data.validity_until,
       specs_confirmed: parsed.data.specs_confirmed as Json,
-      shipping_window_from: parsed.data.shipping_window_from ?? null,
-      shipping_window_to: parsed.data.shipping_window_to ?? null,
+      shipping_window_from: parsed.data.shipping_window_from?.trim() || null,
+      shipping_window_to: parsed.data.shipping_window_to?.trim() || null,
       notes: parsed.data.notes ?? null,
       status: "sent",
     })
@@ -171,9 +171,16 @@ export async function counterQuotation(
 
   const { data: parent } = await supabase
     .from("quotations")
-    .select("id, inquiry_id, buyer_id, seller_id, status")
+    .select("id, inquiry_id, buyer_id, seller_id, status, listing_id")
     .eq("id", parsed.data.parent_quotation_id)
-    .single<{ id: string; inquiry_id: string; buyer_id: string; seller_id: string; status: string }>();
+    .single<{
+      id: string;
+      inquiry_id: string;
+      buyer_id: string;
+      seller_id: string;
+      status: string;
+      listing_id: string | null;
+    }>();
 
   if (!parent) return { data: null, error: { message: "Parent quotation not found." } };
   if (user.id !== parent.buyer_id && user.id !== parent.seller_id) {
@@ -184,6 +191,16 @@ export async function counterQuotation(
   }
 
   const admin = createAdminClient();
+
+  let listingId = parsed.data.listing_id ?? parent.listing_id;
+  if (!listingId) {
+    const { data: inquiry } = await supabase
+      .from("inquiries")
+      .select("listing_id")
+      .eq("id", parent.inquiry_id)
+      .single<{ listing_id: string | null }>();
+    listingId = inquiry?.listing_id ?? null;
+  }
 
   // Mark parent as countered
   await admin
@@ -199,7 +216,7 @@ export async function counterQuotation(
       parent_quotation_id: parent.id,
       seller_id: parent.seller_id,
       buyer_id: parent.buyer_id,
-      listing_id: parsed.data.listing_id ?? null,
+      listing_id: listingId,
       unit_price: parsed.data.unit_price,
       currency: parsed.data.currency,
       quantity: parsed.data.quantity,
@@ -209,8 +226,8 @@ export async function counterQuotation(
       destination_port: parsed.data.destination_port ?? null,
       validity_until: parsed.data.validity_until,
       specs_confirmed: parsed.data.specs_confirmed as Json,
-      shipping_window_from: parsed.data.shipping_window_from ?? null,
-      shipping_window_to: parsed.data.shipping_window_to ?? null,
+      shipping_window_from: parsed.data.shipping_window_from?.trim() || null,
+      shipping_window_to: parsed.data.shipping_window_to?.trim() || null,
       notes: parsed.data.notes ?? null,
       status: "sent",
     })
@@ -268,7 +285,16 @@ export async function acceptQuotation(
   if (new Date(q.validity_until) < new Date()) {
     return { data: null, error: { message: "Quotation has expired." } };
   }
-  if (!q.listing_id) {
+  let listingId = q.listing_id;
+  if (!listingId && q.inquiry_id) {
+    const { data: inquiry } = await supabase
+      .from("inquiries")
+      .select("listing_id")
+      .eq("id", q.inquiry_id)
+      .single<{ listing_id: string | null }>();
+    listingId = inquiry?.listing_id ?? null;
+  }
+  if (!listingId) {
     return { data: null, error: { message: "Quotation must reference a listing to create an order." } };
   }
 
@@ -280,7 +306,7 @@ export async function acceptQuotation(
     .insert({
       buyer_id: q.buyer_id,
       seller_id: q.seller_id,
-      listing_id: q.listing_id,
+      listing_id: listingId,
       inquiry_id: q.inquiry_id,
       current_quotation_id: q.id,
       quantity: q.quantity,
