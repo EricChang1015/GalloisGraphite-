@@ -133,7 +133,7 @@ export async function getChatMessages(
   let query = supabase
     .from("messages")
     .select(
-      "id, room_id, sender_id, content, attachment_url, context_type, context_id, created_at, sender:profiles(full_name, company_name)"
+      "id, room_id, sender_id, content, attachment_url, context_type, context_id, created_at, sender:profiles(full_name, company_name, avatar_url)"
     )
     .eq("room_id", parsed.data.roomId)
     .order("created_at", { ascending: false })
@@ -186,7 +186,7 @@ export async function sendChatMessage(
       context_id: parsed.data.contextId ?? null,
     })
     .select(
-      "id, room_id, sender_id, content, attachment_url, context_type, context_id, created_at, sender:profiles(full_name, company_name)"
+      "id, room_id, sender_id, content, attachment_url, context_type, context_id, created_at, sender:profiles(full_name, company_name, avatar_url)"
     )
     .single<ChatMessageRow>();
 
@@ -269,13 +269,14 @@ export async function listMyConversations(): Promise<
 
     const { data: cp } = await supabase
       .from("profiles")
-      .select("id, full_name, company_name, country")
+      .select("id, full_name, company_name, country, avatar_url")
       .eq("id", counterpartyId)
       .maybeSingle<{
         id: string;
         full_name: string | null;
         company_name: string | null;
         country: string | null;
+        avatar_url: string | null;
       }>();
 
     if (!cp) continue;
@@ -285,6 +286,7 @@ export async function listMyConversations(): Promise<
       counterpartyId: cp.id,
       counterpartyLabel: counterpartyLabel(cp),
       counterpartyCountry: cp.country,
+      counterpartyAvatarUrl: cp.avatar_url,
       lastMessageAt: cr.last_message_at,
       lastMessagePreview: cr.last_message_preview,
     });

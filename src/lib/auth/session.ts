@@ -17,6 +17,7 @@ export type SessionProfile = {
   status: Database["public"]["Enums"]["user_status"];
   full_name: string | null;
   company_name: string | null;
+  avatar_url: string | null;
 };
 
 /**
@@ -58,7 +59,7 @@ export const getCurrentProfile = cache(
     const supabase = await createServerClient();
     const { data } = await supabase
       .from("profiles")
-      .select("role, status, full_name, company_name")
+      .select("role, status, full_name, company_name, avatar_url")
       .eq("id", user.id)
       .maybeSingle<SessionProfile>();
     return data;

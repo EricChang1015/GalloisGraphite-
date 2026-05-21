@@ -26,6 +26,7 @@
 | `013_payment_schedules.sql` | **付款抽離**：新增 enum `payment_category` / `payment_milestone` / `payment_schedule_status` + `payment_schedules` 表；`payments` 加 `schedule_id`；`orders` 加 `incoterm` + 9 個 milestone 時間戳；RLS 對 buyer/seller/admin 開放 select |
 | `014_drop_legacy_payment_terms.sql` | **Hard cutover**：truncate 所有 orders / contracts / payments / quotations / payment_schedules 測試資料；`orders` drop `payment_terms` / `payment_due_days` / `payment_due_date`；`contracts` drop `payment_terms` / `payment_due_days`。`payment_terms_type` enum + `order_status` 的 `payment_pending` / `paid` / `draft` / `contract_generated` 仍保留（PG 無法 drop enum value），但不再被任何 server action 寫入 |
 | `015_payment_seller_verify.sql` | **Payment 審核權限改寫**：drop legacy `payments_admin_update`，新建 `payments_seller_or_admin_update`，允許 update 的條件為「auth.uid() 是該 payment.order 的 seller_id，或 `current_user_role()` ∈ {admin, super_admin}」。順手加 `idx_payments_status_pending` (partial, status='pending') 與 `idx_payments_order_status`，加速 seller / admin 查詢待審 payment |
+| `021_avatars.sql` | **頭像**：`profiles.avatar_url`；`avatars` public Storage bucket；`handle_new_user` 從 OAuth meta 帶入 Google 頭像；既有 OAuth 用戶 backfill |
 
 > ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >
@@ -53,6 +54,7 @@
 | status | enum `user_status` | pending / active / frozen |
 | kyc_level | int | 0=email only, 1=企業文件已上傳, 2=超管驗證 |
 | kyc_docs | jsonb | 上傳憑證 URL 列表 |
+| avatar_url | text | Google OAuth 頭像或 Storage 上傳的公開 URL（`021_avatars.sql`） |
 | created_at / updated_at | timestamptz | |
 
 設計理由:把 auth 與業務分離,RLS 易控制;super_admin 一律手動在 SQL 設定。
@@ -60,6 +62,7 @@
 **Trigger**：
 - `on_auth_user_created` → `handle_new_user()`：新註冊自動 insert 一筆 profile
   - **007 後行為**：讀 `raw_user_meta_data`，`full_name` fallback 到 `name`（Google ID token 用此 key）；`company_name` / `country` 缺漏視為空字串；`role` 預設 `'buyer'`
+  - **019 後**：`avatar_url` 從 `raw_user_meta_data.avatar_url`（Google 等 OAuth）寫入 profile；使用者可在 `/settings` 上傳覆蓋
   - 若 `auth.users.email_confirmed_at` 已非 null（OAuth 流程），直接落 `status='active'`；否則 `'pending'` 等 email 驗證
 - `on_auth_user_email_confirmed` → `handle_user_email_confirmed()`：email 驗證後（UPDATE 觸發）status='active'。OAuth 流程因 INSERT 時 status 已 active，此 trigger 不會再觸發
 
@@ -500,7 +503,7 @@ AI 助手每個 Q&A turn 的 server-side audit trail。append-only。
 | Bucket | 訪問模式 | 用途 | 現況 |
 |---|---|---|---|
 | **`order-documents`** | private（訂單雙方 + admin） | **合約簽名掃描、付款證明、發票、B/L、檢驗、海關、其他訂單檔案**（依路徑首段 `{order_id}/{doctype}/...` 分類） | ✅ 已建立（`010_storage_order_documents.sql`） |
-| `avatars` | public read, self write | 使用者頭像 | ⚠️ 待建立 |
+| `avatars` | public read, self write | 使用者頭像 | ✅ `019_avatars.sql` |
 | `kyc` | private（owner + admin） | KYC 證件 | ⚠️ 待建立（與 ROADMAP §A6 一起） |
 | `listings` | public read, seller write | 商品圖 | ⚠️ 待建立 |
 | `chat` | private（chat members） | 聊天室附件 | ⚠️ 待建立（與 ROADMAP §A2 一起） |

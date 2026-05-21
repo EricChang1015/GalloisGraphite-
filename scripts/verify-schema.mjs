@@ -220,6 +220,25 @@ async function main() {
   `);
   check(otpTable.length === 1, "phone_otp_challenges table exists");
 
+  console.log("\n=== profiles.avatar_url (021) ===");
+  const profiles = await cols("profiles");
+  check(profiles.has("avatar_url"), "profiles.avatar_url exists");
+
+  console.log("\n=== avatars storage bucket (021) ===");
+  const avatarBuckets = await q(`
+    select id, public, file_size_limit
+      from storage.buckets
+     where id = 'avatars';
+  `);
+  check(avatarBuckets.length === 1, "avatars bucket exists");
+  if (avatarBuckets[0]) {
+    check(avatarBuckets[0].public === true, "avatars bucket is public");
+    check(
+      avatarBuckets[0].file_size_limit === 2097152,
+      "avatars file_size_limit is 2 MB"
+    );
+  }
+
   console.log(`\n==== ${pass} passed · ${fail} failed ====`);
   process.exit(fail === 0 ? 0 : 1);
 }

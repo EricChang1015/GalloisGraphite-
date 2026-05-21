@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 
 import { CommercialProfileForm } from "@/components/auth/CommercialProfileForm";
+import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createServerClient } from "@/lib/supabase/server";
@@ -16,6 +17,7 @@ type ProfileRow = {
   company_name: string | null;
   country: string | null;
   phone: string | null;
+  avatar_url: string | null;
   role: string;
   status: string;
   kyc_level: number | null;
@@ -36,7 +38,9 @@ export default async function SettingsPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("email, full_name, company_name, country, phone, role, status, kyc_level")
+    .select(
+      "email, full_name, company_name, country, phone, avatar_url, role, status, kyc_level"
+    )
     .eq("id", user.id)
     .single<ProfileRow>();
 
@@ -69,7 +73,24 @@ export default async function SettingsPage({
         </div>
       </header>
 
-      <section className="rounded-lg border border-border bg-card/40 p-6">
+      <section className="rounded-lg border border-border bg-card/40 p-6 space-y-6">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Profile photo</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Shown in messages and on your account. Google sign-in imports your
+            Google photo automatically.
+          </p>
+          <div className="mt-4">
+            <AvatarUploader
+              userId={user.id}
+              profile={{
+                full_name: profile.full_name,
+                company_name: profile.company_name,
+                avatar_url: profile.avatar_url,
+              }}
+            />
+          </div>
+        </div>
         <CommercialProfileForm
           email={profile.email}
           defaultValues={{

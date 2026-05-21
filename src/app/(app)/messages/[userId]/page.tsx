@@ -34,13 +34,14 @@ export default async function MessageThreadPage({ params }: PageProps) {
   const supabase = await createServerClient();
   const { data: counterparty } = await supabase
     .from("profiles")
-    .select("id, full_name, company_name, country")
+    .select("id, full_name, company_name, country, avatar_url")
     .eq("id", counterpartyId)
     .maybeSingle<{
       id: string;
       full_name: string | null;
       company_name: string | null;
       country: string | null;
+      avatar_url: string | null;
     }>();
 
   if (!counterparty) notFound();
