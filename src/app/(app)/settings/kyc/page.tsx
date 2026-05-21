@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { getMyKycProfile } from "@/actions/kyc";
 import { KycUploadForm } from "@/components/kyc/KycUploadForm";
+import { PhoneVerifyPanel } from "@/components/kyc/PhoneVerifyPanel";
 import { Button } from "@/components/ui/button";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -37,10 +38,17 @@ export default async function KycSettingsPage() {
         </Button>
         <h1 className="font-serif text-3xl tracking-tight">KYC verification</h1>
         <p className="text-sm text-muted-foreground">
-          Upload company registration and identification documents so our team
-          can verify your account before trading.
+          Level 0 is your email login. Verify your phone for Level 1, upload
+          ID or company documents for Level 2 (admin review). Level 3 is assigned
+          by admin for trusted sellers.
         </p>
       </header>
+
+      <PhoneVerifyPanel
+        phone={kyc.data.phone}
+        phoneVerifiedAt={kyc.data.phoneVerifiedAt}
+        kycLevel={kyc.data.kycLevel}
+      />
 
       <section className="rounded-lg border border-border bg-card/40 p-6">
         <KycUploadForm

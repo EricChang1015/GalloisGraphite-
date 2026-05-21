@@ -14,7 +14,13 @@ import {
   SetUserKycLevelSchema,
   UpdateKycThresholdsSchema,
 } from "@/lib/validations/admin";
-import { parseKycDocs, type KycDocEntry } from "@/lib/kyc/types";
+import { ApproveKycDocumentsSchema } from "@/lib/validations/kyc";
+import { levelAfterDocumentApproval } from "@/lib/kyc/levels";
+import {
+  parseKycDocs,
+  summarizeKycDocs,
+  type KycDocEntry,
+} from "@/lib/kyc/types";
 import {
   SMS_NOTIFICATIONS_KEY,
   KYC_MIN_LEVEL_INQUIRY_KEY,
@@ -444,9 +450,73 @@ export async function setUserKycLevel(
   return { data: true, error: null };
 }
 
+export async function approveKycDocuments(
+  input: z.infer<typeof ApproveKycDocumentsSchema>
+): Promise<ActionResult<{ kycLevel: number }>> {
+  const { user, error: authError } = await requireAdmin();
+  if (!user) return { data: null, error: { message: authError! } };
+
+  const parsed = ApproveKycDocumentsSchema.safeParse(input);
+  if (!parsed.success) return { data: null, error: { message: "Invalid input." } };
+
+  const admin = createAdminClient();
+  const { data: profile, error: readErr } = await admin
+    .from("profiles")
+    .select("kyc_level, kyc_docs")
+    .eq("id", parsed.data.userId)
+    .maybeSingle<{ kyc_level: number; kyc_docs: import("@/types/database").Json }>();
+
+  if (readErr) return { data: null, error: { message: readErr.message } };
+  if (!profile) return { data: null, error: { message: "User not found." } };
+
+  const docs = parseKycDocs(profile.kyc_docs);
+  const pending = docs.filter((d) => (d.status ?? "pending") === "pending");
+  if (pending.length === 0) {
+    return { data: null, error: { message: "No pending documents to approve." } };
+  }
+
+  const now = new Date().toISOString();
+  const updated = docs.map((d) =>
+    (d.status ?? "pending") === "pending"
+      ? {
+          ...d,
+          status: "approved" as const,
+          reviewed_at: now,
+          reviewed_by: user.id,
+        }
+      : d
+  );
+
+  const nextLevel = levelAfterDocumentApproval(profile.kyc_level);
+  const { error: updateErr } = await admin
+    .from("profiles")
+    .update({
+      kyc_docs: updated as unknown as import("@/types/database").Json,
+      kyc_level: nextLevel,
+    })
+    .eq("id", parsed.data.userId);
+
+  if (updateErr) return { data: null, error: { message: updateErr.message } };
+
+  await writeAuditLog(user.id, "approve_kyc_documents", "profile", parsed.data.userId, {
+    from: profile.kyc_level,
+    to: nextLevel,
+    approvedCount: pending.length,
+    note: parsed.data.note ?? null,
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath("/settings/kyc");
+
+  return { data: { kycLevel: nextLevel }, error: null };
+}
+
 export async function getUserKycForAdmin(userId: string): Promise<
   ActionResult<{
     kycLevel: number;
+    phone: string | null;
+    phoneVerifiedAt: string | null;
+    docSummary: ReturnType<typeof summarizeKycDocs>;
     documents: Array<KycDocEntry & { signedUrl: string | null }>;
   }>
 > {
@@ -456,9 +526,14 @@ export async function getUserKycForAdmin(userId: string): Promise<
   const admin = createAdminClient();
   const { data: profile, error } = await admin
     .from("profiles")
-    .select("kyc_level, kyc_docs")
+    .select("kyc_level, kyc_docs, phone, phone_verified_at")
     .eq("id", userId)
-    .maybeSingle<{ kyc_level: number; kyc_docs: import("@/types/database").Json }>();
+    .maybeSingle<{
+      kyc_level: number;
+      kyc_docs: import("@/types/database").Json;
+      phone: string | null;
+      phone_verified_at: string | null;
+    }>();
 
   if (error) return { data: null, error: { message: error.message } };
   if (!profile) return { data: null, error: { message: "User not found." } };
@@ -474,7 +549,13 @@ export async function getUserKycForAdmin(userId: string): Promise<
   }
 
   return {
-    data: { kycLevel: profile.kyc_level, documents: withUrls },
+    data: {
+      kycLevel: profile.kyc_level,
+      phone: profile.phone,
+      phoneVerifiedAt: profile.phone_verified_at,
+      docSummary: summarizeKycDocs(docs),
+      documents: withUrls,
+    },
     error: null,
   };
 }

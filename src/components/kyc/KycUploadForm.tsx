@@ -94,7 +94,7 @@ export function KycUploadForm({ userId, kycLevel, initialDocuments }: Props) {
       setDocuments((prev) => [...prev, result.data!.document]);
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
-      toast.success("Document uploaded. An admin will review your KYC level.");
+      toast.success("Document uploaded — pending admin review for Level 2.");
       router.refresh();
     } finally {
       setIsUploading(false);
@@ -123,9 +123,10 @@ export function KycUploadForm({ userId, kycLevel, initialDocuments }: Props) {
           Current status: {KYC_LEVEL_LABELS[kycLevel] ?? `Level ${kycLevel}`}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Level 0 — email verified only. Level 1 — documents on file (pending
-          review). Level 2 — verified by admin. Uploading files does not
-          automatically raise your level; an admin will approve after review.
+          Level 0 — email login. Level 1 — phone verified. Level 2 — ID /
+          documents approved by admin. Level 3 — premium (admin only). Uploads
+          stay pending until an admin approves; phone verification is optional
+          and separate.
         </p>
       </div>
 
@@ -139,7 +140,7 @@ export function KycUploadForm({ userId, kycLevel, initialDocuments }: Props) {
               <div className="min-w-0">
                 <p className="font-medium truncate">{doc.file_name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {DOC_LABELS[doc.type]} ·{" "}
+                  {DOC_LABELS[doc.type]} · {doc.status ?? "pending"} ·{" "}
                   {new Date(doc.uploaded_at).toLocaleString()}
                 </p>
               </div>

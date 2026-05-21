@@ -93,9 +93,9 @@ export default async function SettingsPage({
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Upload business registration and ID documents for admin review. Your
-          current level is shown in the badge above; some actions may require a
-          higher level when the platform enables stricter gates.
+          Verify your phone (Level 1) and upload ID or company documents for
+          Level 2. Level 3 is assigned by admin for trusted sellers. Gates may
+          require higher levels when enabled in admin settings.
         </p>
       </section>
     </div>

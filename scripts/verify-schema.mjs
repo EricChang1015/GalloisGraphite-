@@ -206,6 +206,20 @@ async function main() {
   `);
   check(kycTrigger.length === 1, "trg_profiles_guard_kyc_level exists");
 
+  console.log("\n=== KYC phone / levels (020) ===");
+  const phoneCol = await q(`
+    select column_name from information_schema.columns
+     where table_schema = 'public' and table_name = 'profiles'
+       and column_name = 'phone_verified_at';
+  `);
+  check(phoneCol.length === 1, "profiles.phone_verified_at exists");
+
+  const otpTable = await q(`
+    select tablename from pg_tables
+     where schemaname = 'public' and tablename = 'phone_otp_challenges';
+  `);
+  check(otpTable.length === 1, "phone_otp_challenges table exists");
+
   console.log(`\n==== ${pass} passed · ${fail} failed ====`);
   process.exit(fail === 0 ? 0 : 1);
 }

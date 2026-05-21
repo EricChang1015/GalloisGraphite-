@@ -9,7 +9,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { UserActions } from "@/components/admin/UserActions";
+import { KycAdminBadge } from "@/components/admin/KycAdminBadge";
 import { UserKycDialog } from "@/components/admin/UserKycDialog";
+import { parseKycDocs, summarizeKycDocs } from "@/lib/kyc/types";
+import type { Json } from "@/types/database";
 
 export const metadata = { title: "Admin · Users" };
 
@@ -18,7 +21,9 @@ export default async function AdminUsersPage() {
 
   const { data: users } = await admin
     .from("profiles")
-    .select("id, email, full_name, company_name, country, role, status, kyc_level, created_at")
+    .select(
+      "id, email, full_name, company_name, country, role, status, kyc_level, kyc_docs, phone_verified_at, created_at"
+    )
     .order("created_at", { ascending: false })
     .returns<{
       id: string;
@@ -29,6 +34,8 @@ export default async function AdminUsersPage() {
       role: string;
       status: string;
       kyc_level: number;
+      kyc_docs: Json;
+      phone_verified_at: string | null;
       created_at: string;
     }[]>();
 
@@ -87,7 +94,13 @@ export default async function AdminUsersPage() {
                     {u.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-sm">{u.kyc_level}</TableCell>
+                <TableCell>
+                  <KycAdminBadge
+                    kycLevel={u.kyc_level}
+                    kycDocs={u.kyc_docs}
+                    phoneVerifiedAt={u.phone_verified_at}
+                  />
+                </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
                   {new Date(u.created_at).toLocaleDateString()}
                 </TableCell>
@@ -97,6 +110,9 @@ export default async function AdminUsersPage() {
                       userId={u.id}
                       userLabel={u.company_name || u.full_name || u.email}
                       currentKycLevel={u.kyc_level}
+                      pendingDocCount={
+                        summarizeKycDocs(parseKycDocs(u.kyc_docs)).pending
+                      }
                     />
                     {u.role !== "super_admin" && (
                       <UserActions

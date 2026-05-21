@@ -205,8 +205,17 @@ npm run qa:chat
 
 ## 3.6 KYC（A6）— 合併 main 前必跑
 
-**模型**：`profiles.kyc_level` 僅 Admin 可改；使用者上傳寫入 `kyc_docs` 不自動升級。
-平台門檻存 `platform_settings`：`kyc_min_level_inquiry` / `kyc_min_level_listing`（調試預設 **0**）。
+**模型**（migration 020）：
+
+| Level | 意義 | 如何達成 |
+|---|---|---|
+| 0 | 信箱登入（Supabase Auth） | 註冊預設 |
+| 1 | 電話驗證 | `/settings/kyc` SMS OTP（需 `SMS_*` 或 dev `PHONE_OTP_DEV_CODE`） |
+| 2 | 身分／文件已審 | Admin 核准 pending 文件（可跳過 Level 1） |
+| 3 | 進階／賣家上架 | 僅 Admin 手動 |
+
+`kyc_level` / `phone_verified_at` 使用者不可自改；上傳只寫 `kyc_docs`（status `pending`），不自動升級。
+平台門檻：`kyc_min_level_inquiry` / `kyc_min_level_listing`（0–3，預設 **0**）。
 
 ### 自動化（Tier 0+）
 

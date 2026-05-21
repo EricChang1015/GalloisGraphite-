@@ -84,7 +84,8 @@
 - [x] `(app)/settings/kyc` + `<KycUploadForm />`（PDF/圖 ≤5MB → `kyc/{user_id}/{type}/{uuid}.ext`）
 - [x] `profiles.kyc_docs` jsonb 登記；`profiles_guard_kyc_level` trigger 防止使用者自調 `kyc_level`
 - [x] Admin `/admin/settings` 設定 `kyc_min_level_inquiry` / `kyc_min_level_listing`（預設 **0**）
-- [x] Admin `/admin/users` **KYC** 對話框：檢視文件 signed URL、手動設 level 0–2（audit_logs）
+- [x] Admin `/admin/users` **KYC** 對話框：檢視文件 signed URL、手動設 level 0–3（audit_logs）
+- [x] **四級 KYC + 電話 OTP**（migration 020）：0 信箱、1 電話、2 文件審核、3 進階（admin）；列表顯示 pending 文件數；一鍵核准 → Level 2
 - [x] `createInquiry` / `createListing`（seller）檢查平台門檻 → `KYC_REQUIRED` + toast 導向 `/settings/kyc`
 
 **仍待（非 MVP 阻塞）：**

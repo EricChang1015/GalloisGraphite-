@@ -57,7 +57,7 @@ export function KycThresholdSettings({
             name="inquiryMinLevel"
             type="number"
             min={0}
-            max={2}
+            max={3}
             defaultValue={inquiryMinLevel}
             required
           />
@@ -69,7 +69,7 @@ export function KycThresholdSettings({
             name="listingMinLevel"
             type="number"
             min={0}
-            max={2}
+            max={3}
             defaultValue={listingMinLevel}
             required
           />

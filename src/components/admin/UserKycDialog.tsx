@@ -2,10 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck } from "lucide-react";
+import { FileCheck, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
-import { getUserKycForAdmin, setUserKycLevel } from "@/actions/admin";
+import {
+  approveKycDocuments,
+  getUserKycForAdmin,
+  setUserKycLevel,
+} from "@/actions/admin";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,21 +26,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { KYC_LEVEL_LABELS, type KycDocEntry } from "@/lib/kyc/types";
+import { KYC_LEVEL_LABELS, KYC_MAX_LEVEL } from "@/lib/kyc/types";
 
 interface Props {
   userId: string;
   userLabel: string;
   currentKycLevel: number;
+  pendingDocCount: number;
 }
 
-type DocWithUrl = KycDocEntry & { signedUrl: string | null };
+type DocWithUrl = {
+  id: string;
+  type: string;
+  file_name: string;
+  status?: string;
+  signedUrl: string | null;
+};
 
-export function UserKycDialog({ userId, userLabel, currentKycLevel }: Props) {
+export function UserKycDialog({
+  userId,
+  userLabel,
+  currentKycLevel,
+  pendingDocCount,
+}: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [kycLevel, setKycLevel] = useState(String(currentKycLevel));
   const [documents, setDocuments] = useState<DocWithUrl[]>([]);
+  const [phone, setPhone] = useState<string | null>(null);
+  const [phoneVerifiedAt, setPhoneVerifiedAt] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(pendingDocCount);
   const [loading, setLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -53,6 +72,9 @@ export function UserKycDialog({ userId, userLabel, currentKycLevel }: Props) {
       }
       setDocuments(result.data?.documents ?? []);
       setKycLevel(String(result.data?.kycLevel ?? currentKycLevel));
+      setPhone(result.data?.phone ?? null);
+      setPhoneVerifiedAt(result.data?.phoneVerifiedAt ?? null);
+      setPendingCount(result.data?.docSummary.pending ?? 0);
     });
   }
 
@@ -73,21 +95,80 @@ export function UserKycDialog({ userId, userLabel, currentKycLevel }: Props) {
     });
   }
 
+  function handleApproveDocs() {
+    startTransition(async () => {
+      const result = await approveKycDocuments({
+        userId,
+        note: "Documents approved from admin KYC dialog",
+      });
+      if (result.error) {
+        toast.error(result.error.message);
+        return;
+      }
+      toast.success(`Documents approved. User is now level ${result.data?.kycLevel ?? 2}.`);
+      setOpen(false);
+      router.refresh();
+    });
+  }
+
+  const triggerVariant = pendingDocCount > 0 ? "default" : "outline";
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
-          <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" />
+          <Button
+            type="button"
+            variant={triggerVariant}
+            size="sm"
+            className="h-7 text-xs gap-1"
+          />
         }
       >
         <ShieldCheck className="size-3" />
         KYC
+        {pendingDocCount > 0 ? ` (${pendingDocCount})` : ""}
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>KYC — {userLabel}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          {pendingCount > 0 ? (
+            <div className="rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm">
+              <p className="font-medium text-amber-200">
+                {pendingCount} document{pendingCount > 1 ? "s" : ""} awaiting review
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Approve to grant Level 2 (identity verified). Phone verification
+                is not required first.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                className="mt-2 gap-1"
+                disabled={isPending}
+                onClick={handleApproveDocs}
+              >
+                <FileCheck className="size-3" />
+                Approve documents → Level 2
+              </Button>
+            </div>
+          ) : null}
+
+          <div className="text-sm space-y-1 rounded-md border px-3 py-2">
+            <p>
+              <span className="text-muted-foreground">Phone:</span>{" "}
+              {phone ?? "—"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Phone verified:</span>{" "}
+              {phoneVerifiedAt
+                ? new Date(phoneVerifiedAt).toLocaleString()
+                : "No"}
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor={`kyc-level-${userId}`}>KYC level (admin override)</Label>
             <Select
@@ -100,7 +181,7 @@ export function UserKycDialog({ userId, userLabel, currentKycLevel }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[0, 1, 2].map((n) => (
+                {Array.from({ length: KYC_MAX_LEVEL + 1 }, (_, n) => n).map((n) => (
                   <SelectItem key={n} value={String(n)}>
                     {n} — {KYC_LEVEL_LABELS[n]}
                   </SelectItem>
@@ -108,8 +189,9 @@ export function UserKycDialog({ userId, userLabel, currentKycLevel }: Props) {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Skip document review by setting level 1 or 2 directly. All
-              changes are written to audit_logs.
+              Level 3 is for trusted sellers (e.g. listing gate). Document
+              approval sets level 2; phone OTP sets level 1. All changes are
+              logged in audit_logs.
             </p>
           </div>
 
@@ -123,7 +205,12 @@ export function UserKycDialog({ userId, userLabel, currentKycLevel }: Props) {
               <ul className="space-y-2 text-sm">
                 {documents.map((doc) => (
                   <li key={doc.id} className="rounded border px-3 py-2">
-                    <p className="font-medium">{doc.file_name}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium">{doc.file_name}</p>
+                      <span className="text-[10px] uppercase text-muted-foreground">
+                        {doc.status ?? "pending"}
+                      </span>
+                    </div>
                     <p className="text-xs text-muted-foreground">{doc.type}</p>
                     {doc.signedUrl ? (
                       <a
