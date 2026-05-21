@@ -31,3 +31,5 @@ export const SetUserRoleSchema = z.object({
 export const SmsNotificationsToggleSchema = z.object({
   enabled: z.boolean(),
 });
+
+export { SetUserKycLevelSchema, UpdateKycThresholdsSchema } from "@/lib/validations/kyc";

@@ -9,6 +9,10 @@ import { chromium } from "playwright";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  createAuthenticatedContext as createAuthContext,
+  loadEnvLocal,
+} from "./lib/e2e-auth.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 if (!process.env.E2E_BASE_URL) {
@@ -55,56 +59,10 @@ async function dismissAi(page) {
   }
 }
 
-function loadEnv() {
-  return Object.fromEntries(
-    readFileSync(resolve(__dirname, "../.env.local"), "utf8")
-      .split("\n")
-      .filter((l) => l && !l.startsWith("#"))
-      .map((l) => {
-        const i = l.indexOf("=");
-        return [l.slice(0, i), l.slice(i + 1)];
-      })
-  );
-}
+const loadEnv = loadEnvLocal;
 
-/** Supabase password grant + SSR auth cookie (avoids login form GET submit before hydration). */
 async function createAuthenticatedContext(browser, email) {
-  const env = loadEnv();
-  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-    method: "POST",
-    headers: { apikey: anonKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password: PASS }),
-  });
-  if (!res.ok) {
-    throw new Error(`Supabase auth failed: ${res.status} ${await res.text()}`);
-  }
-  const session = await res.json();
-  const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
-  const cookieName = `sb-${projectRef}-auth-token`;
-  const cookieValue = `base64-${Buffer.from(
-    JSON.stringify({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_at: session.expires_at,
-      expires_in: session.expires_in,
-      token_type: session.token_type,
-      user: session.user,
-    })
-  ).toString("base64")}`;
-  const baseHost = new URL(BASE).hostname;
-  const context = await browser.newContext();
-  await context.addCookies([
-    {
-      name: cookieName,
-      value: cookieValue,
-      domain: baseHost,
-      path: "/",
-      sameSite: "Lax",
-    },
-  ]);
-  return context;
+  return createAuthContext(browser, email, PASS, BASE);
 }
 
 async function login(page, email) {

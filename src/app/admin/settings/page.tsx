@@ -3,7 +3,9 @@ import {
   SMS_NOTIFICATIONS_KEY,
   isSmsGatewayConfigured,
 } from "@/lib/platform/settings";
+import { KycThresholdSettings } from "@/components/admin/KycThresholdSettings";
 import { SmsNotificationsToggle } from "@/components/admin/SmsNotificationsToggle";
+import { getKycThresholds } from "@/lib/platform/settings";
 import { SendTestEmailButton } from "@/components/admin/SendTestEmailButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -22,6 +24,7 @@ export default async function AdminSettingsPage() {
 
   const smsEnabled = setting?.value === true;
   const gatewayConfigured = isSmsGatewayConfigured();
+  const kycThresholds = await getKycThresholds();
 
   const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
 
@@ -55,6 +58,18 @@ export default async function AdminSettingsPage() {
             </p>
           </div>
           <SendTestEmailButton />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">KYC gates</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <KycThresholdSettings
+            inquiryMinLevel={kycThresholds.inquiry}
+            listingMinLevel={kycThresholds.listing}
+          />
         </CardContent>
       </Card>
 

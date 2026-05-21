@@ -78,14 +78,20 @@
 - [x] `<InquiryDialog />` / `<ListingForm />` / `<PaymentForm />` 收到 `code='PROFILE_INCOMPLETE'` 顯示 toast 含「Open Settings」action button，跳到 `/settings?prompt=incomplete`
 - [x] `updateCommercialProfile` server action（`src/actions/profile.ts`）
 
-**⚠️ 仍待實作（KYC document upload）：**
+**✅ KYC 文件與門檻（2026-05-21，migration 019）：**
 
-- [ ] `kyc` Storage bucket + RLS migration
-- [ ] `(app)/settings/kyc` 頁面 + `<KycUploadForm />`
-- [ ] 上傳到 `kyc` bucket，URL 寫入 `profiles.kyc_docs jsonb`
-- [ ] Admin 可在 `/admin/users/[id]` 檢視與升級 `kyc_level`
-- [ ] `createInquiry` / `submitPayment` 補 `kyc_level < 1` → 回 `{ error: { code: 'KYC_REQUIRED' } }`
-- [ ] Seller 自助升級流程：buyer → seller 的 role 切換需 admin 審核（在 admin/users 加按鈕）
+- [x] `kyc` Storage bucket + RLS（`019_kyc_storage_and_settings.sql`）
+- [x] `(app)/settings/kyc` + `<KycUploadForm />`（PDF/圖 ≤5MB → `kyc/{user_id}/{type}/{uuid}.ext`）
+- [x] `profiles.kyc_docs` jsonb 登記；`profiles_guard_kyc_level` trigger 防止使用者自調 `kyc_level`
+- [x] Admin `/admin/settings` 設定 `kyc_min_level_inquiry` / `kyc_min_level_listing`（預設 **0**）
+- [x] Admin `/admin/users` **KYC** 對話框：檢視文件 signed URL、手動設 level 0–3（audit_logs）
+- [x] **四級 KYC + 電話 OTP**（migration 020）：0 信箱、1 電話、2 文件審核、3 進階（admin）；列表顯示 pending 文件數；一鍵核准 → Level 2
+- [x] `createInquiry` / `createListing`（seller）檢查平台門檻 → `KYC_REQUIRED` + toast 導向 `/settings/kyc`
+
+**仍待（非 MVP 阻塞）：**
+
+- [ ] Seller 自助 buyer→seller role 切換需 admin 審核
+- [ ] `submitPayment` 是否也要 KYC 門檻（目前僅 inquiry + listing）
 
 ### A7. 部署與端到端煙霧測試（原 Step 9）
 
@@ -260,7 +266,7 @@ server actions / UI 元件實作：
 - [x] A3 簽名掃描可上傳並推進到 `contract_signed` 狀態（009 完成）+ 雙方簽名嵌入 PDF 預覽（commit 1620d8e）
 - [x] A4 **`order-documents`** bucket 建立完成（`010_storage_order_documents.sql`）；avatars/kyc/listings/chat 依需要時補
 - [x] A5 dispute / cancel 流程可走通（009 完成）
-- [ ] A6 KYC 上傳可運作（admin 可升級 level） — commercial profile gate ✅；KYC 文件上傳仍待
+- [x] A6 KYC 上傳 + admin 門檻 + 手動升級 level — commercial profile gate ✅；migration 019
 - [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，10 個 migration 已套用
 - [x] A7 full_prepay 端到端 happy path 通過（2026-05-15 走測 `ORD-TEST-MP6PL7MZ`）
 - [ ] A7 net_after_arrival 端到端 happy path 通過 + dispute / cancel / force-transition 走測

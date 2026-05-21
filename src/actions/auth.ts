@@ -23,6 +23,10 @@ export type ActionResult<T> =
         fieldErrors?: Record<string, string[]>;
         /** Optional list of missing/required field names for the UI. */
         fields?: string[];
+        /** KYC gate: minimum level required for the action. */
+        requiredLevel?: number;
+        /** KYC gate: caller's current kyc_level. */
+        currentLevel?: number;
       };
     };
 

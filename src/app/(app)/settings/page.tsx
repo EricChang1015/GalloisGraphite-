@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 
+import Link from "next/link";
+
 import { CommercialProfileForm } from "@/components/auth/CommercialProfileForm";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createServerClient } from "@/lib/supabase/server";
 import { findCommercialProfileGaps } from "@/lib/auth/commercial";
@@ -80,14 +83,19 @@ export default async function SettingsPage({
         />
       </section>
 
-      <section className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
-        <h2 className="text-sm font-semibold text-foreground">
-          KYC documents
-        </h2>
-        <p className="mt-1 text-xs">
-          KYC document upload is on the roadmap (ROADMAP §A6). Until it
-          ships, the admin team will collect any required documents over
-          email during your first transaction.
+      <section className="rounded-lg border border-border bg-card/40 p-6 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-foreground">
+            KYC verification
+          </h2>
+          <Button variant="outline" size="sm" render={<Link href="/settings/kyc" />}>
+            Manage KYC documents
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Verify your phone (Level 1) and upload ID or company documents for
+          Level 2. Level 3 is assigned by admin for trusted sellers. Gates may
+          require higher levels when enabled in admin settings.
         </p>
       </section>
     </div>

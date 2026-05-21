@@ -11,9 +11,20 @@ import {
   CategoryInputSchema,
   NewsInputSchema,
   SmsNotificationsToggleSchema,
+  SetUserKycLevelSchema,
+  UpdateKycThresholdsSchema,
 } from "@/lib/validations/admin";
+import { ApproveKycDocumentsSchema } from "@/lib/validations/kyc";
+import { levelAfterDocumentApproval } from "@/lib/kyc/levels";
+import {
+  parseKycDocs,
+  summarizeKycDocs,
+  type KycDocEntry,
+} from "@/lib/kyc/types";
 import {
   SMS_NOTIFICATIONS_KEY,
+  KYC_MIN_LEVEL_INQUIRY_KEY,
+  KYC_MIN_LEVEL_LISTING_KEY,
   isSmsGatewayConfigured,
 } from "@/lib/platform/settings";
 import type { ActionResult } from "./auth";
@@ -359,4 +370,192 @@ export async function updateSmsNotificationsEnabled(
   revalidatePath("/admin");
 
   return { data: true, error: null };
+}
+
+export async function updateKycThresholds(
+  input: z.infer<typeof UpdateKycThresholdsSchema>
+): Promise<ActionResult<true>> {
+  const { user, error: authError } = await requireAdmin();
+  if (!user) return { data: null, error: { message: authError! } };
+
+  const parsed = UpdateKycThresholdsSchema.safeParse(input);
+  if (!parsed.success) return { data: null, error: { message: "Invalid input." } };
+
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+
+  const rows = [
+    {
+      key: KYC_MIN_LEVEL_INQUIRY_KEY,
+      value: parsed.data.inquiryMinLevel,
+      updated_at: now,
+      updated_by: user.id,
+    },
+    {
+      key: KYC_MIN_LEVEL_LISTING_KEY,
+      value: parsed.data.listingMinLevel,
+      updated_at: now,
+      updated_by: user.id,
+    },
+  ];
+
+  const { error } = await admin.from("platform_settings").upsert(rows);
+  if (error) return { data: null, error: { message: error.message } };
+
+  await writeAuditLog(user.id, "update_kyc_thresholds", "platform_settings", user.id, {
+    inquiryMinLevel: parsed.data.inquiryMinLevel,
+    listingMinLevel: parsed.data.listingMinLevel,
+  });
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/users");
+
+  return { data: true, error: null };
+}
+
+export async function setUserKycLevel(
+  input: z.infer<typeof SetUserKycLevelSchema>
+): Promise<ActionResult<true>> {
+  const { user, error: authError } = await requireAdmin();
+  if (!user) return { data: null, error: { message: authError! } };
+
+  const parsed = SetUserKycLevelSchema.safeParse(input);
+  if (!parsed.success) return { data: null, error: { message: "Invalid input." } };
+
+  const admin = createAdminClient();
+  const { data: target } = await admin
+    .from("profiles")
+    .select("kyc_level, email")
+    .eq("id", parsed.data.userId)
+    .maybeSingle<{ kyc_level: number; email: string }>();
+
+  if (!target) return { data: null, error: { message: "User not found." } };
+
+  const { error } = await admin
+    .from("profiles")
+    .update({ kyc_level: parsed.data.kycLevel })
+    .eq("id", parsed.data.userId);
+
+  if (error) return { data: null, error: { message: error.message } };
+
+  await writeAuditLog(user.id, "set_user_kyc_level", "profile", parsed.data.userId, {
+    from: target.kyc_level,
+    to: parsed.data.kycLevel,
+    note: parsed.data.note ?? null,
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath("/settings");
+
+  return { data: true, error: null };
+}
+
+export async function approveKycDocuments(
+  input: z.infer<typeof ApproveKycDocumentsSchema>
+): Promise<ActionResult<{ kycLevel: number }>> {
+  const { user, error: authError } = await requireAdmin();
+  if (!user) return { data: null, error: { message: authError! } };
+
+  const parsed = ApproveKycDocumentsSchema.safeParse(input);
+  if (!parsed.success) return { data: null, error: { message: "Invalid input." } };
+
+  const admin = createAdminClient();
+  const { data: profile, error: readErr } = await admin
+    .from("profiles")
+    .select("kyc_level, kyc_docs")
+    .eq("id", parsed.data.userId)
+    .maybeSingle<{ kyc_level: number; kyc_docs: import("@/types/database").Json }>();
+
+  if (readErr) return { data: null, error: { message: readErr.message } };
+  if (!profile) return { data: null, error: { message: "User not found." } };
+
+  const docs = parseKycDocs(profile.kyc_docs);
+  const pending = docs.filter((d) => (d.status ?? "pending") === "pending");
+  if (pending.length === 0) {
+    return { data: null, error: { message: "No pending documents to approve." } };
+  }
+
+  const now = new Date().toISOString();
+  const updated = docs.map((d) =>
+    (d.status ?? "pending") === "pending"
+      ? {
+          ...d,
+          status: "approved" as const,
+          reviewed_at: now,
+          reviewed_by: user.id,
+        }
+      : d
+  );
+
+  const nextLevel = levelAfterDocumentApproval(profile.kyc_level);
+  const { error: updateErr } = await admin
+    .from("profiles")
+    .update({
+      kyc_docs: updated as unknown as import("@/types/database").Json,
+      kyc_level: nextLevel,
+    })
+    .eq("id", parsed.data.userId);
+
+  if (updateErr) return { data: null, error: { message: updateErr.message } };
+
+  await writeAuditLog(user.id, "approve_kyc_documents", "profile", parsed.data.userId, {
+    from: profile.kyc_level,
+    to: nextLevel,
+    approvedCount: pending.length,
+    note: parsed.data.note ?? null,
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath("/settings/kyc");
+
+  return { data: { kycLevel: nextLevel }, error: null };
+}
+
+export async function getUserKycForAdmin(userId: string): Promise<
+  ActionResult<{
+    kycLevel: number;
+    phone: string | null;
+    phoneVerifiedAt: string | null;
+    docSummary: ReturnType<typeof summarizeKycDocs>;
+    documents: Array<KycDocEntry & { signedUrl: string | null }>;
+  }>
+> {
+  const { user, error: authError } = await requireAdmin();
+  if (!user) return { data: null, error: { message: authError! } };
+
+  const admin = createAdminClient();
+  const { data: profile, error } = await admin
+    .from("profiles")
+    .select("kyc_level, kyc_docs, phone, phone_verified_at")
+    .eq("id", userId)
+    .maybeSingle<{
+      kyc_level: number;
+      kyc_docs: import("@/types/database").Json;
+      phone: string | null;
+      phone_verified_at: string | null;
+    }>();
+
+  if (error) return { data: null, error: { message: error.message } };
+  if (!profile) return { data: null, error: { message: "User not found." } };
+
+  const docs = parseKycDocs(profile.kyc_docs);
+  const withUrls: Array<KycDocEntry & { signedUrl: string | null }> = [];
+
+  for (const doc of docs) {
+    const { data: signed } = await admin.storage
+      .from("kyc")
+      .createSignedUrl(doc.storage_path, 60 * 60);
+    withUrls.push({ ...doc, signedUrl: signed?.signedUrl ?? null });
+  }
+
+  return {
+    data: {
+      kycLevel: profile.kyc_level,
+      phone: profile.phone,
+      phoneVerifiedAt: profile.phone_verified_at,
+      docSummary: summarizeKycDocs(docs),
+      documents: withUrls,
+    },
+    error: null,
+  };
 }

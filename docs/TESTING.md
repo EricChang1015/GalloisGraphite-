@@ -107,6 +107,14 @@ npm run qa:chat
 
 **通過標準**：7 項全過（單一 party thread、RLS 雙向讀寫、`chat_rooms` denorm）。詳見 **§3.5**。
 
+改動 **KYC（A6）** 時，額外執行：
+
+```bash
+npm run qa:kyc
+```
+
+**通過標準**：16 項全過（bucket、門檻預設 0、self-level guard、上傳、`kyc_docs`、admin override、gate 邏輯）。詳見 **§3.6**。
+
 ### Tier 1 — 靜態與型別
 
 ```bash
@@ -192,6 +200,75 @@ npm run qa:chat
 **不應出現**：訂單頁 Communication Tab、`?tab=communication`。
 
 測試帳號見 §1（Buyer / Seller 同密碼 `a1234567`）。
+
+---
+
+## 3.6 KYC（A6）— 合併 main 前必跑
+
+**模型**（migration 020）：
+
+| Level | 意義 | 如何達成 |
+|---|---|---|
+| 0 | 信箱登入（Supabase Auth） | 註冊預設 |
+| 1 | 電話驗證 | `/settings/kyc` SMS OTP（需 `SMS_*` 或 dev `PHONE_OTP_DEV_CODE`） |
+| 2 | 身分／文件已審 | Admin 核准 pending 文件（可跳過 Level 1） |
+| 3 | 進階／賣家上架 | 僅 Admin 手動 |
+
+`kyc_level` / `phone_verified_at` 使用者不可自改；上傳只寫 `kyc_docs`（status `pending`），不自動升級。
+平台門檻：`kyc_min_level_inquiry` / `kyc_min_level_listing`（0–3，預設 **0**）。
+
+### 自動化（Tier 0+）
+
+```bash
+npm run qa:kyc
+```
+
+| TC | 斷言 |
+|---|---|
+| TC-KYC-00 | 門檻預設 0；`kyc` bucket 私有；`trg_profiles_guard_kyc_level` |
+| TC-KYC-01 | 使用者 UPDATE `kyc_level` 被 trigger 還原 |
+| TC-KYC-02 | Seller 可 upload + append `kyc_docs`；level 不變 |
+| TC-KYC-03 | Service role 可設 `kyc_level` |
+| TC-KYC-04 | `min_level_listing=1` 時 level 0 被擋、level 1 通過 |
+
+**依賴 migration**：`019_kyc_storage_and_settings`（`npm run db:migrate`）。
+
+`verify-schema.mjs` 另含 5 項 KYC schema 斷言（Tier 0 `qa:preflight`）。
+
+### UI 自動化（需 production `start`）
+
+**先**在終端 A 啟動（確認 3000 未被佔用；若 `EADDRINUSE` 先關閉舊 process）：
+
+```bash
+npm run build && npm run start
+```
+
+**再**在終端 B 跑（腳本會檢查 server 可連線；auth cookie 會依 Supabase 規則自動分塊 >3180B）：
+
+```bash
+E2E_BASE_URL=http://127.0.0.1:3000 npm run qa:kyc:e2e
+```
+
+> 不要用 `npm run dev` 跑此腳本（與 `e2e-full-trading` 相同，production `start` 才穩定）。
+>
+> **常見失敗**：改 code 後沒有重新 `build` + 重啟 `start`，瀏覽器會出現
+> `This page couldn't load` / chunk 500 — 與 KYC 功能無關，重啟即可。
+
+| TC | 斷言 |
+|---|---|
+| TC-KYC-UI-01 | Seller `/settings/kyc` 可載入 |
+| TC-KYC-UI-02 | Buyer `/settings/kyc` 可載入 |
+| TC-KYC-UI-03 | Admin `/admin/settings` 門檻表單；`/admin/users` KYC dialog |
+
+### 手動 UI（約 5 分鐘）
+
+| # | 角色 | 動作 | 預期 |
+|---|---|---|---|
+| K1 | Seller | `/settings/kyc` 上傳 PDF | Toast 成功；列表出現檔名；level 仍 0 |
+| K2 | Admin | `/admin/users` → **KYC** → level 1 → Save | Seller level 變 1；`audit_logs` 有紀錄 |
+| K3 | Admin | `/admin/settings` 將 inquiry min 設 **1** | |
+| K4 | Buyer (level 0) | Market 詢價 | Toast `KYC_REQUIRED`；導向 `/settings/kyc` |
+| K5 | Admin | 門檻恢復 **0** | 詢價可送出 |
 
 ---
 

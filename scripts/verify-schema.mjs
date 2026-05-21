@@ -184,6 +184,42 @@ async function main() {
   `);
   check(partyIdx.length > 0, "idx_chat_rooms_party_pair exists");
 
+  console.log("\n=== KYC (019) ===");
+  const kycBucket = await q(`
+    select id, public from storage.buckets where id = 'kyc';
+  `);
+  check(kycBucket.length === 1, "storage.buckets kyc exists");
+  check(kycBucket[0]?.public === false, "kyc bucket is private");
+
+  const kycSettings = await q(`
+    select key, value from public.platform_settings
+     where key in ('kyc_min_level_inquiry', 'kyc_min_level_listing');
+  `);
+  const kycKeys = new Set(kycSettings.map((r) => r.key));
+  check(kycKeys.has("kyc_min_level_inquiry"), "platform_settings kyc_min_level_inquiry");
+  check(kycKeys.has("kyc_min_level_listing"), "platform_settings kyc_min_level_listing");
+
+  const kycTrigger = await q(`
+    select tgname from pg_trigger
+     where tgrelid = 'public.profiles'::regclass
+       and tgname = 'trg_profiles_guard_kyc_level';
+  `);
+  check(kycTrigger.length === 1, "trg_profiles_guard_kyc_level exists");
+
+  console.log("\n=== KYC phone / levels (020) ===");
+  const phoneCol = await q(`
+    select column_name from information_schema.columns
+     where table_schema = 'public' and table_name = 'profiles'
+       and column_name = 'phone_verified_at';
+  `);
+  check(phoneCol.length === 1, "profiles.phone_verified_at exists");
+
+  const otpTable = await q(`
+    select tablename from pg_tables
+     where schemaname = 'public' and tablename = 'phone_otp_challenges';
+  `);
+  check(otpTable.length === 1, "phone_otp_challenges table exists");
+
   console.log(`\n==== ${pass} passed · ${fail} failed ====`);
   process.exit(fail === 0 ? 0 : 1);
 }

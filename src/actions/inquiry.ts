@@ -9,6 +9,8 @@ import {
   describeCommercialGap,
   findCommercialProfileGaps,
 } from "@/lib/auth/commercial";
+import { checkKycGate } from "@/lib/kyc/gate";
+import { describeKycGateFailure } from "@/lib/kyc/messages";
 import { InquiryInputSchema, type InquiryInput } from "@/lib/validations/inquiry";
 import type { ActionResult } from "./auth";
 
@@ -48,6 +50,23 @@ export async function createInquiry(
         message: describeCommercialGap(missing),
         code: "PROFILE_INCOMPLETE",
         fields: missing,
+      },
+    };
+  }
+
+  const kycGate = await checkKycGate(user.id, "submit_inquiry");
+  if (!kycGate.ok) {
+    return {
+      data: null,
+      error: {
+        message: describeKycGateFailure(
+          kycGate.requiredLevel,
+          kycGate.currentLevel,
+          kycGate.action
+        ),
+        code: "KYC_REQUIRED",
+        requiredLevel: kycGate.requiredLevel,
+        currentLevel: kycGate.currentLevel,
       },
     };
   }
