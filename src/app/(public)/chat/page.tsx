@@ -2,7 +2,8 @@ import { Metadata } from "next";
 
 import { ChatPageBody } from "@/components/chat/ChatPageBody";
 import { PinAiToggle } from "@/components/chat/PinAiToggle";
-import { createServerClient } from "@/lib/supabase/server";
+import { getCurrentProfile, getCurrentUser } from "@/lib/auth/session";
+import type { AiChatUserAvatar } from "@/lib/profile/avatar";
 
 export const metadata: Metadata = {
   title: "AI Assistant",
@@ -11,13 +12,17 @@ export const metadata: Metadata = {
 };
 
 export default async function ChatPage() {
-  let isAuthenticated = false;
-  try {
-    const supabase = await createServerClient();
-    const { data } = await supabase.auth.getUser();
-    isAuthenticated = Boolean(data.user);
-  } catch {
-    isAuthenticated = false;
+  const user = await getCurrentUser();
+  const profile = await getCurrentProfile();
+  const isAuthenticated = Boolean(user);
+
+  let userAvatar: AiChatUserAvatar | null = null;
+  if (user && profile) {
+    userAvatar = {
+      full_name: profile.full_name,
+      company_name: profile.company_name,
+      avatar_url: profile.avatar_url,
+    };
   }
 
   return (
@@ -46,7 +51,10 @@ export default async function ChatPage() {
         </div>
         <PinAiToggle />
       </div>
-      <ChatPageBody isAuthenticated={isAuthenticated} />
+      <ChatPageBody
+        isAuthenticated={isAuthenticated}
+        userAvatar={userAvatar}
+      />
     </div>
   );
 }

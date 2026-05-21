@@ -20,7 +20,7 @@ export function CounterpartyCard({ profile, subtitle, className, children }: Pro
         className
       )}
     >
-      <UserAvatar profile={profile} size="lg" />
+      <UserAvatar profile={profile} size="lg" enlargeable />
       <div className="min-w-0 flex-1">
         <p className="font-medium truncate">{counterpartyLabel(profile)}</p>
         <p className="text-xs text-muted-foreground truncate">

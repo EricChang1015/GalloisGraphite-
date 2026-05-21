@@ -1,5 +1,6 @@
-import { createServerClient } from "@/lib/supabase/server";
 import { FloatingAiChat } from "@/components/chat/FloatingAiChat";
+import { getCurrentProfile, getCurrentUser } from "@/lib/auth/session";
+import type { AiChatUserAvatar } from "@/lib/profile/avatar";
 
 /**
  * Server component wrapper that resolves the Supabase auth state once and
@@ -11,14 +12,22 @@ import { FloatingAiChat } from "@/components/chat/FloatingAiChat";
  * server-only modules.
  */
 export async function AiChatLauncher() {
-  let isAuthenticated = false;
-  try {
-    const supabase = await createServerClient();
-    const { data } = await supabase.auth.getUser();
-    isAuthenticated = Boolean(data.user);
-  } catch {
-    isAuthenticated = false;
+  const user = await getCurrentUser();
+  const profile = await getCurrentProfile();
+
+  let userAvatar: AiChatUserAvatar | null = null;
+  if (user && profile) {
+    userAvatar = {
+      full_name: profile.full_name,
+      company_name: profile.company_name,
+      avatar_url: profile.avatar_url,
+    };
   }
 
-  return <FloatingAiChat isAuthenticated={isAuthenticated} />;
+  return (
+    <FloatingAiChat
+      isAuthenticated={Boolean(user)}
+      userAvatar={userAvatar}
+    />
+  );
 }

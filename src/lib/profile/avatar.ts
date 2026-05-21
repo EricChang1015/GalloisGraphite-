@@ -19,6 +19,12 @@ export type AvatarProfileFields = {
   avatar_url?: string | null;
 };
 
+/** Subset passed from server layouts into AI chat UI. */
+export type AiChatUserAvatar = Pick<
+  AvatarProfileFields,
+  "full_name" | "company_name" | "avatar_url"
+>;
+
 /** Stable object path: `<userId>/avatar.<ext>` */
 export function avatarObjectPath(userId: string, fileName: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase() || "jpg";

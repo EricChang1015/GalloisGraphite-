@@ -29,6 +29,7 @@ export function ConversationList({ conversations }: Props) {
           >
             <UserAvatar
               size="lg"
+              enlargeable
               profile={{
                 id: c.counterpartyId,
                 full_name: null,

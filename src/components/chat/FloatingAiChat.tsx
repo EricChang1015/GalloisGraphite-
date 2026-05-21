@@ -12,6 +12,7 @@ import {
   useActiveSessionId,
   useChatSessions,
 } from "@/lib/ai/sessions";
+import type { AiChatUserAvatar } from "@/lib/profile/avatar";
 import { cn } from "@/lib/utils";
 
 const HIDDEN_KEY = "mada.ai.hidden";
@@ -92,10 +93,12 @@ function setOpenInStorage(next: boolean) {
 
 interface FloatingAiChatProps {
   isAuthenticated?: boolean;
+  userAvatar?: AiChatUserAvatar | null;
 }
 
 export function FloatingAiChat({
   isAuthenticated = false,
+  userAvatar = null,
 }: FloatingAiChatProps) {
   const pathname = usePathname();
   // The /chat page renders the full panel inline; suppress the launcher
@@ -153,6 +156,7 @@ export function FloatingAiChat({
             <AiChat
               key={activeSessionId}
               isAuthenticated={isAuthenticated}
+              userAvatar={userAvatar}
               variant="compact"
               sessionId={activeSessionId}
               initialMessages={activeSession?.messages}

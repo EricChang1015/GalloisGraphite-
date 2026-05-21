@@ -17,6 +17,7 @@ import {
   avatarObjectPath,
   avatarPublicUrl,
 } from "@/lib/profile/avatar";
+import { prepareAvatarUpload } from "@/lib/profile/resizeAvatarImage";
 import type { AvatarProfileFields } from "@/lib/profile/avatar";
 
 interface Props {
@@ -45,12 +46,13 @@ export function AvatarUploader({ userId, profile }: Props) {
 
     setIsUploading(true);
     try {
+      const prepared = await prepareAvatarUpload(file);
       const supabase = createClient();
-      const path = avatarObjectPath(userId, file.name);
+      const path = avatarObjectPath(userId, prepared.name);
 
       const { error: uploadError } = await supabase.storage
         .from(AVATAR_BUCKET)
-        .upload(path, file, { cacheControl: "3600", upsert: true });
+        .upload(path, prepared, { cacheControl: "3600", upsert: true });
 
       if (uploadError) {
         toast.error(`Upload failed: ${uploadError.message}`);
@@ -104,7 +106,12 @@ export function AvatarUploader({ userId, profile }: Props) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
       <div className="relative shrink-0">
-        <UserAvatar profile={displayProfile} size="lg" className="size-20" />
+        <UserAvatar
+          profile={displayProfile}
+          size="lg"
+          className="size-20"
+          enlargeable
+        />
         <button
           type="button"
           className="absolute -bottom-1 -right-1 flex size-8 items-center justify-center rounded-full border border-border bg-card shadow-sm hover:bg-muted"
@@ -117,8 +124,9 @@ export function AvatarUploader({ userId, profile }: Props) {
       </div>
       <div className="space-y-2 text-sm">
         <p className="text-muted-foreground">
-          Upload a square photo (JPEG, PNG, or WebP, max 2 MB). Google sign-in
-          uses your Google profile picture until you replace it.
+          Upload a photo (JPEG, PNG, or WebP, max 2 MB). Images larger than
+          500×500 are resized before saving. Google sign-in uses your Google
+          picture until you replace it.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button

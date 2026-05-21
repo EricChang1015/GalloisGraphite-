@@ -4,6 +4,8 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SendHorizontal, Bot, User, LogIn } from "lucide-react";
+import { UserAvatar } from "@/components/profile/UserAvatar";
+import type { AiChatUserAvatar } from "@/lib/profile/avatar";
 import ReactMarkdown from "react-markdown";
 
 import { Button } from "@/components/ui/button";
@@ -59,6 +61,8 @@ function fromStoredMessages(stored: StoredMessage[]): UIMessage[] {
 
 interface AiChatProps {
   isAuthenticated?: boolean;
+  /** Logged-in user's profile photo for message bubbles. */
+  userAvatar?: AiChatUserAvatar | null;
   /**
    * Visual variant.
    *  - "full"    — full panel for /chat page (header + footer + larger paddings)
@@ -86,6 +90,7 @@ interface AiChatProps {
 
 export function AiChat({
   isAuthenticated = false,
+  userAvatar = null,
   variant = "full",
   headerActions,
   className,
@@ -208,20 +213,24 @@ export function AiChat({
                 message.role === "user" && "flex-row-reverse"
               )}
             >
-              <div
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full",
-                  message.role === "user"
-                    ? "bg-[color:var(--gold)] text-[color:var(--gold-foreground)]"
-                    : "bg-muted text-muted-foreground"
-                )}
-              >
-                {message.role === "user" ? (
-                  <User className="size-3.5" />
+              {message.role === "user" ? (
+                isAuthenticated && userAvatar ? (
+                  <UserAvatar
+                    profile={userAvatar}
+                    size="sm"
+                    className="size-7 shrink-0"
+                    enlargeable
+                  />
                 ) : (
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[color:var(--gold)] text-[color:var(--gold-foreground)]">
+                    <User className="size-3.5" />
+                  </div>
+                )
+              ) : (
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <Bot className="size-3.5" />
-                )}
-              </div>
+                </div>
+              )}
                 <div
                   className={cn(
                     "max-w-[80%] space-y-2 rounded-xl px-3 py-2 text-sm",

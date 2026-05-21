@@ -10,10 +10,12 @@ import {
   useActiveSessionId,
   useChatSessions,
 } from "@/lib/ai/sessions";
+import type { AiChatUserAvatar } from "@/lib/profile/avatar";
 import { cn } from "@/lib/utils";
 
 interface ChatPageBodyProps {
   isAuthenticated: boolean;
+  userAvatar?: AiChatUserAvatar | null;
 }
 
 /**
@@ -24,7 +26,10 @@ interface ChatPageBodyProps {
  * Session selection lives in localStorage; switching sessions remounts
  * AiChat (`key={sessionId}`) to cleanly reload its messages.
  */
-export function ChatPageBody({ isAuthenticated }: ChatPageBodyProps) {
+export function ChatPageBody({
+  isAuthenticated,
+  userAvatar = null,
+}: ChatPageBodyProps) {
   const sessions = useChatSessions();
   const storedActiveId = useActiveSessionId();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -74,6 +79,7 @@ export function ChatPageBody({ isAuthenticated }: ChatPageBodyProps) {
           <AiChat
             key={activeSessionId}
             isAuthenticated={isAuthenticated}
+            userAvatar={userAvatar}
             variant="full"
             sessionId={activeSessionId}
             initialMessages={activeSession?.messages}
