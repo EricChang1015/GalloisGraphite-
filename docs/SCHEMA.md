@@ -393,12 +393,14 @@ verify 後變 `paid`。
 | room_id | FK chat_rooms ON DELETE CASCADE |
 | sender_id | FK profiles |
 | content | text(可空,純圖片訊息) |
-| attachment_url | text(`chat` bucket Storage URL) |
+| attachment_url | text（現為 `order-documents`/`chat/{room_id}/...` 公開 URL） |
+| context_type | enum listing / order / inquiry（可空，018） |
+| context_id | uuid（可空） |
 | created_at | timestamptz |
 
-索引：`messages(room_id, created_at desc)`
+> ✅ Party DM 已實作（016–018）。見 ROADMAP §A2、TESTING §3.5。
 
-> ⚠️ 表結構就緒，但 `OrderChat` 組件、自動建房邏輯、`/messages` 列表頁待實作（見 ROADMAP §A2）。
+> ✅ Party DM 已實作（`016`–`018`）：`/messages` + `PartyChatPanel`。不做 per-order Communication Tab。
 
 ## 7. 內容
 

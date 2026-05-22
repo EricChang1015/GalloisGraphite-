@@ -391,7 +391,7 @@ select o.order_no, o.status, o.incoterm,
 | 進度條 | `<OrderProgressBar />` | ✅ | ✅ | 12 階段 + Payments X/Y |
 | 文件中心 | `<OrderDocumentsTab />` | 可選 | 可選 | |
 | 站內 IM | `MessageCounterpartyButton` / `/messages` | ✅ | ✅ | Party DM；`npm run qa:chat` |
-| KYC 上傳 | — | — | — | **未實作（A6）** |
+| KYC | `<KycUploadForm />` / Admin | 可選 | 可選 | `qa:kyc` §3.6 |
 
 ---
 
@@ -412,7 +412,7 @@ select o.order_no, o.status, o.incoterm,
 | # | 項目 | 影響 |
 |---|---|---|
 | 1 | ~~站內 IM（A2）~~ | ✅ 已實作（party DM）；合併前跑 §3.5 + `qa:chat` |
-| 2 | KYC 上傳（A6） | 僅 commercial profile gate，無 `kyc_level` 升級 UI |
+| 2 | ~~KYC（A6）~~ | ✅ `qa:kyc` + §3.6 |
 | 3 | 情境 B 正式走測紀錄 | 邏輯已實作，文件化腳本在本版補上，待人工跑一輪寫入 §8 |
 | 4 | dispute / cancel / force | 待 Tier 3 |
 | 5 | `bl_date_plus_N` cron | 需 Vercel cron + `bl_date`；日常 E2E 可略 |

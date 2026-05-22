@@ -23,7 +23,7 @@ Quick reference:
 - `docs/CONTRACT_TEMPLATE.md` — graphite sales contract template
 - `docs/LEGACY_CONTENT.md` — content migrated from old static madagraphite.com
 - `docs/COPY_DRAFTS.md` — marketing copy drafts
-- `supabase/migrations/` — SQL migrations (currently 001 → 010)
+- `supabase/migrations/` — SQL migrations (currently 001 → 021)
 - `.cursor/rules/migrations.mdc` — **migration authoring rules** (read before writing SQL)
 - `.env.example` — required environment variables
 

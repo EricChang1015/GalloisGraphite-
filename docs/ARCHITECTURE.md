@@ -86,8 +86,10 @@
 | `/inquiries/[id]` | **Inquiry detail**：quotation 歷史 timeline、`<QuotationForm />`（seller）、`<QuotationActions />`（accept / counter / decline） |
 | `/orders` | 買賣雙視角訂單列表 |
 | `/orders/[id]` | 7 個 Tab + **OrderProgressBar**：**Overview** / **Quotation** / **Contract**（含 buyer approve/reject + signed-scan upload） / **Payment** / **Shipment**（B/L、vessel、container、ETD/ATD/ETA/ATA） / **Documents**（13 種類型分組上傳） / **Timeline** |
-| `/messages` | ⚠️ **Placeholder（A2 待補）**：將顯示房間列表 |
-| `/settings` | 帳戶設定：commercial profile（full_name / company_name / country / phone）+ role/status/kyc badges +「Change password」連結；若 `?prompt=incomplete` 或 `profiles.{company_name,country}` 為空，最上方顯示黃色提示 banner |
+| `/messages` | Party DM 對話列表（`<ConversationList />`） |
+| `/messages/[userId]` | 與交易對手的 thread（`<PartyChatPanel />`） |
+| `/settings` | commercial profile + role/kyc；`?prompt=incomplete` 黃色 banner |
+| `/settings/kyc` | KYC 上傳 + 電話 OTP |
 
 **Layout**：`(app)/layout.tsx` → 左側 sidebar nav；側欄項目從 `src/lib/notifications/counts.ts` 取 `getUserActionCounts()`，於 Inquiries / Orders 顯示金色數字 badge（`inquiriesNeedingMyResponse` / `ordersNeedingMyAction`），Orders 額外在有 disputed 時補上紅色「!」badge，Settings 在 commercial profile 缺欄時顯示紅點。Counter helper 用 `React.cache()` per-request 記憶化，所以 sidebar + dashboard 共用一次查詢。
 
@@ -151,14 +153,12 @@ provider 為 POE OpenAI-compatible endpoint，回傳 `toUIMessageStreamResponse(
 | Bucket | 用途 | 訪問模式 | 現況 |
 |---|---|---|---|
 | `avatars` | 使用者頭像 | public read, self write | ✅ 已建立 — `021_avatars.sql` |
-| `kyc` | KYC 證件 | private（owner + admin） | ⚠️ 待建立 |
-| `contracts` | 合約簽名掃描（legacy） | private（訂單雙方 + admin） | ⚠️ 待建立（已被 `order-documents` 取代） |
-| **`order-documents`** | 訂單通用文件中心（合約簽名、發票、B/L、檢驗、付款證明…） | private（owner / 訂單雙方 / admin） | ✅ 已建立 — `010_storage_order_documents.sql` |
-| `payments` | 付款憑證圖 | private（buyer + admin） | ✅ 由 `order-documents` 內 `payment_proof` 路徑覆蓋（單一 bucket，路徑命名分類） |
-| `listings` | 商品圖 | public read, seller write | ⚠️ 待建立 |
-| `chat` | 聊天室附件 | private（chat members） | ⚠️ 待建立 |
+| `kyc` | KYC | private | ✅ `019`
+| **`order-documents`** | 訂單 + IM 附件 | private | ✅ `010`
+| `listings` | 商品圖 | public | ⚠️ 待建 |
+| `chat` | IM 專用 | private | 🟡 可選
 
-> 剩餘 buckets（avatars / kyc / listings / chat）待寫成 migration，請參考 [`ROADMAP.md` §A4](./ROADMAP.md)。
+> 待補 listings。見 ROADMAP §A4。
 > `010_storage_order_documents.sql` 已建立 `order-documents` bucket（private）並設好 RLS：
 > - SELECT：路徑首段為 `orders/<order_id>/...` 時，訂單雙方 / admin 可讀；其它路徑以上傳者 + admin 可讀
 > - INSERT：登入用戶可上傳，並由 server action 寫對應的 `order_documents` row
@@ -172,8 +172,7 @@ provider 為 POE OpenAI-compatible endpoint，回傳 `toUIMessageStreamResponse(
 alter publication supabase_realtime add table public.messages;
 ```
 
-→ 客戶端用 `supabase.channel('messages:room_id={uuid}')` + `postgres_changes` 監聽。
-**（`OrderChat` 組件待實作 — 見 ROADMAP §A2）**
+→ `usePartyMessages` + Realtime + 15s polling。UI：`<PartyChatPanel />`（Party DM，ROADMAP §A2）。
 
 ---
 
@@ -196,8 +195,10 @@ type ActionResult<T> =
 | `auth.ts` | `signUp` / `signIn` / `signOut` / `resendVerification` | — | Supabase Auth（email/password）；`signUp` 會偵測 Supabase 對「已存在帳號」的 silent no-op（`data.user.identities.length===0`）並回友善提示，導到 forgot-password 而非假裝寄信 |
 |  | `requestPasswordReset(email)` | — | 呼叫 `auth.resetPasswordForEmail`，redirect 到 `/auth/callback?type=recovery&next=/reset-password`；Google OAuth 用戶可藉此額外綁定 email/password identity |
 |  | `updatePassword(password)` | recovery session | 呼叫 `auth.updateUser({ password })` |
-| **`profile.ts`** | `updateCommercialProfile(input)` | self | 更新 `profiles.{full_name,company_name,country,phone}`；`/settings` 表單與「lazy-collect」入口都呼叫它 |
-| `components/auth/GoogleSignInButton.tsx` | client-side `supabase.auth.signInWithOAuth({ provider:'google' })` | — | 重導 Google → `/auth/callback` |
+| **`profile.ts`** | `updateCommercialProfile` | self | commercial profile |
+| **`chat.ts`** | Party DM actions | member | 016–018 |
+| **`kyc.ts`** | KYC / OTP | self | 019–020 |
+| `components/auth/GoogleSignInButton.tsx | client-side `supabase.auth.signInWithOAuth({ provider:'google' })` | — | 重導 Google → `/auth/callback` |
 | `listing.ts` | `createListing` | role ∈ {seller, admin}, status='active'；seller 角色另需 `company_name`/`country` non-empty | revalidate /listings, /market；commercial profile 缺漏時回 `error.code='PROFILE_INCOMPLETE'` |
 |  | `updateListing` / `pauseListing` / `resumeListing` | owner | revalidate /listings, /market |
 | `inquiry.ts` | `createInquiry` | role='buyer' + `profiles.company_name`/`country` non-empty | Email 通知 seller, revalidate /inquiries；commercial profile 缺漏時回 `error.code='PROFILE_INCOMPLETE'` |
@@ -572,6 +573,8 @@ supabase/migrations/
   017_party_chat_enums.sql          ← chat_type 加 party；chat_message_context_type enum
   018_party_chat.sql                ← Party DM thread + 合併 legacy order rooms
   019_kyc_storage_and_settings.sql  ← kyc bucket + platform_settings 門檻 seed（inquiry/listing min=0）+ profiles kyc_level 防自改 trigger
+  020_kyc_phone_and_levels.sql      ← 四級 KYC + OTP
+  021_avatars.sql                   ← avatars bucket
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）
@@ -609,10 +612,10 @@ npm run db:types             # 重新生成 src/types/database.ts
 | 7 | 簽名合約預覽嵌入買賣雙方簽名 + 下載 | ✅ 已完成 | `<ContractPreview />` 內嵌雙方 signed scan（image/PDF），可下載合併 PDF |
 | 8 | 付款證明上傳（非加密貨幣方式） | ✅ 已完成 | `<PaymentForm />` 對 `bank_transfer / usdi / mup` 顯示檔案上傳 input，存到 `order-documents` |
 | 9 | Full-prepay 端到端流程煙霧測試 | ✅ 已驗證 | 2026-05-15 走測 `ORD-TEST-MP6PL7MZ`：quotation → contract draft/approve/sign → payment submit/verify → ready/shipped/in_transit/arrived → customs_cleared → completed |
-| 10 | Net-after-arrival 端到端流程煙霧測試 | ⚠️ 待執行 | UI / actions 路徑相同，僅分支跳轉時點不同；需要實際走一次驗證 |
-| 11 | 站內 IM（A2） | ⚠️ 待實作 | schema 已就位（`chat_rooms` / `chat_members` / `messages`）；`OrderChat` 元件、自動建房、`/messages` 列表頁都未做 |
-| 12 | 其餘 Storage buckets（avatars / kyc / listings / chat） | ⚠️ 待實作 | 用到該功能時補上 |
-| 13 | KYC 上傳 + lazy-collect commercial profile（A6） | 🟡 部分完成 | Commercial profile gate（`createInquiry` / `createListing` / `submitPayment` 缺欄位時回 `error.code='PROFILE_INCOMPLETE'`）、`/settings` 編輯頁、`<CommercialProfileForm />`、client toast 帶 "Open Settings" action 已完成；KYC 文件上傳 + admin 升級 kyc_level 仍待 |
+| 10 | 分期付款走測（情境 B） | ⚠️ 待執行 | TESTING §4 |
+| 11 | 站內 IM — Party DM（A2） | ✅ 已完成 | `016`–`018` |
+| 12 | Storage `listings` | ⚠️ 待實作 | avatars/kyc/order-documents ✅ |
+| 13 | KYC（A6） | ✅ 核心完成 | `019`–`020` |
 | 14 | `(app)` / `admin` layout 缺 Logout 按鈕 | ✅ 已完成 | `(app)/layout.tsx` 與 `admin/layout.tsx` 已掛上 `<Navbar />`，desktop 有 LogoutButton 在右上、mobile 有 `<MobileNav />` 抽屜 |
 | 15 | Dashboard 待辦通知不完整（要進 Inquiries 才知道有待處理項） | ✅ 已完成 | `src/lib/notifications/counts.ts` 統一計算 sidebar / dashboard 上的 action-needed 數字；`(app)/layout.tsx` 與 `admin/layout.tsx` 顯示金 / 紅 badge，dashboard 加上 incomplete-profile banner + Priority Actions 區塊 + Active Orders「Your turn」/「Disputed」hint |
 | 16 | Payment 由 admin 主審造成 admin 成為瓶頸 + Resend domain 未驗證導致通知信收不到 | ✅ 已完成 | **migration 015** 把 update RLS 改為 seller-of-order or admin；`verifyPayment` 改 role check + UI（`<PaymentVerifyActions />` 抽到 `src/components/order/`，admin/seller 共用，以 `reviewerLabel` 分頭顯示）；email service 從 Resend 改 `nodemailer` + AWS SES SMTP（`src/lib/email/smtp.ts`），`/admin/settings` 加「Send test email」一鍵驗證；通知矩陣調整為 `submitPayment` → seller + admin CC，`verifyPayment` 通知信標示 reviewer 角色 |

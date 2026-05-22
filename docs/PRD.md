@@ -50,14 +50,14 @@
 
 詳見 [`ROADMAP.md` §A](./ROADMAP.md#a-mvp-補完項上線前必做)：
 
-- ~~**A1** Schema 對齊（payments / news / orders）~~ ✅ 已完成（migration 005）
-- **A2** 站內 IM（schema 已就位，但 `/messages` 與 `OrderChat` 待實作）
-- ~~**A3** 合約簽名掃描上傳 UI~~ ✅ 已完成（009 + `<SignedScanUploader />`，並可嵌入簽名後 PDF 預覽下載）
-- ~~**A4** `order-documents` Storage bucket + RLS~~ ✅ 已完成（migration 010）；其餘 buckets（avatars / kyc / listings / chat）依需要時補
-- ~~**A5** Disputed / Cancelled UI 觸發點~~ ✅ 已完成（009 + `<OrderPhaseActions />`）
-- **A6** KYC 文件上傳（簡易版，提升 `kyc_level`） — commercial profile gate ✅；KYC 文件上傳仍待
-- **A7** 部署 ✅；full_prepay 端到端煙霧測試 ✅（2026-05-15）；net_after_arrival 走測待補
-- ~~**B1** B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心、回合制合約）~~ ✅ 已完成（migrations 007 + 009）
+- ~~**A1** Schema 對齊~~ ✅ migration 005
+- ~~**A2** Party DM~~ ✅ migrations 016–018
+- ~~**A3** 合約簽名掃描~~ ✅ 009
+- ~~**A4** Storage~~ ✅ order-documents/kyc/avatars；待 listings
+- ~~**A5** Disputed/Cancelled~~ ✅
+- ~~**A6** KYC~~ ✅ 019–020
+- **A7** 部署 ✅；情境 A ✅；待情境 B / dispute / RLS
+- ~~**B1** B2B 全流程~~ ✅ 007+009；付款 013/014
 
 ### OUT OF SCOPE（此次 MVP 不做）
 
@@ -173,11 +173,9 @@ quotation_pending → quoted ↔ negotiating
 > 部分情況回傳 size hint 為 0 導致沒付完款的訂單被誤推到 `completed`（ORD-260520-601b6b
 > 案例）。現改為 `select("id", { count: "exact", head: true })` 取真實 count。
 
-### 4.6 站內 IM ⚠️ 待實作（A2）
-- 建立訂單時自動建 `chat_rooms (type='order')` + `chat_members(buyer, seller)`
-- Realtime via Supabase `postgres_changes` event on `messages`
-- 支援文字 + 圖片附件（Storage `chat` bucket，A4 待建）
-- Admin 可選擇加入
+### 4.6 站內 IM ✅ Party DM（A2）
+- `party` thread；`/messages`；`usePartyMessages`（Realtime + polling）
+- 不做訂單 Communication Tab；`npm run qa:chat`
 
 ## 5. 非功能需求
 
@@ -220,3 +218,4 @@ quotation_pending → quoted ↔ negotiating
 | 2026-05-15 | docs 773411c：完成 full-prepay 端到端走測（`ORD-TEST-MP6PL7MZ`）；A4 關閉，A7 full-prepay happy path 勾選；OrderProgressBar 在 `completed` 狀態 polish |
 | 2026-05-19 | refactor(orders) decouple-payment：付款從訂單時間軸抽離，新增 `payment_schedules`（migration 013/014）；訂單狀態機簡化為 12 階段線性；Incoterm 限縮 FOB/CFR/CIF；新增 `<PaymentScheduleBuilder />`、`<PaymentScheduleTable />`、`<MilestoneActionButtons />`、`/api/cron/payment-schedule`；移除 `payment_terms` / `payment_due_days` 欄位（hard cutover，舊測試資料清空） |
 | 2026-05-20 | feat(payment/email/shipment) seller-review-and-ses：(1) Payment 改 seller 主審 admin 覆審（migration 015 `payments_seller_or_admin_update`，`<PaymentVerifyActions />` 抽到 `src/components/order/` 雙處使用）；(2) Email 從 Resend 改 nodemailer + AWS SES SMTP（`src/lib/email/smtp.ts`，`/admin/settings` 加「Send test email」）；(3) `acceptQuotation` 寫入 `orders.incoterm = q.incoterm`，解決議價更動後合約 draft 仍用 listing 原 Incoterm 的 bug；(4) `<ShipmentForm />` 加 optional B/L + Inspection Report 上傳；(5) `submitPayment` 接受 `scheduled` 期讓買家「Pay Early」；(6) `autoCompleteIfReady` 修正 Supabase count 用法（`{ count: "exact", head: true }`），解決 ORD-260520-601b6b 未付完款就被推到 completed 的 bug；(7) seller `getUserActionCounts` 加 `paymentsAwaitingMyReview` |
+| 2026-05-22 | docs: 同步 A2 Party DM、A6 KYC、migration 021 與 QA 現況（ARCHITECTURE / ROADMAP / PRD / SCHEMA / TESTING / AGENTS） |
