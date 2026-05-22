@@ -37,6 +37,21 @@ export default async function AdminCategoriesPage() {
       created_at: string;
     }[]>();
 
+  // Count listings per category so admins can see usage at a glance
+  // before deactivating. Service-role client so we see all rows.
+  const categoryIds = (categories ?? []).map((c) => c.id);
+  const listingCounts = new Map<string, number>();
+  if (categoryIds.length > 0) {
+    const { data: countRows } = await admin
+      .from("listings")
+      .select("category_id")
+      .in("category_id", categoryIds);
+    for (const row of countRows ?? []) {
+      const id = (row as { category_id: string }).category_id;
+      listingCounts.set(id, (listingCounts.get(id) ?? 0) + 1);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -57,6 +72,7 @@ export default async function AdminCategoriesPage() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Specification</TableHead>
+              <TableHead className="text-right">Listings</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
@@ -65,6 +81,7 @@ export default async function AdminCategoriesPage() {
           <TableBody>
             {(categories ?? []).map((c) => {
               const spec = parseCategorySpec(c.spec_schema);
+              const usageCount = listingCounts.get(c.id) ?? 0;
               return (
                 <TableRow
                   key={c.id}
@@ -86,6 +103,22 @@ export default async function AdminCategoriesPage() {
                     <div className="text-[10px] mt-1 text-muted-foreground/70">
                       ≥ {spec.size_distribution_min_pct}% match mesh
                     </div>
+                  </TableCell>
+                  <TableCell className="text-right align-top tabular-nums">
+                    {usageCount > 0 ? (
+                      <span
+                        className={
+                          usageCount > 0 && c.is_active
+                            ? "font-medium"
+                            : "text-muted-foreground"
+                        }
+                        title={`${usageCount} listing(s) reference this category`}
+                      >
+                        {usageCount}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">0</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-xs truncate align-top">
                     {c.description ?? "—"}

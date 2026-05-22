@@ -11,6 +11,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PlusIcon } from "lucide-react";
+import {
+  parseCategorySpec,
+  parseListingSpecs,
+  resolveListingSpecs,
+} from "@/lib/categories/spec";
 
 export const metadata = { title: "My Listings — Mada Graphite" };
 
@@ -20,19 +25,26 @@ export default async function ListingsPage() {
 
   const { data: listings } = await supabase
     .from("listings")
-    .select("id, title, quantity, unit, unit_price, currency, status, created_at, product_categories(name)")
+    .select(
+      "id, title, quantity, min_order_quantity, unit, unit_price, currency, status, created_at, specs, product_categories(name, spec_schema)"
+    )
     .eq("seller_id", user!.id)
     .order("created_at", { ascending: false })
     .returns<{
       id: string;
       title: string;
       quantity: number;
+      min_order_quantity: number | null;
       unit: string;
       unit_price: number;
       currency: string;
       status: string;
       created_at: string;
-      product_categories: { name: string } | null;
+      specs: Record<string, unknown> | null;
+      product_categories: {
+        name: string;
+        spec_schema: Record<string, unknown> | null;
+      } | null;
     }[]>();
 
   const statusColor: Record<string, string> = {
@@ -78,32 +90,53 @@ export default async function ListingsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {listings.map((l) => (
-                <TableRow key={l.id}>
-                  <TableCell>
-                    <Link href={`/market/${l.id}`} className="hover:underline font-medium">
-                      {l.title}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {l.product_categories?.name ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {l.quantity.toLocaleString()} {l.unit}
-                  </TableCell>
-                  <TableCell className="text-right text-amber-400 font-medium">
-                    {l.unit_price} {l.currency}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={statusColor[l.status] ?? ""}>
-                      {l.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {new Date(l.created_at).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {listings.map((l) => {
+                const spec = parseCategorySpec(l.product_categories?.spec_schema);
+                const overrides = parseListingSpecs(l.specs);
+                const resolved = resolveListingSpecs(spec, overrides);
+                return (
+                  <TableRow key={l.id}>
+                    <TableCell>
+                      <Link
+                        href={`/market/${l.id}`}
+                        className="hover:underline font-medium"
+                      >
+                        {l.title}
+                      </Link>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {resolved.mesh_size} · {resolved.fixed_carbon} C
+                      </p>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {l.product_categories?.name ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {l.quantity.toLocaleString()} {l.unit}
+                      {l.min_order_quantity != null &&
+                        l.min_order_quantity > 0 && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Min order:{" "}
+                            {l.min_order_quantity.toLocaleString()} {l.unit}
+                          </p>
+                        )}
+                    </TableCell>
+                    <TableCell className="text-right text-amber-400 font-medium">
+                      {l.unit_price} {l.currency}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={statusColor[l.status] ?? ""}
+                      >
+                        {l.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {new Date(l.created_at).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

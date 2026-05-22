@@ -4,6 +4,11 @@ import {
   MarketListingCard,
   type MarketListingItem,
 } from "@/components/market/MarketListingCard";
+import {
+  parseCategorySpec,
+  parseListingSpecs,
+  resolveListingSpecs,
+} from "@/lib/categories/spec";
 
 export const metadata = { title: "Market — [REDACTED]" };
 
@@ -14,9 +19,9 @@ export default async function MarketPage() {
   const { data: listings } = await supabase
     .from("listings")
     .select(
-      `id, title, quantity, unit, unit_price, currency, incoterm, origin_location,
-       available_from, available_to, seller_id,
-       product_categories(name),
+      `id, title, quantity, min_order_quantity, unit, unit_price, currency, incoterm, origin_location,
+       available_from, available_to, seller_id, specs,
+       product_categories(name, spec_schema),
        seller:profiles!listings_seller_id_fkey(id, full_name, company_name, country)`
     )
     .eq("status", "active")
@@ -26,6 +31,7 @@ export default async function MarketPage() {
         id: string;
         title: string;
         quantity: number;
+        min_order_quantity: number | null;
         unit: string;
         unit_price: number;
         currency: string;
@@ -34,7 +40,11 @@ export default async function MarketPage() {
         available_from: string | null;
         available_to: string | null;
         seller_id: string;
-        product_categories: { name: string } | null;
+        specs: Record<string, unknown> | null;
+        product_categories: {
+          name: string;
+          spec_schema: Record<string, unknown> | null;
+        } | null;
         seller: {
           id: string;
           full_name: string | null;
@@ -44,25 +54,34 @@ export default async function MarketPage() {
       }[]
     >();
 
-  const items: MarketListingItem[] = (listings ?? []).map((l) => ({
-    id: l.id,
-    title: l.title,
-    quantity: l.quantity,
-    unit: l.unit,
-    unit_price: l.unit_price,
-    currency: l.currency,
-    incoterm: l.incoterm,
-    origin_location: l.origin_location,
-    available_from: l.available_from,
-    available_to: l.available_to,
-    categoryName: l.product_categories?.name ?? "—",
-    seller: {
-      id: l.seller?.id ?? l.seller_id,
-      full_name: l.seller?.full_name ?? null,
-      company_name: l.seller?.company_name ?? null,
-      country: l.seller?.country ?? null,
-    },
-  }));
+  const items: MarketListingItem[] = (listings ?? []).map((l) => {
+    const spec = parseCategorySpec(l.product_categories?.spec_schema);
+    const overrides = parseListingSpecs(l.specs);
+    const resolved = resolveListingSpecs(spec, overrides);
+    // Compact "+100 Mesh · 94% C" chip for the card.
+    const specChip = `${resolved.mesh_size} · ${resolved.fixed_carbon} C`;
+    return {
+      id: l.id,
+      title: l.title,
+      quantity: l.quantity,
+      min_order_quantity: l.min_order_quantity,
+      unit: l.unit,
+      unit_price: l.unit_price,
+      currency: l.currency,
+      incoterm: l.incoterm,
+      origin_location: l.origin_location,
+      available_from: l.available_from,
+      available_to: l.available_to,
+      categoryName: l.product_categories?.name ?? "—",
+      specChip,
+      seller: {
+        id: l.seller?.id ?? l.seller_id,
+        full_name: l.seller?.full_name ?? null,
+        company_name: l.seller?.company_name ?? null,
+        country: l.seller?.country ?? null,
+      },
+    };
+  });
 
   return (
     <div className="space-y-6">

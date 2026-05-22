@@ -36,7 +36,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
   const { data: listing } = await supabase
     .from("listings")
     .select(
-      `id, seller_id, category_id, title, specs, quantity, unit, unit_price, currency,
+      `id, seller_id, category_id, title, specs, quantity, min_order_quantity, unit, unit_price, currency,
        incoterm, origin_location, available_from, available_to, description, images, status,
        product_categories(name, spec_schema),
        profiles!listings_seller_id_fkey(id, full_name, company_name, country)`
@@ -49,6 +49,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
       title: string;
       specs: Record<string, unknown>;
       quantity: number;
+      min_order_quantity: number | null;
       unit: string;
       unit_price: number;
       currency: string;
@@ -127,7 +128,13 @@ export default async function ListingDetailPage({ params }: PageProps) {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 text-sm">
         {[
-          ["Quantity", `${listing.quantity.toLocaleString()} ${listing.unit}`],
+          ["Available", `${listing.quantity.toLocaleString()} ${listing.unit}`],
+          listing.min_order_quantity != null && listing.min_order_quantity > 0
+            ? [
+                "Min Order",
+                `${listing.min_order_quantity.toLocaleString()} ${listing.unit}`,
+              ]
+            : null,
           ["Unit Price", `${listing.unit_price} ${listing.currency}/${listing.unit}`],
           ["Incoterm", listing.incoterm],
           ["Origin", listing.origin_location],
@@ -193,9 +200,15 @@ export default async function ListingDetailPage({ params }: PageProps) {
             id: listing.id,
             seller_id: listing.seller_id,
             category_id: listing.category_id,
+            title: listing.title,
             unit_price: listing.unit_price,
             currency: listing.currency,
             unit: listing.unit,
+            quantity: listing.quantity,
+            min_order_quantity: listing.min_order_quantity,
+            category_name: listing.product_categories?.name ?? null,
+            // Compact spec chip for the dialog summary card.
+            spec_summary: `${resolved.mesh_size} · ${resolved.fixed_carbon} C`,
           }}
         />
       </div>

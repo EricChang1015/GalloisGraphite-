@@ -11,6 +11,8 @@ export type MarketListingItem = {
   id: string;
   title: string;
   quantity: number;
+  /** Optional MOQ (null when seller didn't set one). */
+  min_order_quantity?: number | null;
   unit: string;
   unit_price: number;
   currency: string;
@@ -19,6 +21,8 @@ export type MarketListingItem = {
   available_from: string | null;
   available_to: string | null;
   categoryName: string;
+  /** Compact spec chip e.g. "+100 Mesh · 94% C". */
+  specChip?: string;
   seller: CounterpartyProfile;
 };
 
@@ -38,14 +42,27 @@ export function MarketListingCard({ listing, currentUserId }: Props) {
               {listing.categoryName}
             </Badge>
           </div>
+          {listing.specChip && (
+            <p className="text-xs text-muted-foreground pt-1">
+              {listing.specChip}
+            </p>
+          )}
         </CardHeader>
         <CardContent className="space-y-2 text-sm flex-1">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Qty</span>
+            <span className="text-muted-foreground">Available</span>
             <span className="font-medium">
               {listing.quantity.toLocaleString()} {listing.unit}
             </span>
           </div>
+          {listing.min_order_quantity != null && listing.min_order_quantity > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Min order</span>
+              <span className="font-medium">
+                {listing.min_order_quantity.toLocaleString()} {listing.unit}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Price</span>
             <span className="font-semibold text-amber-400">
