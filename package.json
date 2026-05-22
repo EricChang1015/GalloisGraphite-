@@ -19,7 +19,9 @@
     "qa:chat": "node scripts/qa-chat-buyer-seller.mjs",
     "qa:kyc": "node scripts/qa-kyc.mjs",
     "qa:kyc:e2e": "node scripts/e2e-kyc.mjs",
-    "qa:e2e-full": "node scripts/e2e-full-trading.mjs"
+    "qa:e2e-full": "node scripts/e2e-full-trading.mjs",
+    "qa:spec-helpers": "node --experimental-strip-types --no-warnings scripts/test-listing-spec-helpers.mjs",
+    "qa:listing-moq": "node scripts/smoke-listing-moq.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.62",

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 清除本 session 走訪 / smoke test seed 的資料：
-//   - listings.title LIKE 'SMOKE · %' 或 'BROWSER · %' 或 'TEST · MADA1%'
+//   - listings.title LIKE 'SMOKE · %' 或 'BROWSER · %' 或 'TEST · MADA1%' (legacy) 或 'TEST · Flake Graphite%'
 //   - 連帶 inquiries / quotations / orders / payments / payment_schedules / contracts
 import { readFileSync } from "node:fs";
 
@@ -37,7 +37,10 @@ const before = await q(`
   select id, title from public.listings
    where title like 'SMOKE · %'
       or title like 'BROWSER · %'
-      or title like 'TEST · MADA1%';
+      or title like 'TEST · MADA1%'
+      or title like 'TEST · Flake Graphite%'
+      or title like 'SMOKE_MOQ%'
+      or description like 'SMOKE_MOQ%';
 `);
 console.log(`  found ${before.length} listings`);
 for (const l of before) console.log(`   - ${l.id}  ${l.title}`);
@@ -80,6 +83,9 @@ const after = await q(`
   select count(*)::int as count from public.listings
    where title like 'SMOKE · %'
       or title like 'BROWSER · %'
-      or title like 'TEST · MADA1%';
+      or title like 'TEST · MADA1%'
+      or title like 'TEST · Flake Graphite%'
+      or title like 'SMOKE_MOQ%'
+      or description like 'SMOKE_MOQ%';
 `);
 console.log(`\n✓ Done. listings remaining with test prefix: ${after[0].count}`);

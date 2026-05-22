@@ -76,7 +76,8 @@ function escape(v) {
 const SELLER = "c73251fe-f0bf-47a7-a308-82134929c8dd"; // +seller@
 const BUYER = "c67b3042-dbac-42a1-9a46-e093faea62dc"; // +buyer@
 const ADMIN = SELLER; // anyone with a uuid; we don't enforce admin role at SQL layer
-const CATEGORY = "1f135ab2-7017-433d-95f6-247ee5278c86"; // MADA1 — +100 Mesh
+// Same UUID as before; migration 022 renamed it to "Flake Graphite +100 Mesh".
+const CATEGORY = "1f135ab2-7017-433d-95f6-247ee5278c86"; // Flake Graphite +100 Mesh
 
 // Track created order IDs so --cleanup can remove them
 const createdOrderIds = [];

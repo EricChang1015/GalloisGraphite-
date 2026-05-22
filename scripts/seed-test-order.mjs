@@ -37,7 +37,8 @@ async function q(sql) {
 
 const SELLER = "c73251fe-f0bf-47a7-a308-82134929c8dd"; // +seller@
 const BUYER = "c67b3042-dbac-42a1-9a46-e093faea62dc"; // +buyer@
-const CATEGORY = "1f135ab2-7017-433d-95f6-247ee5278c86"; // MADA1 — +100 Mesh
+// Same UUID as before, renamed to "Flake Graphite +100 Mesh" by migration 022.
+const CATEGORY = "1f135ab2-7017-433d-95f6-247ee5278c86"; // Flake Graphite +100 Mesh
 
 // Create unique IDs for this run
 const listingId = randomUUID();
@@ -54,7 +55,7 @@ await q(`
   insert into public.listings (id, seller_id, category_id, title, specs, quantity, unit, origin_location, unit_price, currency, incoterm, description, status)
   values (
     '${listingId}', '${SELLER}', '${CATEGORY}',
-    'TEST · MADA1 +100 Mesh · 50 MT',
+    'TEST · Flake Graphite +100 Mesh · 50 MT',
     '{"fixed_carbon":"95-97%","ash":"<3%","moisture":"<0.5%"}'::jsonb,
     50, 'MT', 'Toamasina, Madagascar',
     4500, 'USDT', 'CFR',
