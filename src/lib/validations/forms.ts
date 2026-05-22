@@ -4,6 +4,7 @@ import {
   IncotermSchema,
   PaymentScheduleArraySchema,
 } from "./payment-schedule";
+import { ListingSpecValuesSchema } from "@/lib/categories/spec";
 
 export const SubmitPaymentSchema = z.object({
   order_id: z.string().uuid(),
@@ -77,7 +78,7 @@ export const CancelOrderSchema = z.object({
 export const ListingInputSchema = z.object({
   category_id: z.string().uuid(),
   title: z.string().min(3).max(200),
-  specs: z.record(z.string(), z.unknown()).default({}),
+  specs: ListingSpecValuesSchema.default({}),
   quantity: z.number().positive(),
   unit: z.enum(["MT", "KG"]).default("MT"),
   origin_location: z.string().min(1),

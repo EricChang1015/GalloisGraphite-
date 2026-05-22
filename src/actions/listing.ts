@@ -20,7 +20,13 @@ export async function createListing(
   if (!parsed.success) {
     return {
       data: null,
-      error: { message: "Invalid input.", fieldErrors: z.flattenError(parsed.error).fieldErrors },
+      error: {
+        message: "Invalid input.",
+        fieldErrors: z.flattenError(parsed.error).fieldErrors as Record<
+          string,
+          string[]
+        >,
+      },
     };
   }
 

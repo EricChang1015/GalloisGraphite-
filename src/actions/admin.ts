@@ -162,7 +162,7 @@ export async function upsertCategory(
   const { id, ...fields } = parsed.data;
   const dbFields = {
     ...fields,
-    spec_schema: fields.spec_schema as import("@/types/database").Json,
+    spec_schema: fields.spec_schema as unknown as import("@/types/database").Json,
   };
 
   let result: { id: string } | null = null;
@@ -210,6 +210,27 @@ export async function deleteCategory(categoryId: string): Promise<ActionResult<t
   await writeAuditLog(user.id, "deactivate_category", "category", categoryId);
 
   revalidatePath("/admin/categories");
+  revalidatePath("/market");
+
+  return { data: true, error: null };
+}
+
+export async function reactivateCategory(categoryId: string): Promise<ActionResult<true>> {
+  const { user, error: authError } = await requireAdmin();
+  if (!user) return { data: null, error: { message: authError! } };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("product_categories")
+    .update({ is_active: true })
+    .eq("id", categoryId);
+
+  if (error) return { data: null, error: { message: error.message } };
+
+  await writeAuditLog(user.id, "reactivate_category", "category", categoryId);
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/market");
 
   return { data: true, error: null };
 }

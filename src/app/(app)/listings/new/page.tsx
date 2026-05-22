@@ -8,10 +8,15 @@ export default async function NewListingPage() {
 
   const { data: categories } = await supabase
     .from("product_categories")
-    .select("id, name")
+    .select("id, name, description, spec_schema")
     .eq("is_active", true)
     .order("name")
-    .returns<{ id: string; name: string }[]>();
+    .returns<{
+      id: string;
+      name: string;
+      description: string | null;
+      spec_schema: Record<string, unknown> | null;
+    }[]>();
 
   return (
     <div className="space-y-6">
