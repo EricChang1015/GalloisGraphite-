@@ -28,11 +28,21 @@ const statusColor: Record<string, string> = {
 export default async function InquiriesPage() {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  // See ListingsPage for the rationale: middleware should have
+  // redirected anonymous traffic; this is a defensive bail-out for the
+  // edge case where a stale cookie slips through.
+  if (!user) {
+    return (
+      <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+        Your session expired. Please sign in again.
+      </div>
+    );
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", user!.id)
+    .eq("id", user.id)
     .single<{ role: string }>();
 
   const isSeller = profile?.role === "seller" || profile?.role === "admin" || profile?.role === "super_admin";
@@ -43,7 +53,7 @@ export default async function InquiriesPage() {
       .select(
         "id, status, requested_qty, target_price, destination, message, created_at, product_categories(name), profiles!inquiries_seller_id_fkey(company_name)"
       )
-      .eq("buyer_id", user!.id)
+      .eq("buyer_id", user.id)
       .order("created_at", { ascending: false })
       .returns<{
         id: string;
@@ -62,7 +72,7 @@ export default async function InquiriesPage() {
           .select(
             "id, status, requested_qty, target_price, destination, message, created_at, product_categories(name), profiles!inquiries_buyer_id_fkey(company_name, country)"
           )
-          .eq("seller_id", user!.id)
+          .eq("seller_id", user.id)
           .order("created_at", { ascending: false })
           .returns<{
             id: string;

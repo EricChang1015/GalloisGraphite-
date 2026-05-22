@@ -22,13 +22,24 @@ export const metadata = { title: "My Listings — Mada Graphite" };
 export default async function ListingsPage() {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  // Middleware (`src/proxy.ts`) should have redirected unauthenticated
+  // visitors before they ever hit this page. Belt-and-braces: bail out
+  // cleanly if a stale session cookie sneaks through during a session
+  // transition rather than letting `user!.id` throw a TypeError.
+  if (!user) {
+    return (
+      <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+        Your session expired. Please sign in again.
+      </div>
+    );
+  }
 
   const { data: listings } = await supabase
     .from("listings")
     .select(
       "id, title, quantity, min_order_quantity, unit, unit_price, currency, status, created_at, specs, product_categories(name, spec_schema)"
     )
-    .eq("seller_id", user!.id)
+    .eq("seller_id", user.id)
     .order("created_at", { ascending: false })
     .returns<{
       id: string;
