@@ -75,20 +75,42 @@ export const CancelOrderSchema = z.object({
   reason: z.string().min(1).max(1000),
 });
 
-export const ListingInputSchema = z.object({
-  category_id: z.string().uuid(),
-  title: z.string().min(3).max(200),
-  specs: ListingSpecValuesSchema.default({}),
-  quantity: z.number().positive(),
-  unit: z.enum(["MT", "KG"]).default("MT"),
-  origin_location: z.string().min(1),
-  available_from: z.string().optional(),
-  available_to: z.string().optional(),
-  unit_price: z.number().positive(),
-  currency: z.string().default("USDT"),
-  incoterm: IncotermSchema.default("CFR"),
-  description: z.string().optional(),
-  images: z.array(z.string().url()).default([]),
-});
+export const ListingInputSchema = z
+  .object({
+    category_id: z.string().uuid(),
+    title: z.string().min(3).max(200),
+    specs: ListingSpecValuesSchema.default({}),
+    /** Total available stock the seller is offering in this batch. */
+    quantity: z.number().positive(),
+    /**
+     * Optional Minimum Order Quantity. Null/undefined = no MOQ; positive
+     * = `createInquiry` will reject requested_qty below this value with
+     * `error.code='BELOW_MOQ'`.
+     */
+    min_order_quantity: z.number().positive().optional(),
+    unit: z.enum(["MT", "KG"]).default("MT"),
+    origin_location: z.string().min(1),
+    available_from: z.string().optional(),
+    available_to: z.string().optional(),
+    unit_price: z.number().positive(),
+    currency: z.string().default("USDT"),
+    incoterm: IncotermSchema.default("CFR"),
+    description: z.string().optional(),
+    images: z.array(z.string().url()).default([]),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.min_order_quantity != null &&
+      value.quantity != null &&
+      value.min_order_quantity > value.quantity
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["min_order_quantity"],
+        message:
+          "Minimum order quantity cannot exceed the available quantity.",
+      });
+    }
+  });
 
 export type ListingInput = z.infer<typeof ListingInputSchema>;

@@ -71,6 +71,61 @@ export async function createInquiry(
     };
   }
 
+  // MOQ guard — when the listing declares a minimum order quantity,
+  // reject requests below the floor with a friendly explanation. Buyers
+  // can still negotiate via quotation, but the initial inquiry must
+  // respect the seller's published MOQ.
+  if (parsed.data.listing_id) {
+    const { data: listingRow } = await supabase
+      .from("listings")
+      .select("min_order_quantity, unit, status, seller_id")
+      .eq("id", parsed.data.listing_id)
+      .single<{
+        min_order_quantity: number | null;
+        unit: string;
+        status: string;
+        seller_id: string;
+      }>();
+    if (listingRow) {
+      if (listingRow.status !== "active") {
+        return {
+          data: null,
+          error: {
+            message:
+              "This listing is no longer accepting inquiries.",
+            code: "LISTING_INACTIVE",
+          },
+        };
+      }
+      if (listingRow.seller_id !== parsed.data.seller_id) {
+        return {
+          data: null,
+          error: {
+            message: "Inquiry seller does not match the listing's seller.",
+            code: "SELLER_MISMATCH",
+          },
+        };
+      }
+      if (
+        listingRow.min_order_quantity != null &&
+        parsed.data.requested_qty < listingRow.min_order_quantity
+      ) {
+        return {
+          data: null,
+          error: {
+            message: `Minimum order is ${listingRow.min_order_quantity.toLocaleString()} ${listingRow.unit} for this listing.`,
+            code: "BELOW_MOQ",
+            fieldErrors: {
+              requested_qty: [
+                `Must be at least ${listingRow.min_order_quantity.toLocaleString()} ${listingRow.unit}.`,
+              ],
+            },
+          },
+        };
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from("inquiries")
     .insert({
