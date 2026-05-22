@@ -6,6 +6,12 @@ import { Separator } from "@/components/ui/separator";
 import { InquiryDialog } from "@/components/listing/InquiryDialog";
 import { CounterpartyCard } from "@/components/messages/CounterpartyCard";
 import { MessageCounterpartyButton } from "@/components/messages/MessageCounterpartyButton";
+import {
+  parseCategorySpec,
+  parseListingSpecs,
+  resolveListingSpecs,
+  PRODUCT_TYPE_LABEL,
+} from "@/lib/categories/spec";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -32,7 +38,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
     .select(
       `id, seller_id, category_id, title, specs, quantity, unit, unit_price, currency,
        incoterm, origin_location, available_from, available_to, description, images, status,
-       product_categories(name),
+       product_categories(name, spec_schema),
        profiles!listings_seller_id_fkey(id, full_name, company_name, country)`
     )
     .eq("id", id)
@@ -53,7 +59,10 @@ export default async function ListingDetailPage({ params }: PageProps) {
       description: string | null;
       images: string[] | null;
       status: string;
-      product_categories: { name: string } | null;
+      product_categories: {
+        name: string;
+        spec_schema: Record<string, unknown> | null;
+      } | null;
       profiles: {
         id: string;
         full_name: string | null;
@@ -64,7 +73,16 @@ export default async function ListingDetailPage({ params }: PageProps) {
 
   if (!listing || listing.status !== "active") notFound();
 
-  const specEntries = Object.entries(listing.specs ?? {});
+  const categorySpec = parseCategorySpec(listing.product_categories?.spec_schema);
+  const overrides = parseListingSpecs(listing.specs);
+  const resolved = resolveListingSpecs(categorySpec, overrides);
+  const specRows: Array<[string, string]> = [
+    ["Product Type", PRODUCT_TYPE_LABEL[categorySpec.product_type]],
+    ["Mesh Size", resolved.mesh_size],
+    ["Fixed Carbon", resolved.fixed_carbon],
+    ["Moisture", resolved.moisture],
+    ["Size Distribution", resolved.size_distribution],
+  ];
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -129,21 +147,27 @@ export default async function ListingDetailPage({ params }: PageProps) {
           ))}
       </div>
 
-      {specEntries.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            Specifications
-          </h2>
-          <div className="rounded-md border divide-y text-sm">
-            {specEntries.map(([key, val]) => (
-              <div key={key} className="flex items-center px-4 py-2">
-                <span className="w-40 text-muted-foreground shrink-0">{key}</span>
-                <span>{String(val)}</span>
-              </div>
-            ))}
-          </div>
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          Specifications
+        </h2>
+        <div className="rounded-md border divide-y text-sm">
+          {specRows.map(([key, val]) => (
+            <div key={key} className="flex items-center px-4 py-2">
+              <span className="w-44 text-muted-foreground shrink-0">{key}</span>
+              <span className="font-medium">{val}</span>
+            </div>
+          ))}
         </div>
-      )}
+        {resolved.additional_notes && (
+          <div className="mt-3 rounded-md border bg-card/40 p-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+              Seller Notes
+            </p>
+            <p className="whitespace-pre-line">{resolved.additional_notes}</p>
+          </div>
+        )}
+      </div>
 
       {listing.description && (
         <div>
