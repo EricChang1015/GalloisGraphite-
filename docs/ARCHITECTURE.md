@@ -572,6 +572,9 @@ supabase/migrations/
   017_party_chat_enums.sql          ← chat_type 加 party；chat_message_context_type enum
   018_party_chat.sql                ← Party DM thread + 合併 legacy order rooms
   019_kyc_storage_and_settings.sql  ← kyc bucket + platform_settings 門檻 seed（inquiry/listing min=0）+ profiles kyc_level 防自改 trigger
+  020_kyc_phone_and_levels.sql      ← 四級 KYC（0 email / 1 phone / 2 docs / 3 advanced）+ phone OTP + 升級審核流程
+  021_avatars.sql                   ← `profiles.avatar_url` + `avatars` public bucket；OAuth meta backfill
+  022_flake_graphite_categories.sql ← Category 重整：移除 MADA1/MADA2 品牌命名；結構化 `spec_schema`（product_type / mesh_size / fixed_carbon_min/max / moisture_max / size_distribution_min_pct / is_custom）；7 個 active 品類（6 mesh + Custom Grade）
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）
@@ -619,6 +622,8 @@ npm run db:types             # 重新生成 src/types/database.ts
 | 17 | Incoterm 在議價更動後合約 draft 仍使用 listing 原 Incoterm | ✅ 已完成 | `acceptQuotation` 寫入 `orders.incoterm = q.incoterm`；`<ContractDraftForm />` 以 `order.incoterm ?? order.current_quotation?.incoterm` fallback |
 | 18 | ShipmentForm 缺貨物品檢報告上傳 | ✅ 已完成 | `<ShipmentForm />` 加入 optional B/L 與 Inspection Report（COA/SGS）上傳欄；上傳後寫進 `order_documents`（type=`bill_of_lading` / `inspection_report`） |
 | 19 | `autoCompleteIfReady` 誤推 order 至 `completed` | ✅ 已完成 | Supabase count 改用 `select("id", { count: "exact", head: true })`，僅 count===0 時才推進；同時 buyer 可在 `<PaymentScheduleTable />` 對 `scheduled` 列點「Pay Early」提前結算 |
+| 20 | Categories 仍用 MADA1/MADA2 brand 命名；`spec_schema` 是 free-form 「field descriptor map」 | ✅ 已完成 | **migration 022** 把 6 個 mesh entries rename 為 `Flake Graphite +N Mesh`；`spec_schema` 改成結構化（`product_type` / `mesh_size` / `fixed_carbon_min/max` / `moisture_max` / `size_distribution_min_pct` / `is_custom`）；舊 MADA brand rows 被設為 `is_active=false`（未刪除）。型別與 helper 集中在 `src/lib/categories/spec.ts`，Admin Category form / Listing form / Market detail 都直接吃結構化值 |
+| 21 | `<ListingForm />` Category dropdown 顯示 UUID（base-ui `Select.Value` 沒給 children fallback 為 raw value） + Listing Title 純手填 + Quantity 含義不清（沒 MOQ） + Custom Grade 不能多 mesh | ✅ 已完成（2026-05-22） | (1) `<SelectValue>` 對 Category / Product Type / Mesh Size 都改用 children render function 顯示 label；(2) 新增 `buildListingTitle()` helper + 「Generate title」按鈕；(3) **migration 023** 加 `listings.min_order_quantity numeric(18,3) null`，`createInquiry` server-side 校驗 `requested_qty >= min_order_quantity`；(4) `ListingSpecValuesSchema.mesh_size` 允許 `MeshSize \| MeshSize[]`，Custom 時 UI 變 checkbox grid，`resolveListingSpecs` 用 `formatMeshSelection()` 渲染 "+35 to -100 Mesh" |
 
 ---
 
@@ -638,3 +643,5 @@ npm run db:types             # 重新生成 src/types/database.ts
 10. Audit log 完整覆蓋所有 admin mutations
 11. Payment 改由 seller 主審（admin 可覆審 / 介入）；buyer 可對 `scheduled` 期 Pay Early
 12. ShipmentForm 接受 optional 的 B/L 掃描 + Inspection Report（COA/SGS）上傳到 `order_documents`
+13. **結構化 Flake Graphite spec schema**（migration 022）：取代舊 MADA1/MADA2 brand 命名，category `spec_schema` 改成 typed jsonb（`src/lib/categories/spec.ts`）；Admin form + Listing form 都吃結構化值；Custom Grade 解鎖賣家 override 每一項
+14. **Listing UX polish**（migration 023 + 2026-05-22）：optional `listings.min_order_quantity`（MOQ）、Custom 時 mesh 多選範圍（"+35 to -100 Mesh"）、可一鍵 generate 標題、Market 卡片顯示 spec chip + MOQ；`createInquiry` 加 BELOW_MOQ guard

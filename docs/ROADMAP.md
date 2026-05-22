@@ -145,6 +145,55 @@ server actions / UI 元件實作：
 - [x] AI agent 撰寫規範：[`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc)（檔名規則、idempotency、enum 拆檔、RLS 覆蓋、failure handling）
 - [x] 解決舊版重複 prefix：`006_b2b_progress_enums` → `007_b2b_progress_enums`、`007_oauth_profile_handling` → `008_oauth_profile_handling`、`007_b2b_progress_tables` → `009_b2b_progress_tables`
 
+### A14. ✅ Category 重整 + Listing UX polish（已完成 — 2026-05-22）
+
+把舊 MADA1/MADA2 brand 命名從 product category 裡拿掉（mining region 概念保留在
+marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Custom Grade」
+的結構化 spec_schema；同時補完 listing form 的若干 UX 漏洞：
+
+- [x] **migration 022**（已合併 — commit 8ebee24）：
+  - 6 個 mesh entries rename 為 `Flake Graphite +35 / +50 / +80 / +100 / +150 / -100 Mesh`
+  - `spec_schema` 改成結構化 jsonb（`product_type` / `mesh_size` / `fixed_carbon_min/max` / `moisture_max` / `size_distribution_min_pct` / `is_custom`）
+  - Custom Grade 設 `is_custom=true`、`mesh_size=null`
+  - 舊 MADA brand rows 設 `is_active=false`（保留以維持既有 listings FK）
+- [x] **migration 023**：`listings.min_order_quantity numeric(18,3) null`（optional MOQ）
+- [x] `src/lib/categories/spec.ts`：
+  - `CategorySpec` / `ListingSpecValues` 型別 + helpers（`parseCategorySpec` / `parseListingSpecs` / `resolveListingSpecs` / `describeCategorySpec`）
+  - **新增** `buildListingTitle()` — 由 category name + spec + qty + unit 一鍵建議標題
+  - **新增** `formatMeshSelection()` — 對 `MeshSize[]` 偵測 contiguous range 渲染 "+35 to -100 Mesh"，sparse 則 "+35, +80, -100 Mesh"
+  - `ListingSpecValuesSchema.mesh_size` 改成 `MeshSize \| MeshSize[]`（Custom Grade 用 array）
+- [x] **`<SelectValue>` raw-value bug 修正**：
+  - 根因：base-ui `Select.Value` 沒給 children/items map 時 fallback 為 `serializeValue(value)`，所以 trigger 顯示原始 UUID / enum code
+  - `<ListingForm />` Category select 改 `<SelectValue>{(v)=>categoryName}</SelectValue>`
+  - `<ListingForm />` 標準 Mesh 改 `{(v)=>`${v} Mesh`}`
+  - `<CategoryFormDialog />` Product Type / Mesh Size 同步修
+- [x] `<ListingForm />` 大改：
+  - Category dropdown 顯示「Flake Graphite +100 Mesh」（不再是 UUID）
+  - Custom Grade 啟用時 mesh 變 6-格 checkbox grid，下方即時顯示 `formatMeshSelection` 預覽
+  - 新增「Generate title」按鈕；title 留空 onBlur 自動填
+  - Quantity 欄改名 「Available Quantity」 + helper text；新增 optional 「Minimum Order Quantity」
+  - 預設 `quantity = undefined`（placeholder `"e.g. 50"`）取代 `1`
+  - Description / Additional Notes 補 helper text 說明用途差異
+- [x] `<InquiryDialog />`：
+  - 加 listing summary card（category badge + spec chip + Available / Min order）
+  - `requested_qty` 預設 `MOQ ?? 1`；client-side 校驗 `>= MOQ`
+  - `target_price` 預設 undefined（placeholder = listing.unit_price）
+- [x] `<MarketListingCard />` / `/market` page：
+  - 取出 `min_order_quantity` + `specs` + `product_categories.spec_schema`
+  - 卡片加 spec chip（mesh + carbon）
+  - Qty 行改 「Available」；MOQ 有設時加 「Min order」 行
+- [x] `/market/[id]` 詳情頁：加 「Min Order」 tile（MOQ 有設時）；spec 區的 Mesh Size 支援 array
+- [x] `/listings`（seller 自己列表）：Title 下方加 spec chip 小字
+- [x] `/admin/categories`：加 「Listings: N」 count cell（select count 每個 category），方便 admin 在 deactivate 前評估影響
+- [x] `src/actions/inquiry.ts`：`createInquiry` 加 BELOW_MOQ guard（`requested_qty < min_order_quantity` 回 `error.code='BELOW_MOQ'`）
+- [x] `src/actions/listing.ts`：`createListing` / `updateListing` 接 `min_order_quantity`
+- [x] 測試：
+  - `scripts/verify-schema.mjs` 加 `min_order_quantity` 欄位 assertion + `product_categories.spec_schema` shape sanity check
+  - `scripts/test-listing-title.mjs` 4 case
+  - `scripts/test-mesh-format.mjs`（single / contiguous / sparse）
+  - `scripts/smoke-listing-moq.mjs`（service role 建 listing with MOQ → 試 createInquiry below / equal MOQ，`--cleanup` 收尾）
+- [x] 既有 `scripts/seed-test-order.mjs` / `scripts/smoke-payment-schedule.mjs` / `scripts/cleanup-test-data.mjs` 註解更新（UUID 沒變，只是 category name 改了）
+
 ### A13. ✅ Payment 改 seller-primary review + Email migrate 到 AWS SES SMTP（已完成 — 2026-05-20）
 
 把第一線審核責任交回賣家，把 admin 從每日 ops 解放但保留覆審權；同時把通知信

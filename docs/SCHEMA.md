@@ -26,7 +26,14 @@
 | `013_payment_schedules.sql` | **付款抽離**：新增 enum `payment_category` / `payment_milestone` / `payment_schedule_status` + `payment_schedules` 表；`payments` 加 `schedule_id`；`orders` 加 `incoterm` + 9 個 milestone 時間戳；RLS 對 buyer/seller/admin 開放 select |
 | `014_drop_legacy_payment_terms.sql` | **Hard cutover**：truncate 所有 orders / contracts / payments / quotations / payment_schedules 測試資料；`orders` drop `payment_terms` / `payment_due_days` / `payment_due_date`；`contracts` drop `payment_terms` / `payment_due_days`。`payment_terms_type` enum + `order_status` 的 `payment_pending` / `paid` / `draft` / `contract_generated` 仍保留（PG 無法 drop enum value），但不再被任何 server action 寫入 |
 | `015_payment_seller_verify.sql` | **Payment 審核權限改寫**：drop legacy `payments_admin_update`，新建 `payments_seller_or_admin_update`，允許 update 的條件為「auth.uid() 是該 payment.order 的 seller_id，或 `current_user_role()` ∈ {admin, super_admin}」。順手加 `idx_payments_status_pending` (partial, status='pending') 與 `idx_payments_order_status`，加速 seller / admin 查詢待審 payment |
+| `016_chat_room_denorm.sql` | **站內 IM A2 前置**：`chat_rooms` 加 `last_message_at` / `last_message_preview` / `last_sender_id`，trigger 在 `messages` insert 後同步寫入，用於 `/messages` 房間列表排序 |
+| `017_party_chat_enums.sql` | **黨對黨 IM enum**：`chat_type` 加 `party`；新 enum `chat_message_context_type`（`listing` / `inquiry` / `order` / `none`） |
+| `018_party_chat.sql` | **黨對黨 IM 表變更**：`chat_rooms` 加 `party_a_id` / `party_b_id`、`messages` 加 `context_type` + `context_id`；合併 legacy order-bound rooms 進 party thread；補 RLS |
+| `019_kyc_storage_and_settings.sql` | **KYC P1**：`kyc` private bucket + `storage.objects` RLS；`platform_settings` seed `kyc_min_level_inquiry=0` / `kyc_min_level_listing=0`；`profiles_guard_kyc_level` BEFORE UPDATE trigger 防止使用者自調 `kyc_level` |
+| `020_kyc_phone_and_levels.sql` | **四級 KYC + 電話 OTP**：`profiles.kyc_level` 0–3（0 email、1 phone、2 docs、3 advanced）；新增 phone OTP table + verification 欄位；列表 / 升級流程相關欄位 |
 | `021_avatars.sql` | **頭像**：`profiles.avatar_url`；`avatars` public Storage bucket；`handle_new_user` 從 OAuth meta 帶入 Google 頭像；既有 OAuth 用戶 backfill |
+| `022_flake_graphite_categories.sql` | **品類重整**：移除 MADA1/MADA2 mining-brand 命名（mining region 留在 marketing copy 而不入 schema）；`product_categories.spec_schema` 改成結構化 jsonb（`product_type` / `mesh_size` / `fixed_carbon_min/max` / `moisture_max` / `size_distribution_min_pct` / `is_custom`）；7 個 active 品類（`Flake Graphite +35 / +50 / +80 / +100 / +150 / -100 Mesh` + `Custom Grade`）；舊 MADA brand rows 被 deactivate（保留以維持既有 listings FK） |
+| `023_listings_moq.sql` | **Listing MOQ**：`listings.min_order_quantity numeric(18,3) null`（`check (min_order_quantity is null or min_order_quantity > 0)`）；optional — 為 null 時表示沒有最小訂購量門檻。`createInquiry` server action 會在 buyer `requested_qty < min_order_quantity` 時回 `error.code='BELOW_MOQ'` |
 
 > ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >
@@ -74,24 +81,36 @@
 | 欄位 | 型別 | 說明 |
 |---|---|---|
 | id | uuid PK | |
-| name | text UNIQUE | e.g. "MADA1 — +80 Mesh" |
+| name | text UNIQUE | e.g. "Flake Graphite +80 Mesh"、"Custom Grade" |
 | description | text | |
-| spec_schema | jsonb | 描述該品類規格欄位的 schema |
+| spec_schema | jsonb | **結構化** 品類規格預設值（022 後改寫）；型別定義在 `src/lib/categories/spec.ts` 的 `CategorySpecSchema` |
 | is_active | bool | 下架時設 false |
 | created_at | timestamptz | |
 
-`spec_schema` 範例（用於前端動態渲染欄位）:
+`spec_schema` 結構（**022 後**，由 `CategorySpec` 型別保證）:
 ```json
 {
-  "fixed_carbon": {"type": "string", "label": "Fixed Carbon (%)", "placeholder": "e.g. 94–96"},
-  "mesh_size":    {"type": "string", "label": "Mesh Size",         "placeholder": "+80MESH"},
-  "moisture":     {"type": "string", "label": "Moisture",          "placeholder": "0.5% MAX"},
-  "brand":        {"type": "string", "label": "Brand",             "placeholder": "MADA1"}
+  "product_type":              "flake_graphite",
+  "mesh_size":                 "+100",
+  "fixed_carbon_min":          75,
+  "fixed_carbon_max":          99,
+  "moisture_max":              0.5,
+  "size_distribution_min_pct": 80,
+  "is_custom":                 false
 }
 ```
 
-預設 13 個 category 由 `003_seed_categories.sql` 載入：
-MADA1 / MADA2 × {+35, +50, +80, +100, +150, -100} mesh + Custom Grade。
+- `product_type`：enum string（目前只有 `flake_graphite`，預留 spherical / expandable…）
+- `mesh_size`：標準品類的固定篩網號（`+35` / `+50` / `+80` / `+100` / `+150` / `-100`）；
+  Custom Grade 設 `null`，由賣家在 listing 端填（**可多選**，存在 `listings.specs.mesh_size` 為 `MeshSize[]`）
+- `fixed_carbon_min/max`：百分比範圍，listing 端可在 `specs.fixed_carbon` 以 free string（"94"、"94-96"、"≥95"…）override
+- `moisture_max` / `size_distribution_min_pct`：百分比預設值；listing 端可 override
+- `is_custom`：true 時 Listing form 解鎖所有 override 欄位、mesh 變多選
+
+**目前 active 品類（022 後）**：7 個 — `Flake Graphite +35 Mesh` / `+50` / `+80` / `+100` / `+150` / `-100` + `Custom Grade`。
+舊 MADA1 / MADA2 brand rows（`003_seed_categories.sql` 載入的 12 個 + MADA123 等）被 022 設為 `is_active=false` 保留下來，
+維持既有 listings 的 FK 關係但不再公開出現於 dropdown。MADA1/MADA2 仍是 **mining region 概念**（marketing copy / AI 知識庫保留），
+不再混進 product category name。
 
 ### `listings`
 賣家上貨。
@@ -101,9 +120,10 @@ MADA1 / MADA2 × {+35, +50, +80, +100, +150, -100} mesh + Custom Grade。
 | id | uuid PK | |
 | seller_id | uuid FK profiles | |
 | category_id | uuid FK product_categories | |
-| title | text | |
-| specs | jsonb | 該批次的具體規格(允許優於 schema) |
-| quantity | numeric(18,3) | |
+| title | text | 可由 `buildListingTitle()` helper 一鍵 generate |
+| specs | jsonb | 該批次的具體規格 override（型別：`ListingSpecValues` in `src/lib/categories/spec.ts`）；可選欄位 `mesh_size` (MeshSize 或 MeshSize[] for custom) / `fixed_carbon` / `moisture` / `size_distribution` / `additional_notes`；留空欄位 = 沿用 category default |
+| quantity | numeric(18,3) | **總可供應數量**（available stock）；必填 |
+| **min_order_quantity** | numeric(18,3) null | 023 新增：最小訂購量，optional；買家詢價時 `requested_qty < min_order_quantity` 會被 server-side 擋下（`error.code='BELOW_MOQ'`） |
 | unit | text | MT / KG (預設 MT) |
 | origin_location | text | e.g. "Toamasina, Madagascar" |
 | available_from / available_to | date | 可出貨時間區間 |
