@@ -239,6 +239,42 @@ async function main() {
     );
   }
 
+  console.log("\n=== product_categories spec_schema shape (022) ===");
+  const specSample = await q(`
+    select count(*) filter (where (spec_schema ? 'product_type')
+                              and (spec_schema ? 'mesh_size')
+                              and (spec_schema ? 'fixed_carbon_min')
+                              and (spec_schema ? 'fixed_carbon_max')
+                              and (spec_schema ? 'is_custom')) as structured,
+           count(*) filter (where is_active and coalesce((spec_schema->>'is_custom')::boolean, false)) as active_custom,
+           count(*) filter (where is_active and not coalesce((spec_schema->>'is_custom')::boolean, false)) as active_standard,
+           count(*) filter (where not is_active) as deactivated
+      from public.product_categories;
+  `);
+  const stats = specSample[0] ?? {};
+  check(Number(stats.structured) >= 7, `≥7 categories use the structured spec_schema (got ${stats.structured})`);
+  check(Number(stats.active_custom) >= 1, `at least 1 active Custom Grade category (got ${stats.active_custom})`);
+  check(Number(stats.active_standard) >= 6, `at least 6 active standard mesh categories (got ${stats.active_standard})`);
+  check(Number(stats.deactivated) >= 6, `legacy MADA brand rows deactivated (got ${stats.deactivated})`);
+
+  console.log("\n=== listings.min_order_quantity (023) ===");
+  const listings = await cols("listings");
+  check(listings.has("min_order_quantity"), "listings.min_order_quantity exists");
+  if (listings.has("min_order_quantity")) {
+    check(listings.get("min_order_quantity") === "numeric", "listings.min_order_quantity type is numeric");
+  }
+  const moqIsNullable = await q(`
+    select is_nullable from information_schema.columns
+     where table_schema='public' and table_name='listings' and column_name='min_order_quantity';
+  `);
+  check(moqIsNullable[0]?.is_nullable === "YES", "listings.min_order_quantity is nullable");
+  const moqCheck = await q(`
+    select conname from pg_constraint
+     where conrelid = 'public.listings'::regclass
+       and conname  = 'listings_min_order_quantity_positive';
+  `);
+  check(moqCheck.length === 1, "listings_min_order_quantity_positive constraint exists");
+
   console.log(`\n==== ${pass} passed · ${fail} failed ====`);
   process.exit(fail === 0 ? 0 : 1);
 }

@@ -355,6 +355,7 @@ export type Database = {
           id: string
           images: Json
           incoterm: string
+          min_order_quantity: number | null
           origin_location: string
           quantity: number
           seller_id: string
@@ -374,6 +375,7 @@ export type Database = {
           id?: string
           images?: Json
           incoterm?: string
+          min_order_quantity?: number | null
           origin_location: string
           quantity: number
           seller_id: string
@@ -393,6 +395,7 @@ export type Database = {
           id?: string
           images?: Json
           incoterm?: string
+          min_order_quantity?: number | null
           origin_location?: string
           quantity?: number
           seller_id?: string
