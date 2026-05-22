@@ -195,7 +195,14 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue />
+                          {/* Render the human label, not the enum code. */}
+                          <SelectValue>
+                            {(value: unknown) =>
+                              typeof value === "string" && value in PRODUCT_TYPE_LABEL
+                                ? PRODUCT_TYPE_LABEL[value as keyof typeof PRODUCT_TYPE_LABEL]
+                                : "Select product type"
+                            }
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -253,7 +260,13 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select mesh size" />
+                            <SelectValue placeholder="Select mesh size">
+                              {(value: unknown) =>
+                                typeof value === "string" && value && value !== MESH_NONE
+                                  ? `${value} Mesh`
+                                  : "Select mesh size"
+                              }
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>

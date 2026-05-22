@@ -83,6 +83,12 @@ export async function createListing(
 
   const availableFrom = parsed.data.available_from?.trim() || null;
   const availableTo = parsed.data.available_to?.trim() || null;
+  // Normalize optional MOQ: undefined -> null so the DB column stays NULL
+  // rather than receiving the undefined sentinel.
+  const minOrderQuantity =
+    typeof parsed.data.min_order_quantity === "number"
+      ? parsed.data.min_order_quantity
+      : null;
 
   const { data, error } = await supabase
     .from("listings")
@@ -93,6 +99,7 @@ export async function createListing(
       images: parsed.data.images as unknown as import("@/types/database").Json,
       available_from: availableFrom,
       available_to: availableTo,
+      min_order_quantity: minOrderQuantity,
     })
     .select("id")
     .single<{ id: string }>();

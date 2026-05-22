@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
@@ -14,9 +14,12 @@ import {
 import {
   MESH_SIZES,
   PRODUCT_TYPE_LABEL,
+  buildListingTitle,
   describeCategorySpec,
+  formatMeshSelection,
   parseCategorySpec,
   type CategorySpec,
+  type MeshSize,
 } from "@/lib/categories/spec";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +39,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 export interface CategoryOption {
   id: string;
@@ -51,6 +56,9 @@ interface ListingFormProps {
 export function ListingForm({ categories }: ListingFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  /** Track whether the seller has manually edited the title so we don't
+   *  clobber their text on auto-fill. */
+  const [titleEdited, setTitleEdited] = useState(false);
 
   const form = useForm<ListingInput>({
     resolver: zodResolver(ListingInputSchema) as never,
@@ -58,12 +66,15 @@ export function ListingForm({ categories }: ListingFormProps) {
       category_id: "",
       title: "",
       specs: {},
-      quantity: 1,
+      // Leave undefined so the input renders empty rather than "1"; the
+      // zod schema (required positive) still catches submit without a value.
+      quantity: undefined as unknown as number,
+      min_order_quantity: undefined,
       unit: "MT",
       origin_location: "Madagascar",
       available_from: "",
       available_to: "",
-      unit_price: 0,
+      unit_price: undefined as unknown as number,
       currency: "USDT",
       incoterm: "CFR",
       description: "",
@@ -81,22 +92,67 @@ export function ListingForm({ categories }: ListingFormProps) {
     [selected]
   );
 
+  // Live spec overrides + qty drive the suggested title.
+  const watchedSpecs = form.watch("specs");
+  const watchedQty = form.watch("quantity");
+  const watchedUnit = form.watch("unit");
+  const suggestedTitle = useMemo(() => {
+    if (!selected || !selectedSpec) return "";
+    return buildListingTitle({
+      categoryName: selected.name,
+      categorySpec: selectedSpec,
+      overrides: watchedSpecs ?? {},
+      quantity:
+        typeof watchedQty === "number" && Number.isFinite(watchedQty)
+          ? watchedQty
+          : null,
+      unit: watchedUnit ?? null,
+    });
+  }, [selected, selectedSpec, watchedSpecs, watchedQty, watchedUnit]);
+
+  // Custom Grade renders mesh as a checkbox grid (array values); standard
+  // categories keep the single-select dropdown.
+  const customMeshValue: MeshSize[] = useMemo(() => {
+    const v = watchedSpecs?.mesh_size;
+    if (Array.isArray(v)) return v;
+    if (typeof v === "string") return [v];
+    return [];
+  }, [watchedSpecs?.mesh_size]);
+
+  function applySuggestedTitle() {
+    if (suggestedTitle) {
+      form.setValue("title", suggestedTitle, { shouldValidate: true });
+      setTitleEdited(true); // future blur events won't auto-fill
+    }
+  }
+
   function onSubmit(values: ListingInput) {
-    // For custom-grade categories the seller must specify a mesh size.
-    if (selectedSpec?.is_custom && !values.specs.mesh_size) {
-      form.setError("specs.mesh_size", {
-        message: "Mesh size is required for custom grade.",
-      });
-      return;
+    // For custom-grade categories the seller must specify at least one mesh size.
+    if (selectedSpec?.is_custom) {
+      const ms = values.specs?.mesh_size;
+      const hasMesh =
+        (Array.isArray(ms) && ms.length > 0) ||
+        (typeof ms === "string" && ms.length > 0);
+      if (!hasMesh) {
+        form.setError("specs.mesh_size", {
+          message: "Pick at least one mesh size for custom grade.",
+        });
+        return;
+      }
     }
 
     startTransition(async () => {
       const result = await createListing(values);
       if (result.error) {
         if (result.error.fieldErrors) {
-          for (const [field, messages] of Object.entries(result.error.fieldErrors)) {
+          for (const [field, messages] of Object.entries(
+            result.error.fieldErrors
+          )) {
             const msg = Array.isArray(messages) ? messages[0] : messages;
-            if (msg) form.setError(field as keyof ListingInput, { message: String(msg) });
+            if (msg)
+              form.setError(field as keyof ListingInput, {
+                message: String(msg),
+              });
           }
         }
         if (result.error.code === "PROFILE_INCOMPLETE") {
@@ -127,7 +183,10 @@ export function ListingForm({ categories }: ListingFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-6 max-w-2xl"
+      >
         <FormField
           control={form.control}
           name="category_id"
@@ -145,7 +204,23 @@ export function ListingForm({ categories }: ListingFormProps) {
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a product category" />
+                    {/*
+                      Render the selected category's *name* instead of the
+                      raw UUID. base-ui's Select.Value falls back to
+                      serializeValue(value) when no children/items map is
+                      provided, which is why the trigger previously showed
+                      a UUID. Passing a render function fixes it.
+                    */}
+                    <SelectValue placeholder="Select a product category">
+                      {(value: unknown) => {
+                        const id =
+                          typeof value === "string" ? value : "";
+                        const match = categories.find((c) => c.id === id);
+                        return match
+                          ? match.name
+                          : "Select a product category";
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -177,8 +252,9 @@ export function ListingForm({ categories }: ListingFormProps) {
                     </span>
                   </p>
                   <p className="text-muted-foreground">
-                    ≥ {selectedSpec.size_distribution_min_pct}% of particles match the mesh.
-                    Override any field below if your batch differs.
+                    ≥ {selectedSpec.size_distribution_min_pct}% of particles
+                    match the mesh. Override any field below if your batch
+                    differs.
                   </p>
                 </div>
               )}
@@ -192,10 +268,49 @@ export function ListingForm({ categories }: ListingFormProps) {
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Listing Title</FormLabel>
+              <div className="flex items-center justify-between">
+                <FormLabel>Listing Title</FormLabel>
+                {selectedSpec && suggestedTitle && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={applySuggestedTitle}
+                  >
+                    Generate title
+                  </Button>
+                )}
+              </div>
               <FormControl>
-                <Input placeholder="e.g. Natural Flake Graphite 95% C — 50 MT" {...field} />
+                <Input
+                  placeholder={
+                    suggestedTitle ||
+                    "e.g. Natural Flake Graphite 95% C — 50 MT"
+                  }
+                  {...field}
+                  onChange={(e) => {
+                    setTitleEdited(true);
+                    field.onChange(e);
+                  }}
+                  onBlur={(e) => {
+                    // If the seller never edited the title and the field
+                    // is still empty, fill in the suggestion on blur.
+                    if (!titleEdited && !e.target.value && suggestedTitle) {
+                      form.setValue("title", suggestedTitle, {
+                        shouldValidate: true,
+                      });
+                    }
+                    field.onBlur();
+                  }}
+                />
               </FormControl>
+              {selectedSpec && suggestedTitle && !field.value && (
+                <p className="text-xs text-muted-foreground">
+                  Suggested:{" "}
+                  <span className="text-foreground">{suggestedTitle}</span>
+                </p>
+              )}
               <FormMessage />
             </FormItem>
           )}
@@ -207,38 +322,94 @@ export function ListingForm({ categories }: ListingFormProps) {
               <h3 className="text-sm font-semibold">Product Specifications</h3>
               <p className="text-xs text-muted-foreground">
                 {selectedSpec.is_custom
-                  ? "Custom grade — please fill in all spec fields below."
-                  : "Inherited from category. Leave empty to use defaults, or override to match your batch."}
+                  ? "Custom grade — pick every mesh size that applies and fill in any spec ranges (e.g. 90–95% fixed carbon)."
+                  : "Inherited from category. Leave a field empty to use the category default, or override it to match your batch."}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Mesh size — single dropdown for standard, multi-select grid for custom. */}
+            {selectedSpec.is_custom ? (
+              <Controller
+                control={form.control}
+                name="specs.mesh_size"
+                render={({ field, fieldState }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Mesh Size(s)
+                      <span className="text-destructive ml-1">*</span>
+                    </FormLabel>
+                    <div className="grid grid-cols-3 gap-2">
+                      {MESH_SIZES.map((m) => {
+                        const isChecked = customMeshValue.includes(m);
+                        return (
+                          <label
+                            key={m}
+                            className={cn(
+                              "flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer transition-colors",
+                              isChecked
+                                ? "border-primary bg-primary/10"
+                                : "border-border hover:bg-muted/50"
+                            )}
+                          >
+                            <Checkbox
+                              checked={isChecked}
+                              onCheckedChange={(checked) => {
+                                const next = new Set(customMeshValue);
+                                if (checked) next.add(m);
+                                else next.delete(m);
+                                const arr = Array.from(next);
+                                field.onChange(arr.length > 0 ? arr : undefined);
+                              }}
+                              aria-label={`${m} mesh`}
+                            />
+                            <span>{m} Mesh</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {customMeshValue.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Selection: {formatMeshSelection(customMeshValue)}
+                      </p>
+                    )}
+                    {fieldState.error?.message && (
+                      <p className="text-xs text-destructive">
+                        {fieldState.error.message}
+                      </p>
+                    )}
+                  </FormItem>
+                )}
+              />
+            ) : (
               <FormField
                 control={form.control}
                 name="specs.mesh_size"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Mesh Size
-                      {selectedSpec.is_custom && (
-                        <span className="text-destructive ml-1">*</span>
-                      )}
-                    </FormLabel>
+                    <FormLabel>Mesh Size</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? ""}
+                      onValueChange={(v) => field.onChange(v)}
+                      value={
+                        typeof field.value === "string" ? field.value : ""
+                      }
                     >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue
                             placeholder={
-                              selectedSpec.is_custom
-                                ? "Pick mesh size"
+                              selectedSpec.mesh_size
+                                ? `Default: ${selectedSpec.mesh_size} Mesh`
+                                : "Pick mesh size"
+                            }
+                          >
+                            {(value: unknown) =>
+                              typeof value === "string" && value
+                                ? `${value} Mesh`
                                 : selectedSpec.mesh_size
-                                  ? `Default: ${selectedSpec.mesh_size}`
+                                  ? `Default: ${selectedSpec.mesh_size} Mesh`
                                   : "Pick mesh size"
                             }
-                          />
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -253,7 +424,9 @@ export function ListingForm({ categories }: ListingFormProps) {
                   </FormItem>
                 )}
               />
+            )}
 
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="specs.fixed_carbon"
@@ -264,20 +437,21 @@ export function ListingForm({ categories }: ListingFormProps) {
                       <Input
                         placeholder={
                           selectedSpec.is_custom
-                            ? "e.g. 95"
+                            ? "e.g. 95 or 90-95"
                             : `Default: ${selectedSpec.fixed_carbon_min}–${selectedSpec.fixed_carbon_max}`
                         }
                         {...field}
                         value={field.value ?? ""}
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Accepts a single number or range — e.g. <span className="text-foreground">94</span>, <span className="text-foreground">90-95</span>, <span className="text-foreground">≥95</span>.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="specs.moisture"
@@ -295,40 +469,44 @@ export function ListingForm({ categories }: ListingFormProps) {
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="specs.size_distribution"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Size Distribution</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={`Default: ${selectedSpec.size_distribution_min_pct}% min`}
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
+
+            <FormField
+              control={form.control}
+              name="specs.size_distribution"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Size Distribution</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={`Default: ${selectedSpec.size_distribution_min_pct}% min`}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
               name="specs.additional_notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Additional Notes (optional)</FormLabel>
+                  <FormLabel>Additional Spec Notes (optional)</FormLabel>
                   <FormControl>
                     <Textarea
                       rows={2}
-                      placeholder="Anything else buyers should know about this batch — e.g. ash content, sulphur, packing."
+                      placeholder="Spec-related context: ash content, sulphur, packing, COA references…"
                       {...field}
                       value={field.value ?? ""}
                     />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Shown in the buyer's spec sheet. For batch logistics
+                    or commercial terms, use the Description field below.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -342,16 +520,24 @@ export function ListingForm({ categories }: ListingFormProps) {
             name="quantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Quantity</FormLabel>
+                <FormLabel>Available Quantity *</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     min={0.001}
                     step={0.001}
+                    placeholder="e.g. 50"
                     {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    value={field.value ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      field.onChange(v === "" ? undefined : parseFloat(v));
+                    }}
                   />
                 </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  Total amount you can ship from this lot.
+                </p>
                 <FormMessage />
               </FormItem>
             )}
@@ -365,7 +551,13 @@ export function ListingForm({ categories }: ListingFormProps) {
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue>
+                        {(value: unknown) =>
+                          value === "KG"
+                            ? "KG (Kilogram)"
+                            : "MT (Metric Ton)"
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -379,6 +571,35 @@ export function ListingForm({ categories }: ListingFormProps) {
           />
         </div>
 
+        <FormField
+          control={form.control}
+          name="min_order_quantity"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Minimum Order Quantity (optional)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={0.001}
+                  step={0.001}
+                  placeholder="e.g. 5 — leave blank for no minimum"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    field.onChange(v === "" ? undefined : parseFloat(v));
+                  }}
+                />
+              </FormControl>
+              <p className="text-xs text-muted-foreground">
+                The smallest order a buyer can submit through inquiry.
+                Empty = any quantity is OK. Cannot exceed available quantity.
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -391,8 +612,13 @@ export function ListingForm({ categories }: ListingFormProps) {
                     type="number"
                     min={0}
                     step={0.01}
+                    placeholder="e.g. 850.00"
                     {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    value={field.value ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      field.onChange(v === "" ? undefined : parseFloat(v));
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -503,10 +729,14 @@ export function ListingForm({ categories }: ListingFormProps) {
               <FormControl>
                 <Textarea
                   rows={4}
-                  placeholder="Additional details about quality, packaging, certificates..."
+                  placeholder="Commercial / logistics context: packaging, certificates, delivery options, payment preferences…"
                   {...field}
                 />
               </FormControl>
+              <p className="text-xs text-muted-foreground">
+                Free-form pitch shown beneath the spec sheet on the
+                listing page.
+              </p>
               <FormMessage />
             </FormItem>
           )}
@@ -516,7 +746,11 @@ export function ListingForm({ categories }: ListingFormProps) {
           <Button type="submit" disabled={isPending}>
             {isPending ? "Creating…" : "Create Listing"}
           </Button>
-          <Button type="button" variant="outline" onClick={() => router.back()}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+          >
             Cancel
           </Button>
         </div>
