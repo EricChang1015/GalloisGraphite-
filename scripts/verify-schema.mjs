@@ -257,6 +257,49 @@ async function main() {
   check(Number(stats.active_standard) >= 6, `at least 6 active standard mesh categories (got ${stats.active_standard})`);
   check(Number(stats.deactivated) >= 6, `legacy MADA brand rows deactivated (got ${stats.deactivated})`);
 
+  console.log("\n=== listings storage bucket (024) ===");
+  const listingsBucket = await q(`
+    select id, public, file_size_limit, allowed_mime_types
+      from storage.buckets
+     where id = 'listings';
+  `);
+  check(listingsBucket.length === 1, "listings bucket exists");
+  if (listingsBucket[0]) {
+    check(listingsBucket[0].public === true, "listings bucket is public");
+    check(
+      listingsBucket[0].file_size_limit === 2097152,
+      `listings file_size_limit is 2 MiB (got ${listingsBucket[0].file_size_limit})`
+    );
+    const mimes = Array.isArray(listingsBucket[0].allowed_mime_types)
+      ? listingsBucket[0].allowed_mime_types
+      : String(listingsBucket[0].allowed_mime_types ?? "")
+          .replace(/^[{"]|[}"]$/g, "")
+          .split(",")
+          .map((s) => s.replace(/^"|"$/g, "").trim());
+    for (const m of ["image/jpeg", "image/png", "image/webp"]) {
+      check(mimes.includes(m), `listings MIME whitelist includes ${m}`);
+    }
+  }
+  const listingsPolicies = await q(`
+    select polname from pg_policy
+     where polrelid = 'storage.objects'::regclass
+       and polname in (
+         'listings:public read',
+         'listings:owner insert',
+         'listings:owner update',
+         'listings:owner delete'
+       );
+  `);
+  const polNames = new Set(listingsPolicies.map((p) => p.polname));
+  for (const p of [
+    "listings:public read",
+    "listings:owner insert",
+    "listings:owner update",
+    "listings:owner delete",
+  ]) {
+    check(polNames.has(p), `policy ${p} exists`);
+  }
+
   console.log("\n=== listings.min_order_quantity (023) ===");
   const listings = await cols("listings");
   check(listings.has("min_order_quantity"), "listings.min_order_quantity exists");

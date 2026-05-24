@@ -575,6 +575,8 @@ supabase/migrations/
   020_kyc_phone_and_levels.sql      ← 四級 KYC（0 email / 1 phone / 2 docs / 3 advanced）+ phone OTP + 升級審核流程
   021_avatars.sql                   ← `profiles.avatar_url` + `avatars` public bucket；OAuth meta backfill
   022_flake_graphite_categories.sql ← Category 重整：移除 MADA1/MADA2 品牌命名；結構化 `spec_schema`（product_type / mesh_size / fixed_carbon_min/max / moisture_max / size_distribution_min_pct / is_custom）；7 個 active 品類（6 mesh + Custom Grade）
+  023_listings_moq.sql              ← optional `listings.min_order_quantity numeric(18,3)` + positivity check；`createInquiry` 加 `BELOW_MOQ` guard
+  024_listings_bucket.sql           ← Public `listings` Storage bucket（2 MiB / JPEG/PNG/WebP 白名單）+ `storage.objects` 4 條 RLS（公開讀；owner 寫/改；owner+admin 刪）；路徑慣例 `listings/{seller_user_id}/{uuid}.{ext}`
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）

@@ -34,6 +34,7 @@
 | `021_avatars.sql` | **頭像**：`profiles.avatar_url`；`avatars` public Storage bucket；`handle_new_user` 從 OAuth meta 帶入 Google 頭像；既有 OAuth 用戶 backfill |
 | `022_flake_graphite_categories.sql` | **品類重整**：移除 MADA1/MADA2 mining-brand 命名（mining region 留在 marketing copy 而不入 schema）；`product_categories.spec_schema` 改成結構化 jsonb（`product_type` / `mesh_size` / `fixed_carbon_min/max` / `moisture_max` / `size_distribution_min_pct` / `is_custom`）；7 個 active 品類（`Flake Graphite +35 / +50 / +80 / +100 / +150 / -100 Mesh` + `Custom Grade`）；舊 MADA brand rows 被 deactivate（保留以維持既有 listings FK） |
 | `023_listings_moq.sql` | **Listing MOQ**：`listings.min_order_quantity numeric(18,3) null`（`check (min_order_quantity is null or min_order_quantity > 0)`）；optional — 為 null 時表示沒有最小訂購量門檻。`createInquiry` server action 會在 buyer `requested_qty < min_order_quantity` 時回 `error.code='BELOW_MOQ'` |
+| `024_listings_bucket.sql` | **Listing images bucket**：建立 `listings` public storage bucket（2 MiB / `image/jpeg` / `image/png` / `image/webp`）+ `storage.objects` 4 條 RLS（公開 SELECT；INSERT/UPDATE 限路徑首段 = `auth.uid()`；DELETE owner 或 admin）。路徑慣例 `listings/{seller_user_id}/{uuid}.{ext}`，搭配 client-side `compressTo720pWebp` 把圖縮到 720 px / WebP 再上傳 |
 
 > ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >
@@ -523,9 +524,9 @@ AI 助手每個 Q&A turn 的 server-side audit trail。append-only。
 | Bucket | 訪問模式 | 用途 | 現況 |
 |---|---|---|---|
 | **`order-documents`** | private（訂單雙方 + admin） | **合約簽名掃描、付款證明、發票、B/L、檢驗、海關、其他訂單檔案**（依路徑首段 `{order_id}/{doctype}/...` 分類） | ✅ 已建立（`010_storage_order_documents.sql`） |
-| `avatars` | public read, self write | 使用者頭像 | ✅ `019_avatars.sql` |
-| `kyc` | private（owner + admin） | KYC 證件 | ⚠️ 待建立（與 ROADMAP §A6 一起） |
-| `listings` | public read, seller write | 商品圖 | ⚠️ 待建立 |
+| `avatars` | public read, self write | 使用者頭像 | ✅ `021_avatars.sql` |
+| `kyc` | private（owner + admin） | KYC 證件 | ✅ `019_kyc_storage_and_settings.sql` |
+| `listings` | public read, seller write | 商品圖（720p WebP，2 MiB cap） | ✅ `024_listings_bucket.sql` |
 | `chat` | private（chat members） | 聊天室附件 | ⚠️ 待建立（與 ROADMAP §A2 一起） |
 | ~~`contracts`~~ | — | （legacy 規劃）合約簽名掃描 | ❌ 不再建立，`order-documents` 已涵蓋 |
 | ~~`payments`~~ | — | （legacy 規劃）付款憑證 | ❌ 不再建立，`order-documents` `payment_proof` 子路徑已涵蓋 |
