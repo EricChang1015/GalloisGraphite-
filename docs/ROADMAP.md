@@ -115,8 +115,8 @@
   7. [x] **（full_prepay 流）** submit payment → admin verify → `paid` → `in_production`（含付款證明上傳）
   8. [x] `markReadyToShip` → `markShipped`(B/L + vessel + container) → `markInTransit` → `markArrived`(ATA)
   9. [x] 買家 `markCustomsCleared` → 自動 `completed`（2026-05-15 走完）
-  10. [ ] **（net_after_arrival 流）** `contract_signed` 直接 → `in_production` → ... → `arrived` → `customs_cleared` → buyer submit final payment → admin verify → `completed`
-  11. [ ] `disputed` / `cancelled` 路徑各跑一次（含 admin force-transition 解 dispute）
+  10. [x] **（分期付款流，原 net_after_arrival）** 30% + 70% 排程 → 未付清不得 `completed` — 2026-05-24 `npm run qa:e2e-full`（`ORD-260524-f4e88b`）
+  11. [x] `disputed` / `cancelled` + admin force-transition — 2026-05-24 `npm run qa:e2e-dispute`
 
 > 詳細測試帳號與走測腳本見 [`TESTING.md`](./TESTING.md)。
 
@@ -343,7 +343,7 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - [x] A6 KYC 上傳 + admin 門檻 + 四級 level + phone OTP（migrations 019/020）
 - [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，所有 migrations 已套用
 - [x] A7 full_prepay 端到端 happy path 通過（2026-05-15 走測 `ORD-TEST-MP6PL7MZ`）
-- [ ] A7 net_after_arrival 端到端 happy path 通過 + dispute / cancel / force-transition 走測
+- [x] A7 分期付款（30/70）端到端 + dispute / cancel / force-transition 走測（2026-05-24，`qa:e2e-full` + `qa:e2e-dispute`）
 - [x] A8 B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心）已完成
 - [x] A9 Migration 自動套用 runner 完成（`npm run db:migrate`）
 - [x] A13 Payment 改 seller-primary review + AWS SES SMTP（2026-05-20）

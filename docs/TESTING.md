@@ -413,8 +413,8 @@ select o.order_no, o.status, o.incoterm,
 |---|---|---|
 | 1 | ~~站內 IM（A2）~~ | ✅ 已實作（party DM）；合併前跑 §3.5 + `qa:chat` |
 | 2 | KYC 上傳（A6） | 僅 commercial profile gate，無 `kyc_level` 升級 UI |
-| 3 | 情境 B 正式走測紀錄 | 邏輯已實作，文件化腳本在本版補上，待人工跑一輪寫入 §8 |
-| 4 | dispute / cancel / force | 待 Tier 3 |
+| 3 | ~~情境 B 正式走測紀錄~~ | ✅ 2026-05-24 `npm run qa:e2e-full`（30/70 分期 + 結案閘門）— 見 §8 |
+| 4 | ~~dispute / cancel / force~~ | ✅ 2026-05-24 `npm run qa:e2e-dispute` — 見 §8 |
 | 5 | `bl_date_plus_N` cron | 需 Vercel cron + `bl_date`；日常 E2E 可略 |
 
 已解決（僅供對照）：`order-documents` bucket ✅；SES email ✅；seller-primary payment review ✅。
@@ -443,14 +443,35 @@ select o.order_no, o.status, o.incoterm,
 | 手動 UI | 待填（§3.5 M1–M5） |
 | 備註 | migration 016–018；舊 order-room 已合併 |
 
-### （待填）— 情境 B 分期走測
+### 2026-05-24 — 情境 B（30/70 分期）+ 全鏈路 Playwright E2E
 
 | 欄位 | 值 |
 |---|---|
-| order_no | |
-| 走測人 | |
-| 結果 | pass / fail |
-| 備註 | |
+| 分支 | `cursor/a7-e2e-qa-66be` |
+| 環境 | `E2E_BASE_URL=http://127.0.0.1:3000`（`npm run build && npm run start`） |
+| order_no | `ORD-260524-f4e88b` |
+| 走測人 | Cloud Agent（`npm run qa:e2e-full`） |
+| 結果 | **pass**（24/24 步驟） |
+| 備註 | 涵蓋合約 reject/redraft、30% `before_shipment` + 70% `arrived_at_port`、物流 12 階段至 `completed`；詳見 [`E2E_REPORT_FULL.md`](./E2E_REPORT_FULL.md) |
+
+### 2026-05-24 — Dispute / Cancel / Admin force
+
+| 欄位 | 值 |
+|---|---|
+| 分支 | `cursor/a7-e2e-qa-66be` |
+| 環境 | 同上 |
+| 訂單 | `ORD-QA-DC-MPJI1XHO-IN_P`（dispute → force 回 `in_production`）、`ORD-QA-DC-MPJI1XHO-CONT`（cancel） |
+| 走測人 | Cloud Agent（`npm run qa:e2e-dispute`） |
+| 結果 | **pass**（6/6 步驟） |
+| 備註 | `audit_logs` 含 `raise_dispute`、`force_transition_order`、`cancel_order`；詳見 [`E2E_REPORT_DISPUTE.md`](./E2E_REPORT_DISPUTE.md) |
+
+### （待填）— Tier 0 前置（本輪已跑）
+
+| 欄位 | 值 |
+|---|---|
+| `npm run qa:preflight` | pass（build + migrations + verify-schema 72/72） |
+| `npm run qa:chat` | pass（7/7） |
+| Google OAuth production smoke | 仍待人工 |
 
 ---
 
@@ -475,5 +496,9 @@ select o.order_no, o.status, o.incoterm,
 | `scripts/verify-schema.mjs` | 斷言 014 + party chat schema |
 | `scripts/apply-migrations.mjs --status` | migration 套用狀態 |
 | `scripts/qa-chat-buyer-seller.mjs` | Buyer↔Seller party DM RLS（§3.5） |
+| `scripts/e2e-full-trading.mjs` | Playwright 全鏈路 + 情境 B 30/70（§3–§4） |
+| `scripts/e2e-dispute-cancel.mjs` | Playwright dispute / cancel / admin force（§6） |
 
-`package.json` 捷徑：`npm run qa:preflight`、`npm run qa:chat`、`npm run qa:cleanup`、`npm run qa:seed-order`。
+`package.json` 捷徑：`npm run qa:preflight`、`npm run qa:chat`、`npm run qa:e2e-full`、`npm run qa:e2e-dispute`、`npm run qa:cleanup`、`npm run qa:seed-order`。
+
+**Playwright 瀏覽器**：首次執行 `qa:e2e-*` 前需 `npx playwright install chromium`。
