@@ -49,10 +49,10 @@
 ### A4. Storage Buckets 與 Policy 初始化
 
 - [x] **`order-documents`**（private，owner + 訂單雙方 + admin 可讀，登入用戶可寫，uploader/admin 可覆蓋） — 由 [`010_storage_order_documents.sql`](../supabase/migrations/010_storage_order_documents.sql) 建立；合約簽名掃描、付款證明、發票 / B/L 等所有訂單檔案統一存到這顆 bucket，依路徑前綴歸類
-- [ ] `avatars`（public read，self write）
-- [ ] `kyc`（private，僅 owner + admin 可讀，僅 owner 可寫）
-- [ ] `listings`（public read，seller 可寫）
-- [ ] `chat`（private，僅 chat_members 可讀寫）
+- [x] **`avatars`**（public read，self write）— `021_avatars.sql`
+- [x] **`kyc`**（private，僅 owner + admin 可讀，僅 owner 可寫）— `019_kyc_storage_and_settings.sql`
+- [ ] `listings`（public read，seller 可寫）— 規劃中（A14 後 followup，見 PLAN §Part 2）
+- [ ] `chat`（private，僅 chat_members 可讀寫）— 與 A2 一起做
 
 > `contracts` / `payments` 兩顆 legacy bucket 不再規劃 — `order-documents` 已涵蓋。
 > 其餘 bucket 可於對應功能（avatar 上傳、KYC、商品圖、IM 附件）實作時補上。
@@ -66,11 +66,11 @@
 - [x] Server Action 寫 `audit_logs` + `orders.timeline` event
 - [x] Admin `/admin/orders/[id]` 可用 `<AdminOrderActions />` force-transition 到 `completed` / `cancelled`
 
-### A6. KYC 文件上傳（簡易版） + Lazy-collect commercial profile
+### A6. ✅ KYC 文件上傳（簡易版） + Lazy-collect commercial profile（已完成 — 2026-05-21）
 
 **設計原則**：一般用戶（瀏覽 / 用 AI Chat）不需要 KYC；只有真正要做買賣／詢價的實體才需要。Google OAuth 用戶現在以 `company_name=''` / `country=''` 建立 profile，後續第一次商業動作時觸發補資料 + KYC。
 
-**🟡 部分完成（commercial profile gate）：**
+**Commercial profile gate（已完成）：**
 
 - [x] `(app)/settings` 頁面 + `<CommercialProfileForm />`（編輯 full_name / company_name / country / phone）
 - [x] `src/lib/auth/commercial.ts` helper：`findCommercialProfileGaps(userId)` 與 `describeCommercialGap(missing)`
@@ -188,11 +188,11 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - [x] `src/actions/inquiry.ts`：`createInquiry` 加 BELOW_MOQ guard（`requested_qty < min_order_quantity` 回 `error.code='BELOW_MOQ'`）
 - [x] `src/actions/listing.ts`：`createListing` / `updateListing` 接 `min_order_quantity`
 - [x] 測試：
-  - `scripts/verify-schema.mjs` 加 `min_order_quantity` 欄位 assertion + `product_categories.spec_schema` shape sanity check
-  - `scripts/test-listing-title.mjs` 4 case
-  - `scripts/test-mesh-format.mjs`（single / contiguous / sparse）
-  - `scripts/smoke-listing-moq.mjs`（service role 建 listing with MOQ → 試 createInquiry below / equal MOQ，`--cleanup` 收尾）
+  - `scripts/verify-schema.mjs` 加 `min_order_quantity` 欄位 assertion + `product_categories.spec_schema` shape sanity check（總計 62 assertions 全綠）
+  - `scripts/test-listing-spec-helpers.mjs`（`npm run qa:spec-helpers`）— 17 cases，cover `formatMeshSelection`（single / contiguous / sparse / unsorted / dedup）、`buildListingTitle`（standard / custom / 無 qty）、`parseListingSpecs`（string + array mesh、garbage fallback）
+  - `scripts/smoke-listing-moq.mjs`（`npm run qa:listing-moq`）— service-role 建 listing with MOQ → 走 below / equal / above MOQ 三分支 + DB 正性 constraint，`--cleanup` 收尾
 - [x] 既有 `scripts/seed-test-order.mjs` / `scripts/smoke-payment-schedule.mjs` / `scripts/cleanup-test-data.mjs` 註解更新（UUID 沒變，只是 category name 改了）
+- [x] **防禦性修正**（commit `ff464c9`）：`/listings` 與 `/inquiries` 原本對 `user!.id` 做 non-null assertion，session 過渡時偶會炸成 `TypeError: Cannot read properties of null`。改成顯示「Your session expired」卡片。發現於 manual smoke 走測時，是 listings/page.tsx 改動連帶觸發的 pre-existing bug；同步修了 inquiries/page.tsx
 
 ### A13. ✅ Payment 改 seller-primary review + Email migrate 到 AWS SES SMTP（已完成 — 2026-05-20）
 
@@ -311,16 +311,18 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 ## D. Definition of Done（MVP 上線版）
 
 - [x] A1 schema 對齊全部完成（TS types 由 `npm run db:types` 重新生成）
-- [ ] A2 IM 可雙方即時對話 + 圖片附件
+- [ ] A2 IM 可雙方即時對話 + 圖片附件 — party DM (`/messages`) 已通；order detail tab 仍待
 - [x] A3 簽名掃描可上傳並推進到 `contract_signed` 狀態（009 完成）+ 雙方簽名嵌入 PDF 預覽（commit 1620d8e）
-- [x] A4 **`order-documents`** bucket 建立完成（`010_storage_order_documents.sql`）；avatars/kyc/listings/chat 依需要時補
+- [x] A4 **`order-documents`** / **`avatars`** / **`kyc`** buckets 建立完成（010 / 021 / 019）；listings / chat 仍待
 - [x] A5 dispute / cancel 流程可走通（009 完成）
-- [x] A6 KYC 上傳 + admin 門檻 + 手動升級 level — commercial profile gate ✅；migration 019
-- [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，10 個 migration 已套用
+- [x] A6 KYC 上傳 + admin 門檻 + 四級 level + phone OTP（migrations 019/020）
+- [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，所有 migrations 已套用
 - [x] A7 full_prepay 端到端 happy path 通過（2026-05-15 走測 `ORD-TEST-MP6PL7MZ`）
 - [ ] A7 net_after_arrival 端到端 happy path 通過 + dispute / cancel / force-transition 走測
 - [x] A8 B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心）已完成
 - [x] A9 Migration 自動套用 runner 完成（`npm run db:migrate`）
+- [x] A13 Payment 改 seller-primary review + AWS SES SMTP（2026-05-20）
+- [x] A14 Category 重整 + Listing UX polish — migrations 022/023, structured spec_schema, MOQ, custom mesh range, auto-title, Select label fixes（commits `15fba5b → ff464c9`，2026-05-22）
 - [x] 公開頁 SEO meta（title/description/og）齊全
 - [x] 所有路由都有 `loading.tsx` 與 `error.tsx` 雛形（多數已完成）
 - [x] 沒有 console.error / TS error / lint error（`npm run build` 在每個 commit 前都跑過）
