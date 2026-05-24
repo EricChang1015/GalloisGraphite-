@@ -51,7 +51,7 @@
 - [x] **`order-documents`**（private，owner + 訂單雙方 + admin 可讀，登入用戶可寫，uploader/admin 可覆蓋） — 由 [`010_storage_order_documents.sql`](../supabase/migrations/010_storage_order_documents.sql) 建立；合約簽名掃描、付款證明、發票 / B/L 等所有訂單檔案統一存到這顆 bucket，依路徑前綴歸類
 - [x] **`avatars`**（public read，self write）— `021_avatars.sql`
 - [x] **`kyc`**（private，僅 owner + admin 可讀，僅 owner 可寫）— `019_kyc_storage_and_settings.sql`
-- [ ] `listings`（public read，seller 可寫）— 規劃中（A14 後 followup，見 PLAN §Part 2）
+- [x] **`listings`**（public read，seller-owned write）— `024_listings_bucket.sql`（2 MiB / JPEG/PNG/WebP；路徑 `listings/{seller_uid}/{uuid}.ext`）；client 端 `compressTo720pWebp` 在上傳前縮到 720 px WebP；UI `<ListingImageUploader />` 提供 drag-drop + 「From your library」可重用既往上傳
 - [ ] `chat`（private，僅 chat_members 可讀寫）— 與 A2 一起做
 
 > `contracts` / `payments` 兩顆 legacy bucket 不再規劃 — `order-documents` 已涵蓋。
@@ -144,6 +144,31 @@ server actions / UI 元件實作：
 - [x] 同步 npm scripts：`db:migrate` / `db:migrate:status` / `db:migrate:bootstrap` / `db:migrate:dry` / `db:types`
 - [x] AI agent 撰寫規範：[`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc)（檔名規則、idempotency、enum 拆檔、RLS 覆蓋、failure handling）
 - [x] 解決舊版重複 prefix：`006_b2b_progress_enums` → `007_b2b_progress_enums`、`007_oauth_profile_handling` → `008_oauth_profile_handling`、`007_b2b_progress_tables` → `009_b2b_progress_tables`
+
+### A15. ✅ Listing images（已完成 — 2026-05-24）
+
+完成 ROADMAP §A4 中最後一個面向產品的 storage bucket，讓賣家上傳商品照、買家在 market 看到實際成品。
+
+- [x] **migration 024**：public `listings` storage bucket（2 MiB / `image/jpeg`/`image/png`/`image/webp`）+ `storage.objects` 4 條 RLS（公開 SELECT；INSERT/UPDATE 限路徑首段 = `auth.uid()`；DELETE owner 或 admin）。`verify-schema.mjs` 補 10 條 assertion（總計 72/72）。
+- [x] `src/lib/listings/images.ts`：型別 / path helpers / MIME 白名單常數（client/server 共用）；`LISTING_IMAGES_PER_LISTING = 5` 上限。
+- [x] **Client-side 720p WebP 壓縮**（`src/lib/images/compress.ts`）：`compressTo720pWebp(file, { maxEdge=720, quality=0.82 })`，用 `createImageBitmap` + canvas → `toBlob('image/webp')` 在瀏覽器端縮邊 / 重編碼。對小檔 / 壓得反而變大 / 缺 API 的環境自動 passthrough。
+- [x] **Server actions**（`src/actions/listing-images.ts`）：
+  - `uploadListingImage(FormData)` — 走 user-scoped server client 上 storage（依賴 RLS owner-INSERT，避免 service-role 漏洞）；驗證 MIME 白名單 + 2 MiB cap；回 `{ url, path, size }`。
+  - `deleteListingImage(pathOrUrl)` — owner / admin 才可；同時 scrub 賣家自家 `listings.images` jsonb 內所有引用。
+  - `listMyListingImages()` — 列出 `listings/{auth.uid()}/...` 下的物件，最多 200 筆；供「From your library」tab 使用。
+- [x] **`<ListingImageUploader />`** 新元件：
+  - 兩個 tab — **Upload new**（drag-drop + 點選；逐檔顯示 `compressing… / uploading (X KB → Y KB)`）/ **From your library**（lazy-load 既往上傳的 thumbnail grid、點擊 toggle 加入/移除 selection、可從 library 直接刪除）
+  - 下方 selected 區：首張是 cover、↑↓ 排序、× 刪除；最大 5 張
+  - 全文案明示「Images are optional」+ 「publicly visible once active」
+- [x] 整合：
+  - `<ListingForm />` 在 Specifications 區之後 / Description 之前插入「Images (optional)」section
+  - `/market` 卡片有圖時上方加 16:9 cover banner
+  - `/market/[id]` 用新 `<ListingGallery />` 取代舊單張 hero（hero + thumbnail 列、點擊切換）
+  - `/listings`（seller）每列前面加 size-10 縮圖（或灰底佔位）
+- [x] 測試：
+  - `scripts/smoke-listing-images.mjs`（`npm run qa:listing-images`）— 9 assertions，分別測 owner-INSERT 可、非 owner INSERT 被擋、`listings.images` jsonb 引用、owner-DELETE 可、非 owner DELETE 被擋、`storage.list` 確認刪除。`--cleanup` 透過 Storage API（不能直接 `DELETE FROM storage.objects`）清掉所有 tagged 物件。
+  - `verify-schema.mjs` 補 bucket assertion（10 條）→ 總計 72/72 通過
+- [x] 手動 GUI 走測（seller 上傳 → 看到 compressing → uploading (12 KB → 1.2 KB) → 切到 library tab 看到既往上傳 → toggle 重用 → 提交 listing → buyer 看到 market 卡片 banner + 詳情頁 hero / thumbnail 切換）
 
 ### A14. ✅ Category 重整 + Listing UX polish（已完成 — 2026-05-22）
 
@@ -313,7 +338,7 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - [x] A1 schema 對齊全部完成（TS types 由 `npm run db:types` 重新生成）
 - [ ] A2 IM 可雙方即時對話 + 圖片附件 — party DM (`/messages`) 已通；order detail tab 仍待
 - [x] A3 簽名掃描可上傳並推進到 `contract_signed` 狀態（009 完成）+ 雙方簽名嵌入 PDF 預覽（commit 1620d8e）
-- [x] A4 **`order-documents`** / **`avatars`** / **`kyc`** buckets 建立完成（010 / 021 / 019）；listings / chat 仍待
+- [x] A4 **`order-documents`** / **`avatars`** / **`kyc`** / **`listings`** buckets 建立完成（010 / 021 / 019 / 024）；只剩 `chat`（與 A2 一起做）
 - [x] A5 dispute / cancel 流程可走通（009 完成）
 - [x] A6 KYC 上傳 + admin 門檻 + 四級 level + phone OTP（migrations 019/020）
 - [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，所有 migrations 已套用
@@ -323,6 +348,7 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - [x] A9 Migration 自動套用 runner 完成（`npm run db:migrate`）
 - [x] A13 Payment 改 seller-primary review + AWS SES SMTP（2026-05-20）
 - [x] A14 Category 重整 + Listing UX polish — migrations 022/023, structured spec_schema, MOQ, custom mesh range, auto-title, Select label fixes（commits `15fba5b → ff464c9`，2026-05-22）
+- [x] A15 Listing images — migration 024 `listings` bucket（720p WebP / 2 MiB cap / owner-scoped RLS）+ `<ListingImageUploader />`（drag-drop + reuse-library + client compress）+ market card banner + detail gallery（2026-05-24）
 - [x] 公開頁 SEO meta（title/description/og）齊全
 - [x] 所有路由都有 `loading.tsx` 與 `error.tsx` 雛形（多數已完成）
 - [x] 沒有 console.error / TS error / lint error（`npm run build` 在每個 commit 前都跑過）
