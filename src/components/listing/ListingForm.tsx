@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ListingImageUploader } from "@/components/listing/ListingImageUploader";
 import { cn } from "@/lib/utils";
 
 export interface CategoryOption {
@@ -719,6 +720,23 @@ export function ListingForm({ categories }: ListingFormProps) {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="images"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Images (optional)</FormLabel>
+              <FormControl>
+                <ListingImageUploader
+                  value={field.value ?? []}
+                  onChange={(urls) => field.onChange(urls)}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

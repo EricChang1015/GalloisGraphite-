@@ -20,7 +20,7 @@ export default async function MarketPage() {
     .from("listings")
     .select(
       `id, title, quantity, min_order_quantity, unit, unit_price, currency, incoterm, origin_location,
-       available_from, available_to, seller_id, specs,
+       available_from, available_to, seller_id, specs, images,
        product_categories(name, spec_schema),
        seller:profiles!listings_seller_id_fkey(id, full_name, company_name, country)`
     )
@@ -41,6 +41,7 @@ export default async function MarketPage() {
         available_to: string | null;
         seller_id: string;
         specs: Record<string, unknown> | null;
+        images: string[] | null;
         product_categories: {
           name: string;
           spec_schema: Record<string, unknown> | null;
@@ -74,6 +75,7 @@ export default async function MarketPage() {
       available_to: l.available_to,
       categoryName: l.product_categories?.name ?? "—",
       specChip,
+      coverImage: (l.images ?? [])[0] ?? null,
       seller: {
         id: l.seller?.id ?? l.seller_id,
         full_name: l.seller?.full_name ?? null,

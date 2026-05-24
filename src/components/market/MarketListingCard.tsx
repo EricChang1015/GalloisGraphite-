@@ -23,6 +23,8 @@ export type MarketListingItem = {
   categoryName: string;
   /** Compact spec chip e.g. "+100 Mesh · 94% C". */
   specChip?: string;
+  /** First image URL from listings.images, if any. */
+  coverImage?: string | null;
   seller: CounterpartyProfile;
 };
 
@@ -35,6 +37,17 @@ export function MarketListingCard({ listing, currentUserId }: Props) {
   return (
     <Card className="h-full flex flex-col transition-colors hover:border-primary/50 hover:bg-card/80">
       <Link href={`/market/${listing.id}`} className="flex-1 flex flex-col">
+        {listing.coverImage ? (
+          <div className="relative aspect-[16/9] overflow-hidden rounded-t-lg bg-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={listing.coverImage}
+              alt={listing.title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        ) : null}
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-2">
             <CardTitle className="text-base leading-snug">{listing.title}</CardTitle>

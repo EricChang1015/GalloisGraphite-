@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { InquiryDialog } from "@/components/listing/InquiryDialog";
 import { CounterpartyCard } from "@/components/messages/CounterpartyCard";
 import { MessageCounterpartyButton } from "@/components/messages/MessageCounterpartyButton";
+import { ListingGallery } from "@/components/listing/ListingGallery";
 import {
   parseCategorySpec,
   parseListingSpecs,
@@ -118,11 +119,9 @@ export default async function ListingDetailPage({ params }: PageProps) {
       )}
 
       {(listing.images ?? []).length > 0 && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={(listing.images ?? [])[0]}
+        <ListingGallery
+          images={listing.images ?? []}
           alt={listing.title}
-          className="w-full rounded-lg object-cover max-h-64"
         />
       )}
 

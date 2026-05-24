@@ -37,7 +37,7 @@ export default async function ListingsPage() {
   const { data: listings } = await supabase
     .from("listings")
     .select(
-      "id, title, quantity, min_order_quantity, unit, unit_price, currency, status, created_at, specs, product_categories(name, spec_schema)"
+      "id, title, quantity, min_order_quantity, unit, unit_price, currency, status, created_at, specs, images, product_categories(name, spec_schema)"
     )
     .eq("seller_id", user.id)
     .order("created_at", { ascending: false })
@@ -52,6 +52,7 @@ export default async function ListingsPage() {
       status: string;
       created_at: string;
       specs: Record<string, unknown> | null;
+      images: string[] | null;
       product_categories: {
         name: string;
         spec_schema: Record<string, unknown> | null;
@@ -105,18 +106,36 @@ export default async function ListingsPage() {
                 const spec = parseCategorySpec(l.product_categories?.spec_schema);
                 const overrides = parseListingSpecs(l.specs);
                 const resolved = resolveListingSpecs(spec, overrides);
+                const cover = (l.images ?? [])[0] ?? null;
                 return (
                   <TableRow key={l.id}>
                     <TableCell>
-                      <Link
-                        href={`/market/${l.id}`}
-                        className="hover:underline font-medium"
-                      >
-                        {l.title}
-                      </Link>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {resolved.mesh_size} · {resolved.fixed_carbon} C
-                      </p>
+                      <div className="flex items-start gap-3">
+                        {cover ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={cover}
+                            alt=""
+                            className="size-10 shrink-0 rounded object-cover bg-muted"
+                          />
+                        ) : (
+                          <div
+                            className="size-10 shrink-0 rounded bg-muted/40"
+                            aria-hidden
+                          />
+                        )}
+                        <div>
+                          <Link
+                            href={`/market/${l.id}`}
+                            className="hover:underline font-medium"
+                          >
+                            {l.title}
+                          </Link>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {resolved.mesh_size} · {resolved.fixed_carbon} C
+                          </p>
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {l.product_categories?.name ?? "—"}
