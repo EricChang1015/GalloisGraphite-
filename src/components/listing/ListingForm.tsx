@@ -6,7 +6,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
-import { createListing } from "@/actions/listing";
+import { createListing, updateListing } from "@/actions/listing";
 import {
   ListingInputSchema,
   type ListingInput,
@@ -50,37 +50,91 @@ export interface CategoryOption {
   spec_schema: Record<string, unknown> | null;
 }
 
-interface ListingFormProps {
-  categories: CategoryOption[];
+/**
+ * Existing listing fields used to pre-fill the form when editing.
+ * Mirrors the columns we select in `/listings/[id]/edit/page.tsx`.
+ */
+export interface ExistingListing {
+  id: string;
+  category_id: string;
+  title: string;
+  specs: Record<string, unknown> | null;
+  quantity: number;
+  min_order_quantity: number | null;
+  unit: string;
+  origin_location: string;
+  available_from: string | null;
+  available_to: string | null;
+  unit_price: number;
+  currency: string;
+  incoterm: string;
+  description: string | null;
+  images: string[] | null;
 }
 
-export function ListingForm({ categories }: ListingFormProps) {
+interface ListingFormProps {
+  categories: CategoryOption[];
+  /** When provided the form runs in "edit" mode and calls updateListing(id). */
+  existing?: ExistingListing;
+}
+
+export function ListingForm({ categories, existing }: ListingFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const isEdit = !!existing;
   /** Track whether the seller has manually edited the title so we don't
-   *  clobber their text on auto-fill. */
-  const [titleEdited, setTitleEdited] = useState(false);
+   *  clobber their text on auto-fill. In edit mode they already typed
+   *  the title once, so suppress auto-fill. */
+  const [titleEdited, setTitleEdited] = useState(isEdit);
 
   const form = useForm<ListingInput>({
     resolver: zodResolver(ListingInputSchema) as never,
-    defaultValues: {
-      category_id: "",
-      title: "",
-      specs: {},
-      // Leave undefined so the input renders empty rather than "1"; the
-      // zod schema (required positive) still catches submit without a value.
-      quantity: undefined as unknown as number,
-      min_order_quantity: undefined,
-      unit: "MT",
-      origin_location: "Madagascar",
-      available_from: "",
-      available_to: "",
-      unit_price: undefined as unknown as number,
-      currency: "USDT",
-      incoterm: "CFR",
-      description: "",
-      images: [],
-    },
+    defaultValues: existing
+      ? {
+          category_id: existing.category_id,
+          title: existing.title,
+          specs: (existing.specs ?? {}) as ListingInput["specs"],
+          quantity: existing.quantity,
+          min_order_quantity:
+            existing.min_order_quantity == null
+              ? undefined
+              : existing.min_order_quantity,
+          unit:
+            existing.unit === "KG" || existing.unit === "MT"
+              ? (existing.unit as "MT" | "KG")
+              : "MT",
+          origin_location: existing.origin_location,
+          available_from: existing.available_from ?? "",
+          available_to: existing.available_to ?? "",
+          unit_price: existing.unit_price,
+          currency: existing.currency,
+          incoterm:
+            existing.incoterm === "CFR" ||
+            existing.incoterm === "CIF" ||
+            existing.incoterm === "FOB"
+              ? (existing.incoterm as "CFR" | "CIF" | "FOB")
+              : "CFR",
+          description: existing.description ?? "",
+          images: existing.images ?? [],
+        }
+      : {
+          category_id: "",
+          title: "",
+          specs: {},
+          // Leave undefined so the input renders empty rather than "1"; the
+          // zod schema (required positive) still catches submit without a value.
+          quantity: undefined as unknown as number,
+          min_order_quantity: undefined,
+          unit: "MT",
+          origin_location: "Madagascar",
+          available_from: "",
+          available_to: "",
+          unit_price: undefined as unknown as number,
+          currency: "USDT",
+          incoterm: "CFR",
+          description: "",
+          images: [],
+        },
   });
 
   const categoryId = form.watch("category_id");
@@ -143,7 +197,9 @@ export function ListingForm({ categories }: ListingFormProps) {
     }
 
     startTransition(async () => {
-      const result = await createListing(values);
+      const result = isEdit
+        ? await updateListing(existing.id, values)
+        : await createListing(values);
       if (result.error) {
         if (result.error.fieldErrors) {
           for (const [field, messages] of Object.entries(
@@ -177,8 +233,11 @@ export function ListingForm({ categories }: ListingFormProps) {
         }
         return;
       }
-      toast.success("Listing created successfully.");
+      toast.success(
+        isEdit ? "Listing updated." : "Listing created successfully."
+      );
       router.push("/listings");
+      router.refresh();
     });
   }
 
@@ -762,7 +821,13 @@ export function ListingForm({ categories }: ListingFormProps) {
 
         <div className="flex gap-3">
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Creating…" : "Create Listing"}
+            {isPending
+              ? isEdit
+                ? "Saving…"
+                : "Creating…"
+              : isEdit
+                ? "Save changes"
+                : "Create Listing"}
           </Button>
           <Button
             type="button"

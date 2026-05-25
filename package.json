@@ -22,7 +22,8 @@
     "qa:e2e-full": "node scripts/e2e-full-trading.mjs",
     "qa:spec-helpers": "node --experimental-strip-types --no-warnings scripts/test-listing-spec-helpers.mjs",
     "qa:listing-moq": "node scripts/smoke-listing-moq.mjs",
-    "qa:listing-images": "node scripts/smoke-listing-images.mjs"
+    "qa:listing-images": "node scripts/smoke-listing-images.mjs",
+    "qa:listing-delete": "node scripts/smoke-listing-delete.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.62",

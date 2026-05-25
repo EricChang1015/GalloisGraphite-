@@ -16,6 +16,7 @@ import {
   parseListingSpecs,
   resolveListingSpecs,
 } from "@/lib/categories/spec";
+import { ListingRowActions } from "@/components/listing/ListingRowActions";
 
 export const metadata = { title: "My Listings — Mada Graphite" };
 
@@ -99,6 +100,7 @@ export default async function ListingsPage() {
                 <TableHead className="text-right">Price</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -163,6 +165,15 @@ export default async function ListingsPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
                       {new Date(l.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <ListingRowActions
+                        listing={{
+                          id: l.id,
+                          title: l.title,
+                          status: l.status,
+                        }}
+                      />
                     </TableCell>
                   </TableRow>
                 );
