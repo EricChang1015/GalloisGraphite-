@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AiChatLauncher } from "@/components/chat/AiChatLauncher";
 import { Navbar } from "@/components/layout/Navbar";
+import type { WorkspaceMobileSection } from "@/components/layout/MobileNav";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth/session";
 import {
@@ -89,9 +90,21 @@ export default async function AppLayout({
   const counts =
     user && profile ? await getUserActionCounts(user.id, profile.role) : null;
 
+  // Same items + badges the desktop sidebar shows — push to the mobile
+  // drawer so a phone user can reach Listings / Inquiries / Orders /
+  // Settings without a sidebar.
+  const workspace: WorkspaceMobileSection = {
+    label: "Workspace",
+    items: NAV.map((item) => ({
+      href: item.href,
+      label: item.label,
+      badge: badgeFor(item.href, counts),
+    })),
+  };
+
   return (
     <>
-      <Navbar />
+      <Navbar workspace={workspace} />
       <div className="flex flex-1">
         <aside className="hidden md:flex md:w-56 flex-col border-r border-border bg-card">
           <div className="px-4 py-4 text-xs uppercase tracking-[0.18em] text-muted-foreground">

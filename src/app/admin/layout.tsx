@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Navbar } from "@/components/layout/Navbar";
+import type { WorkspaceMobileSection } from "@/components/layout/MobileNav";
 import { Badge } from "@/components/ui/badge";
 import { getAdminActionCounts } from "@/lib/notifications/counts";
 
@@ -46,9 +47,24 @@ export default async function AdminLayout({
     return null;
   };
 
+  // Mirror the sidebar to the mobile drawer so admins on a phone can
+  // still reach Users / Categories / Payments / News / Settings.
+  const workspace: WorkspaceMobileSection = {
+    label: "Admin Console",
+    items: [
+      { href: "/admin", label: "Overview" },
+      { href: "/dashboard", label: "Dashboard" },
+      ...ADMIN_NAV.map((item) => ({
+        href: item.href,
+        label: item.label,
+        badge: badgeFor(item.href),
+      })),
+    ],
+  };
+
   return (
     <>
-      <Navbar />
+      <Navbar workspace={workspace} />
       <div className="flex flex-1">
         <aside className="hidden md:flex md:w-56 flex-col border-r border-border bg-card">
           <div className="px-4 py-4 text-xs uppercase tracking-[0.18em] text-muted-foreground">

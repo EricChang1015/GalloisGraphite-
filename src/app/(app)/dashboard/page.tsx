@@ -7,6 +7,8 @@ import {
   PlusIcon,
   ArrowRightIcon,
   AlertTriangleIcon,
+  SettingsIcon,
+  ListIcon,
 } from "lucide-react";
 
 import { createServerClient } from "@/lib/supabase/server";
@@ -240,16 +242,17 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Quick links */}
+      {/* Quick links — mirror the desktop sidebar so phone users have
+          the same surface area. Wraps to multiple rows on mobile. */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/market">
           <Card className="hover:border-primary/40 transition-colors cursor-pointer h-full">
             <CardContent className="flex items-center gap-3 pt-4">
               <ShoppingBagIcon className="w-5 h-5 text-amber-400" />
               <div>
-                <p className="text-sm font-medium">Browse Market</p>
+                <p className="text-sm font-medium">Market</p>
                 <p className="text-xs text-muted-foreground">
-                  Find graphite listings
+                  Browse graphite listings
                 </p>
               </div>
             </CardContent>
@@ -296,6 +299,21 @@ export default async function DashboardPage() {
           </Card>
         </Link>
         {isSeller && (
+          <Link href="/listings">
+            <Card className="hover:border-primary/40 transition-colors cursor-pointer h-full">
+              <CardContent className="flex items-center gap-3 pt-4">
+                <ListIcon className="w-5 h-5 text-cyan-400" />
+                <div>
+                  <p className="text-sm font-medium">My Listings</p>
+                  <p className="text-xs text-muted-foreground">
+                    Edit, pause or delete your listings
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+        {isSeller && (
           <Link href="/listings/new">
             <Card className="hover:border-primary/40 transition-colors cursor-pointer h-full">
               <CardContent className="flex items-center gap-3 pt-4">
@@ -308,6 +326,27 @@ export default async function DashboardPage() {
             </Card>
           </Link>
         )}
+        <Link href="/settings">
+          <Card className="hover:border-primary/40 transition-colors cursor-pointer h-full">
+            <CardContent className="flex items-center gap-3 pt-4">
+              <SettingsIcon className="w-5 h-5 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Settings</p>
+                <p className="text-xs text-muted-foreground">
+                  {counts?.profileIncomplete
+                    ? "Profile needs attention"
+                    : "Profile & preferences"}
+                </p>
+              </div>
+              {counts?.profileIncomplete && (
+                <span
+                  className="inline-block size-2 rounded-full bg-destructive"
+                  aria-label="Profile incomplete"
+                />
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Priority Actions */}

@@ -19,14 +19,35 @@ import { cn } from "@/lib/utils";
 
 type NavLink = { href: string; label: string };
 
+/**
+ * Optional second nav section shown above the public marketing links
+ * when the user is inside a context (Workspace or Admin Console) that
+ * has its own desktop sidebar. Lets us surface those sidebar entries
+ * on mobile too, where the sidebar is hidden.
+ *
+ * `items[].badge` is a pre-rendered ReactNode (server-side) so the
+ * action counts already filled in by the layout component show up
+ * here without a second round-trip.
+ */
+export type WorkspaceMobileSection = {
+  label: string;
+  items: ReadonlyArray<{
+    href: string;
+    label: string;
+    badge?: React.ReactNode;
+  }>;
+};
+
 export function MobileNav({
   links,
   isAuthenticated,
   isAdmin,
+  workspace,
 }: {
   links: readonly NavLink[];
   isAuthenticated: boolean;
   isAdmin: boolean;
+  workspace?: WorkspaceMobileSection;
 }) {
   const [open, setOpen] = React.useState(false);
 
@@ -58,7 +79,37 @@ export function MobileNav({
           <SheetDescription>Madagascar natural flake graphite</SheetDescription>
         </SheetHeader>
 
-        <nav className="flex flex-1 flex-col gap-1 px-3 py-4">
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+          {/* Workspace / admin section — only when inside (app) or /admin */}
+          {workspace && workspace.items.length > 0 && (
+            <div className="mb-2">
+              <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                {workspace.label}
+              </p>
+              {workspace.items.map((item) => (
+                <SheetClose
+                  key={item.href}
+                  nativeButton={false}
+                  render={
+                    <Link
+                      href={item.href}
+                      onClick={close}
+                      className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted hover:text-[color:var(--gold)]"
+                    />
+                  }
+                >
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge}
+                </SheetClose>
+              ))}
+              <div className="my-2 border-t border-border" aria-hidden />
+              <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Site
+              </p>
+            </div>
+          )}
+
+          {/* Public marketing links — always present */}
           {links.map((link) => (
             <SheetClose
               key={link.href}

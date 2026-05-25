@@ -8,7 +8,10 @@ import {
   getCurrentUser,
   isAdminRole,
 } from "@/lib/auth/session";
-import { MobileNav } from "@/components/layout/MobileNav";
+import {
+  MobileNav,
+  type WorkspaceMobileSection,
+} from "@/components/layout/MobileNav";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { NavSearchTrigger } from "@/components/layout/NavSearchTrigger";
 
@@ -31,7 +34,16 @@ const NAV_LINKS = [
  *  - Hover underline using signal accent
  *  - Sign-up button uses signal background as the primary CTA
  */
-export async function Navbar() {
+/**
+ * Sticky navbar with optional `workspace` prop. The (app) and admin
+ * layouts pass the same nav items their desktop sidebar uses so the
+ * mobile drawer can surface them too (mobile has no sidebar).
+ */
+export async function Navbar({
+  workspace,
+}: {
+  workspace?: WorkspaceMobileSection;
+} = {}) {
   const user = await getCurrentUser();
   const profile = user ? await getCurrentProfile() : null;
   const isAuthenticated = Boolean(user);
@@ -134,6 +146,7 @@ export async function Navbar() {
             links={NAV_LINKS}
             isAuthenticated={isAuthenticated}
             isAdmin={isAdmin}
+            workspace={workspace}
           />
         </div>
       </div>
