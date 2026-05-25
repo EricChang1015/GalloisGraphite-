@@ -102,21 +102,21 @@
 - [x] Vercel import + env（含 POE / Resend / Supabase / 平台收款資訊）
 - [x] Supabase production schema：所有 10 個 migrations（001 → 010）都已透過 `scripts/apply-migrations.mjs` 套用，並由 `_agent_migrations` 追蹤表記錄
   > 注意：未來如增量 migration，**enum add value 與使用該值必須分檔**（007/009 是現有範例：007 加 enum value、009 才使用）
-- [ ] RLS policy review（特別是 005 / 009 / 010 新增 / 修改的政策）
+- [x] RLS policy review（005 / 010 / 015 / 018）— `npm run qa:verify-rls`（17/17 pass，2026-05-25）
 - [x] ~~Resend domain DNS（或先用 `onboarding@resend.dev` 寄件）~~ — 2026-05-20 改用 **AWS SES SMTP**（`src/lib/email/smtp.ts`）；production env 需設 `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM_ADDRESS`（必須是 SES 已驗證 identity）
 - [x] **建立 `order-documents` Storage bucket + policy**（A4） — `010_storage_order_documents.sql` 已建立
 - 端到端 happy path：
-  1. [x] 註冊（buyer + seller）— Email 登入已驗證；Google OAuth 路徑已實作但 production smoke 走測待補
+  1. [x] 註冊（buyer + seller）— Email 登入已驗證；Google OAuth 程式路徑 + migration 008 已驗證（`npm run qa:oauth`）；production 瀏覽器一鍵登入仍建議人工複核
   2. [x] 上貨
   3. [x] 詢價 → 賣家發 quotation → 買家 accept（含 counter-offer 來回測試）
-  4. [x] 賣家 draftContract（`full_prepay`） — `net_after_arrival` 待補測一次
+  4. [x] 賣家 draftContract（含 30/70 分期排程）— 情境 B 已走測（2026-05-25）
   5. [x] 買家 approve contract + redraft 來回
   6. [x] 雙方上傳 signed scan → 自動推進到 `contract_signed`，簽名掃描已能嵌入合約預覽下載
   7. [x] **（full_prepay 流）** submit payment → admin verify → `paid` → `in_production`（含付款證明上傳）
   8. [x] `markReadyToShip` → `markShipped`(B/L + vessel + container) → `markInTransit` → `markArrived`(ATA)
   9. [x] 買家 `markCustomsCleared` → 自動 `completed`（2026-05-15 走完）
-  10. [ ] **（net_after_arrival 流）** `contract_signed` 直接 → `in_production` → ... → `arrived` → `customs_cleared` → buyer submit final payment → admin verify → `completed`
-  11. [ ] `disputed` / `cancelled` 路徑各跑一次（含 admin force-transition 解 dispute）
+  10. [x] **（分期 / 情境 B）** 30% 簽約 + 70% `accepted_by_buyer`：`customs_cleared` 未付清不得 `completed`；付清後結案 — `npm run qa:a7:gate` + Playwright `e2e-full-trading`（`ORD-260525-67fdd1`，2026-05-25）
+  11. [x] `disputed` / `cancelled` / admin force-transition — `npm run qa:a7:dispute`（9/9 pass，2026-05-25）
 
 > 詳細測試帳號與走測腳本見 [`TESTING.md`](./TESTING.md)。
 
@@ -356,7 +356,7 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - [x] A6 KYC 上傳 + admin 門檻 + 四級 level + phone OTP（migrations 019/020）
 - [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，所有 migrations 已套用
 - [x] A7 full_prepay 端到端 happy path 通過（2026-05-15 走測 `ORD-TEST-MP6PL7MZ`）
-- [ ] A7 net_after_arrival 端到端 happy path 通過 + dispute / cancel / force-transition 走測
+- [x] A7 分期結案閘門 + dispute / cancel / force-transition + RLS 複查（2026-05-25，`npm run qa:a7`）
 - [x] A8 B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心）已完成
 - [x] A9 Migration 自動套用 runner 完成（`npm run db:migrate`）
 - [x] A13 Payment 改 seller-primary review + AWS SES SMTP（2026-05-20）

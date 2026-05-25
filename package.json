@@ -23,7 +23,13 @@
     "qa:spec-helpers": "node --experimental-strip-types --no-warnings scripts/test-listing-spec-helpers.mjs",
     "qa:listing-moq": "node scripts/smoke-listing-moq.mjs",
     "qa:listing-images": "node scripts/smoke-listing-images.mjs",
-    "qa:listing-delete": "node scripts/smoke-listing-delete.mjs"
+    "qa:listing-delete": "node scripts/smoke-listing-delete.mjs",
+    "qa:payment-schedule": "node scripts/smoke-payment-schedule.mjs --cleanup",
+    "qa:a7:gate": "node scripts/smoke-a7-completion-gate.mjs --cleanup",
+    "qa:a7:dispute": "node scripts/smoke-a7-dispute-cancel.mjs --cleanup",
+    "qa:verify-rls": "node scripts/verify-rls-policies.mjs",
+    "qa:oauth": "node scripts/smoke-oauth-config.mjs",
+    "qa:a7": "npm run qa:payment-schedule && npm run qa:a7:gate && npm run qa:a7:dispute && npm run qa:verify-rls && npm run qa:oauth"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.62",

@@ -138,13 +138,15 @@ node scripts/check-dev-errors.mjs
 
 | 項目 | 腳本章節 | 狀態 |
 |---|---|---|
-| Dispute / Cancel | §6 | 待各跑一次 |
-| Admin force transition | §6 | 待跑 |
+| Dispute / Cancel | §6 | ✅ `npm run qa:a7:dispute`（2026-05-25） |
+| Admin force transition | §6 | ✅ 同上（admin RLS + DB） |
+| 分期結案閘門（情境 B） | §4 | ✅ `npm run qa:a7:gate` + `e2e-full-trading`（2026-05-25） |
+| RLS 複查（005/010/015/018） | — | ✅ `npm run qa:verify-rls`（2026-05-25） |
 | Pay Early（`scheduled` → 提前付款） | §3 D1 變體 | 2026-05-20 已煙霧通過 |
 | Seller reject payment | Payment Tab | 建議補 |
-| Contract reject + re-draft | §3 C1 變體 | 建議補 |
+| Contract reject + re-draft | §3 C1 變體 | ✅ `e2e-full-trading` C2–C3（2026-05-25） |
 | `PROFILE_INCOMPLETE` gate | 清空 settings 後試 inquiry | 建議補 |
-| Google OAuth 註冊 | ROADMAP A7 | production 待補 |
+| Google OAuth 註冊 | ROADMAP A7 | ✅ `npm run qa:oauth`（程式路徑）；production 瀏覽器一鍵登入建議人工複核 |
 
 ### Tier 4 — 清理測試資料
 
@@ -413,8 +415,8 @@ select o.order_no, o.status, o.incoterm,
 |---|---|---|
 | 1 | ~~站內 IM（A2）~~ | ✅ 已實作（party DM）；合併前跑 §3.5 + `qa:chat` |
 | 2 | KYC 上傳（A6） | 僅 commercial profile gate，無 `kyc_level` 升級 UI |
-| 3 | 情境 B 正式走測紀錄 | 邏輯已實作，文件化腳本在本版補上，待人工跑一輪寫入 §8 |
-| 4 | dispute / cancel / force | 待 Tier 3 |
+| 3 | ~~情境 B 正式走測紀錄~~ | ✅ 2026-05-25：`qa:a7:gate` + `e2e-full-trading` → §8 |
+| 4 | ~~dispute / cancel / force~~ | ✅ 2026-05-25：`qa:a7:dispute` |
 | 5 | `bl_date_plus_N` cron | 需 Vercel cron + `bl_date`；日常 E2E 可略 |
 
 已解決（僅供對照）：`order-documents` bucket ✅；SES email ✅；seller-primary payment review ✅。
@@ -443,14 +445,15 @@ select o.order_no, o.status, o.incoterm,
 | 手動 UI | 待填（§3.5 M1–M5） |
 | 備註 | migration 016–018；舊 order-room 已合併 |
 
-### （待填）— 情境 B 分期走測
+### 2026-05-25 — 情境 B 分期 + A7 QA 套件
 
 | 欄位 | 值 |
 |---|---|
-| order_no | |
-| 走測人 | |
-| 結果 | pass / fail |
-| 備註 | |
+| order_no | `ORD-260525-67fdd1`（Playwright UI）；`ORD-A7-GATE-*`（DB gate smoke） |
+| 自動化 | `npm run qa:a7` — payment-schedule 53/53、gate 6/6、dispute 9/9、RLS 17/17、oauth 8/8 |
+| UI E2E | `E2E_BASE_URL=http://127.0.0.1:3000 node scripts/e2e-full-trading.mjs` — 24/24 steps pass |
+| 排程 | 30% `before_shipment` + 70% `arrived_at_port`；`customs_cleared` 時僅 30% 已付 → 維持非 `completed`；70% verify 後 → `completed` |
+| 報告 | [`docs/E2E_REPORT_FULL.md`](./E2E_REPORT_FULL.md) |
 
 ---
 
@@ -462,6 +465,7 @@ select o.order_no, o.status, o.incoterm,
 | 2026-05-20 | Payment seller-review、SES、走測紀錄 |
 | 2026-05-20 | **重寫**：對齊 migration 014 / `payment_schedules`；新增 §0–§2 QA 分層、情境 A/B、regression 矩陣、SQL 快查；移除過時 `net_after_arrival` 章節 |
 | 2026-05-20 | 站內信 A2：§3.5 party DM QA、`qa:chat`、regression 矩陣更新 |
+| 2026-05-25 | **A7 收尾**：`npm run qa:a7` 套件、情境 B §8 紀錄、`e2e-full-trading` 報告 |
 
 ---
 
@@ -475,5 +479,23 @@ select o.order_no, o.status, o.incoterm,
 | `scripts/verify-schema.mjs` | 斷言 014 + party chat schema |
 | `scripts/apply-migrations.mjs --status` | migration 套用狀態 |
 | `scripts/qa-chat-buyer-seller.mjs` | Buyer↔Seller party DM RLS（§3.5） |
+| `scripts/smoke-payment-schedule.mjs` | 分期排程三情境 SQL 走測（FOB 30/70、CFR 30/40/30、CIF 100%） |
+| `scripts/smoke-a7-completion-gate.mjs` | 情境 B 結案閘門（`maybeAutoComplete`） |
+| `scripts/smoke-a7-dispute-cancel.mjs` | Dispute / cancel / admin force + RLS |
+| `scripts/verify-rls-policies.mjs` | 005/010/015/018 關鍵 policy 斷言 |
+| `scripts/smoke-oauth-config.mjs` | Google OAuth 程式路徑 + migration 008 |
+| `scripts/e2e-full-trading.mjs` | Playwright 30/70 UI 全流程（§4） |
 
-`package.json` 捷徑：`npm run qa:preflight`、`npm run qa:chat`、`npm run qa:cleanup`、`npm run qa:seed-order`。
+`package.json` 捷徑：`npm run qa:preflight`、`npm run qa:chat`、`npm run qa:a7`、`npm run qa:a7:gate`、`npm run qa:a7:dispute`、`npm run qa:verify-rls`、`npm run qa:oauth`、`npm run qa:payment-schedule`、`npm run qa:cleanup`、`npm run qa:seed-order`。
+
+**A7 一鍵（發版前建議）**：
+
+`qa:a7:dispute` 需先依 §1 設定 `QA_BUYER_EMAIL`、`QA_ADMIN_EMAIL`、`QA_PASSWORD`。
+
+```bash
+npm run qa:preflight
+npm run qa:a7
+# UI 分期（需 production build + start + Playwright browsers）：
+npm run build && npm run start   # 另一終端
+E2E_BASE_URL=http://127.0.0.1:3000 node scripts/e2e-full-trading.mjs
+```

@@ -2,23 +2,23 @@
 
 | 項目 | 值 |
 |---|---|
-| Run ID | MPF018FD |
+| Run ID | MPLF5O93 |
 | Base URL | http://127.0.0.1:3000 |
-| 訂單 | ORD-260521-a33910 |
-| Order UUID | 54fc458c-0024-4db3-ac90-1c3845da6e71 |
-| Inquiry UUID | 99984618-89f3-4f87-9ec3-6cffdcbc48ef |
+| 訂單 | ORD-260525-67fdd1 |
+| Order UUID | b9d4d54a-3d0d-4562-b8e0-03d02044fff0 |
+| Inquiry UUID | c12a1a7a-2989-4ce7-abf5-9a6ae3068511 |
 
 ## 步驟結果
 
 | 步驟 | 結果 | 備註 |
 |---|---|---|
-| A1 Seller listing seeded (API) | ✅ | 6ef53f40-4ee9-4d99-a71b-26f740f34c6b |
-| A2 Seller can open listing detail | ✅ | 6ef53f40-4ee9-4d99-a71b-26f740f34c6b |
-| B1 Buyer inquiry seeded (API) | ✅ | 99984618-89f3-4f87-9ec3-6cffdcbc48ef |
-| B2 Seller quote 4300 (seeded) | ✅ | fb0f91ea-06c2-4d22-8167-9743695e8d11 |
+| A1 Seller listing seeded (API) | ✅ | 354cfe29-f2e3-4323-94f8-0382c3072ff4 |
+| A2 Seller can open listing detail | ✅ | 354cfe29-f2e3-4323-94f8-0382c3072ff4 |
+| B1 Buyer inquiry seeded (API) | ✅ | c12a1a7a-2989-4ce7-abf5-9a6ae3068511 |
+| B2 Seller quote 4300 (seeded) | ✅ | 251b048b-ad86-48ad-8376-0f73e00923d0 |
 | B3 Buyer counter 4250 (seeded) | ✅ | — |
 | B4 Seller counter 4280 (seeded) | ✅ | — |
-| B5 Buyer accept -> order | ✅ | ORD-260521-a33910 |
+| B5 Buyer accept -> order | ✅ | ORD-260525-67fdd1 |
 | C1 Seller draft contract v1 | ✅ | — |
 | C2 Buyer reject contract | ✅ | — |
 | C3 Seller re-draft contract v2 | ✅ | — |
@@ -35,7 +35,7 @@
 | F2 Buyer pay 70% (arrived_at_port) | ✅ | — |
 | F3 Seller verify 70% | ✅ | — |
 | F4 Order completed (DB) | ✅ | status=completed, allPaid=true |
-| F5 Order completed (UI) | ✅ | ORD-260521-a33910 |
+| F5 Order completed (UI) | ✅ | ORD-260525-67fdd1 |
 
 ## 待修正問題
 
