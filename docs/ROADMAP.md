@@ -145,6 +145,19 @@ server actions / UI 元件實作：
 - [x] AI agent 撰寫規範：[`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc)（檔名規則、idempotency、enum 拆檔、RLS 覆蓋、failure handling）
 - [x] 解決舊版重複 prefix：`006_b2b_progress_enums` → `007_b2b_progress_enums`、`007_oauth_profile_handling` → `008_oauth_profile_handling`、`007_b2b_progress_tables` → `009_b2b_progress_tables`
 
+### A16. ✅ Seller listing edit / delete（已完成 — 2026-05-24）
+
+賣家原本上完貨之後沒有任何 UI 可以改或刪，這次補齊。
+
+- [x] **Server actions**（`src/actions/listing.ts`）：
+  - `updateListing(id, input)` 改成 dual-mode — full-form edit 會跑 `ListingInputSchema` + commercial-profile + KYC gate；bare status-toggle（`pauseListing` / `resumeListing` / 新 `markListingSoldOut`）保持原本快速通道。Pre-check `maybeSingle()` 回 `NOT_FOUND_OR_FORBIDDEN` 而非無聲 no-op。
+  - **`deleteListing(id)`**：載入 listing → 驗 ownership（admin/super_admin 可代刪）→ 數 `orders.listing_id = id` count；> 0 時回 `LISTING_HAS_ORDERS`（`orders.listing_id` 是 `NOT NULL`，不擋直接讓 FK violation crash request）；通過則 hard delete，`inquiries.listing_id` / `quotations.listing_id` 設 `set null` 自動 scrub。
+  - `markListingSoldOut(id)` — `<ListingRowActions />` 用。
+- [x] **`/listings/[id]/edit` 頁**（server component）：用 `getCurrentUser` 驗證身分、撈 listing + 檢查 ownership（或 admin），fall through `notFound()` 處理 invalid id / 非 owner；若 listing 引用的 category 已被 `deactivate`，把它另撈出來塞回 dropdown 第一格避免空白。
+- [x] **`<ListingForm />`** 加 `existing?: ExistingListing` prop：default values 全部對齊既存資料（title / specs / quantity / MOQ / unit / 日期 / price / currency / incoterm / description / images），submit 改呼 `updateListing(existing.id, values)`、button label / toast 切「Save changes」/「Listing updated.」。`titleEdited` 在 edit 模式預設 `true` 避免 onBlur 蓋掉手動標題。
+- [x] **`<ListingRowActions />`**（`/listings` 新「Actions」欄）：Edit（Link）/ Pause↔Resume / Sold out / **Delete**（紅色 + confirm dialog；dialog 文案說明訂單存在會被擋）。
+- [x] **Smoke**：`scripts/smoke-listing-delete.mjs`（`npm run qa:listing-delete`）— 11 assertions，分別驗 update 的 title / unit_price / status round-trip、delete 對 order-attached listing 回 `LISTING_HAS_ORDERS`、非 owner 被擋、owner 對 order-free listing 通過、row 真的不見。`--cleanup` 收尾。
+
 ### A15. ✅ Listing images（已完成 — 2026-05-24）
 
 完成 ROADMAP §A4 中最後一個面向產品的 storage bucket，讓賣家上傳商品照、買家在 market 看到實際成品。
@@ -349,6 +362,7 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - [x] A13 Payment 改 seller-primary review + AWS SES SMTP（2026-05-20）
 - [x] A14 Category 重整 + Listing UX polish — migrations 022/023, structured spec_schema, MOQ, custom mesh range, auto-title, Select label fixes（commits `15fba5b → ff464c9`，2026-05-22）
 - [x] A15 Listing images — migration 024 `listings` bucket（720p WebP / 2 MiB cap / owner-scoped RLS）+ `<ListingImageUploader />`（drag-drop + reuse-library + client compress）+ market card banner + detail gallery（2026-05-24）
+- [x] A16 Seller listing edit / delete — `updateListing` 走完整 zod 校驗 + `deleteListing`（FK-aware，order-attached 擋下）+ `/listings/[id]/edit` + `<ListingRowActions />` 行內 Edit/Pause/Resume/Sold-out/Delete（2026-05-24）
 - [x] 公開頁 SEO meta（title/description/og）齊全
 - [x] 所有路由都有 `loading.tsx` 與 `error.tsx` 雛形（多數已完成）
 - [x] 沒有 console.error / TS error / lint error（`npm run build` 在每個 commit 前都跑過）
