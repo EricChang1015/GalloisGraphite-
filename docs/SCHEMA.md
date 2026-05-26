@@ -186,7 +186,8 @@
 | shipping_window_from / to | date | 可出貨窗口 |
 | notes | text | |
 | status | enum `quotation_status` | sent / countered / accepted / rejected / expired / superseded |
-| countered_by | uuid FK profiles | counter / accept / reject 的執行者 |
+| countered_by | uuid FK profiles | counter / accept / reject 的執行者（responder） |
+| created_by | uuid FK profiles, NOT NULL (027) | **提案人**：第一份永遠是 seller，counter-offer 是 counter 的人；用來判定「是我提的」（隱藏 Accept/Counter/Decline 按鈕）與顯示 by buyer / by seller 標籤 |
 | responded_at | timestamptz | |
 | created_at | timestamptz | |
 

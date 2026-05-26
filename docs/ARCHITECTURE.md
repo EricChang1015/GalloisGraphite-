@@ -204,10 +204,10 @@ type ActionResult<T> =
 | `inquiry.ts` | `createInquiry` | role='buyer' + `profiles.company_name`/`country` non-empty | Email 通知 seller, revalidate /inquiries；commercial profile 缺漏時回 `error.code='PROFILE_INCOMPLETE'` |
 |  | `acceptInquiry` | seller_id = auth.uid() | **(007 變更)** 改為自動發出預設 quotation（用 listing 條件 + 14 天 validity），inquiry='quoted'，buyer 仍需 accept quotation |
 |  | `rejectInquiry` | seller_id = auth.uid() | inquiry='rejected' |
-| **`quotation.ts`（007）** | `submitQuotation` | seller, role check | mark prior live quotations as superseded, insert quotation, inquiry='quoted', notify buyer |
-|  | `counterQuotation` | parties | parent → 'countered', insert child quotation, inquiry='negotiating' |
-|  | `acceptQuotation` | buyer only | create order(`current_quotation_id` = q.id, **`incoterm = q.incoterm`**, status='contract_pending'), q.status='accepted', inquiry='converted', notify seller。Incoterm 在這一步就敲定（不等到合約 draft），確保 ContractDraftForm 帶到的是議價後的 Incoterm 而不是 listing 原值 |
-|  | `rejectQuotation` | parties | q.status='rejected'; if no live quotations remain on inquiry → inquiry='rejected' |
+| **`quotation.ts`（007 + 027）** | `submitQuotation` | seller, role check | mark prior live quotations as superseded, insert quotation（**`created_by = user.id`**）, inquiry='quoted', notify buyer |
+|  | `counterQuotation` | parties **except parent.created_by**（提案人不能反提自己的 offer） | parent → 'countered'（記 `countered_by`）, insert child quotation（**`created_by = user.id`**）, inquiry='negotiating' |
+|  | `acceptQuotation` | parties **except q.created_by**（提案人不能接受自己的 offer；一律是「對手方」按 Accept） | create order(`current_quotation_id` = q.id, **`incoterm = q.incoterm`**, status='contract_pending'), q.status='accepted', inquiry='converted', 通知**對手方**（buyer accept → 通知 seller draft contract；seller accept buyer's counter → 通知 buyer 訂單已建立）。Incoterm 在這一步就敲定（不等到合約 draft），確保 ContractDraftForm 帶到的是議價後的 Incoterm 而不是 listing 原值 |
+|  | `rejectQuotation` | parties **except q.created_by** | q.status='rejected'; if no live quotations remain on inquiry → inquiry='rejected' |
 | `order.ts` | `draftContract` | seller, status ∈ {quoted, negotiating, contract_pending} | render HTML（含 payment schedule 表）、insert/update contract（revision_no++ 若 re-draft），同步 `orders.incoterm`，rebuild `payment_schedules` 列（保留已 paid 列），status='contract_pending', notify buyer |
 |  | `approveContract` | buyer, status='contract_pending' | `contract.buyer_approved_at` = now |
 |  | `rejectContract` | buyer, status='contract_pending' | `contract.buyer_rejected_at`、`buyer_reject_reason`，notify seller |
@@ -578,6 +578,9 @@ supabase/migrations/
   022_flake_graphite_categories.sql ← Category 重整：移除 MADA1/MADA2 品牌命名；結構化 `spec_schema`（product_type / mesh_size / fixed_carbon_min/max / moisture_max / size_distribution_min_pct / is_custom）；7 個 active 品類（6 mesh + Custom Grade）
   023_listings_moq.sql              ← optional `listings.min_order_quantity numeric(18,3)` + positivity check；`createInquiry` 加 `BELOW_MOQ` guard
   024_listings_bucket.sql           ← Public `listings` Storage bucket（2 MiB / JPEG/PNG/WebP 白名單）+ `storage.objects` 4 條 RLS（公開讀；owner 寫/改；owner+admin 刪）；路徑慣例 `listings/{seller_user_id}/{uuid}.{ext}`
+  025_listings_delete_policy.sql    ← listings DELETE RLS（owner / admin）
+  026_waive_schedules_on_cancelled_orders.sql  ← 訂單取消時把 `payment_schedules.status` 改 `waived`
+  027_quotations_created_by.sql     ← `quotations.created_by` NOT NULL FK profiles + backfill：第一份永遠是 seller、counter-offer = parent.countered_by。修正 `inquiries/[id]` 的「Round #N · by seller/buyer」標籤誤判 + 提案人能接受/反提自己 offer 的兩個 bug；server-side 在 `acceptQuotation` / `counterQuotation` / `rejectQuotation` 加上「不能對自己的 offer 動作」校驗
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）

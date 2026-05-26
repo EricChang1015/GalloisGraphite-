@@ -96,13 +96,11 @@ export default async function InquiryDetailPage({ params }: PageProps) {
   const isSeller = inquiry.seller_id === user.id;
   if (!isBuyer && !isSeller && !isAdmin) notFound();
 
-  const myRole: "buyer" | "seller" = isBuyer ? "buyer" : "seller";
-
   // Quotations history (newest first)
   const { data: quotations } = await supabase
     .from("quotations")
     .select(
-      "id, parent_quotation_id, seller_id, buyer_id, unit_price, currency, quantity, unit, incoterm, origin_port, destination_port, validity_until, notes, status, created_at, responded_at, countered_by"
+      "id, parent_quotation_id, seller_id, buyer_id, created_by, unit_price, currency, quantity, unit, incoterm, origin_port, destination_port, validity_until, notes, status, created_at, responded_at, countered_by"
     )
     .eq("inquiry_id", id)
     .order("created_at", { ascending: false })
@@ -112,6 +110,7 @@ export default async function InquiryDetailPage({ params }: PageProps) {
         parent_quotation_id: string | null;
         seller_id: string;
         buyer_id: string;
+        created_by: string;
         unit_price: number;
         currency: string;
         quantity: number;
@@ -228,10 +227,14 @@ export default async function InquiryDetailPage({ params }: PageProps) {
               const total = q.unit_price * q.quantity;
               const isLive = q.status === "sent";
               const expired = new Date(q.validity_until) < new Date();
-              const lastSenderRole =
-                // Counter-offers are inserted by the countering party.
-                // The first quotation is always seller-originated.
-                q.parent_quotation_id ? (q.countered_by === inquiry.buyer_id ? "buyer" : "seller") : "seller";
+              // The proposer of this quotation is `created_by` (set by both
+              // submitQuotation and counterQuotation). Do NOT use
+              // `countered_by` — that records who *responded* to this
+              // quotation, not who created it.
+              const senderRole: "buyer" | "seller" =
+                q.created_by === inquiry.buyer_id ? "buyer" : "seller";
+              const isMyOffer = q.created_by === user.id;
+              const canActOnLive = isLive && !expired && !isAdmin && !isMyOffer;
 
               return (
                 <li
@@ -241,7 +244,10 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="text-xs text-muted-foreground">
                       Round #{quotations.length - idx} · by{" "}
-                      <span className="text-foreground">{lastSenderRole}</span>
+                      <span className="text-foreground">{senderRole}</span>
+                      {isMyOffer && (
+                        <span className="ml-1 text-foreground/70">(you)</span>
+                      )}
                     </span>
                     <Badge variant="outline" className={quotationStatusColor[q.status] ?? ""}>
                       {q.status}
@@ -294,12 +300,11 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                     </>
                   )}
 
-                  {isLive && !expired && !isAdmin && (
+                  {canActOnLive && (
                     <div className="pt-2 border-t border-border/40">
                       <QuotationActions
                         quotationId={q.id}
                         inquiryId={id}
-                        myRole={myRole}
                         defaults={{
                           quantity: q.quantity,
                           unit_price: q.unit_price,
@@ -310,6 +315,11 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                           destination_port: q.destination_port ?? "",
                         }}
                       />
+                    </div>
+                  )}
+                  {isLive && !expired && isMyOffer && (
+                    <div className="pt-2 border-t border-border/40 text-xs text-muted-foreground">
+                      Waiting for the {senderRole === "buyer" ? "seller" : "buyer"} to respond…
                     </div>
                   )}
                 </li>

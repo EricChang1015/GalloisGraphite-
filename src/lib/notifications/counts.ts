@@ -5,6 +5,8 @@ import { cache } from "react";
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findCommercialProfileGaps } from "@/lib/auth/commercial";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 
 /**
  * Map of `orders.status` → which party (buyer / seller / admin / no-one) is
@@ -76,6 +78,59 @@ export function describeOrderAction(
 }
 
 // =====================================================================
+// Inquiry actor logic — single source of truth
+// =====================================================================
+
+/**
+ * Returns the set of inquiry IDs where it is currently `userId`'s turn to
+ * respond, given their `role`. Combines two sources:
+ *
+ *   1. `inquiries.status = 'pending'` AND no quotation yet → seller's turn
+ *      (only counted when `role === 'seller'`).
+ *   2. `inquiries.status IN ('quoted','negotiating')` with a live quotation
+ *      whose `created_by` is the OTHER party → my turn (counted for both
+ *      buyer and seller).
+ *
+ * Driven by `quotations.created_by` (added in 027). The previous
+ * status-only logic was wrong: `status='negotiating'` only tells us a
+ * negotiation is in progress, not who is currently waiting on whom. After
+ * 027 we always have an unambiguous answer.
+ */
+export async function getInquiriesNeedingMyResponse(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  role: "buyer" | "seller" | "admin" | "super_admin"
+): Promise<Set<string>> {
+  if (role !== "buyer" && role !== "seller") return new Set();
+  const ids = new Set<string>();
+
+  if (role === "seller") {
+    const { data } = await supabase
+      .from("inquiries")
+      .select("id")
+      .eq("seller_id", userId)
+      .eq("status", "pending")
+      .returns<{ id: string }[]>();
+    for (const row of data ?? []) ids.add(row.id);
+  }
+
+  const liveCol = role === "buyer" ? "buyer_id" : "seller_id";
+  const { data: liveQs } = await supabase
+    .from("quotations")
+    .select("inquiry_id, inquiries!inner(status)")
+    .eq("status", "sent")
+    .eq(liveCol, userId)
+    .neq("created_by", userId)
+    .in("inquiries.status", ["quoted", "negotiating"])
+    .returns<{ inquiry_id: string }[]>();
+  for (const row of liveQs ?? []) {
+    if (row.inquiry_id) ids.add(row.inquiry_id);
+  }
+
+  return ids;
+}
+
+// =====================================================================
 // User-side counts
 // =====================================================================
 
@@ -102,22 +157,9 @@ export const getUserActionCounts = cache(
 
     const supabase = await createServerClient();
 
-    const inquiryStatuses: ("pending" | "quoted" | "negotiating")[] =
-      role === "buyer"
-        ? ["quoted", "negotiating"]
-        : role === "seller"
-          ? ["pending", "negotiating"]
-          : [];
-    const inquiryCol = role === "buyer" ? "buyer_id" : "seller_id";
-
-    const inquiryPromise =
-      inquiryStatuses.length > 0
-        ? supabase
-            .from("inquiries")
-            .select("id", { count: "exact", head: true })
-            .eq(inquiryCol, userId)
-            .in("status", inquiryStatuses)
-        : Promise.resolve({ count: 0 });
+    const inquiryPromise = getInquiriesNeedingMyResponse(supabase, userId, role).then(
+      (ids) => ({ count: ids.size })
+    );
 
     // Outstanding payment installments only apply to buyers (sellers
     // don't submit payment). We count distinct orders so multiple due

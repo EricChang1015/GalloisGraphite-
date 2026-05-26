@@ -98,6 +98,7 @@ export async function submitQuotation(
       inquiry_id: parsed.data.inquiry_id,
       seller_id: user.id,
       buyer_id: inquiry.buyer_id,
+      created_by: user.id,
       listing_id: parsed.data.listing_id ?? inquiry.listing_id,
       unit_price: parsed.data.unit_price,
       currency: parsed.data.currency,
@@ -171,7 +172,7 @@ export async function counterQuotation(
 
   const { data: parent } = await supabase
     .from("quotations")
-    .select("id, inquiry_id, buyer_id, seller_id, status, listing_id")
+    .select("id, inquiry_id, buyer_id, seller_id, status, listing_id, created_by")
     .eq("id", parsed.data.parent_quotation_id)
     .single<{
       id: string;
@@ -180,6 +181,7 @@ export async function counterQuotation(
       seller_id: string;
       status: string;
       listing_id: string | null;
+      created_by: string;
     }>();
 
   if (!parent) return { data: null, error: { message: "Parent quotation not found." } };
@@ -188,6 +190,16 @@ export async function counterQuotation(
   }
   if (parent.status !== "sent" && parent.status !== "countered") {
     return { data: null, error: { message: `Cannot counter a ${parent.status} quotation.` } };
+  }
+  // The party who proposed the parent quotation cannot counter their own offer;
+  // only the OTHER party can respond. This prevents the proposer from also
+  // playing reviewer (which was the source of the "buyer counters their own
+  // counter" bug observed in 026-05-26 manual testing).
+  if (parent.created_by === user.id) {
+    return {
+      data: null,
+      error: { message: "You cannot counter your own offer. Wait for the other party to respond." },
+    };
   }
 
   const admin = createAdminClient();
@@ -216,6 +228,7 @@ export async function counterQuotation(
       parent_quotation_id: parent.id,
       seller_id: parent.seller_id,
       buyer_id: parent.buyer_id,
+      created_by: user.id,
       listing_id: listingId,
       unit_price: parsed.data.unit_price,
       currency: parsed.data.currency,
@@ -257,7 +270,7 @@ export async function acceptQuotation(
   const { data: q } = await supabase
     .from("quotations")
     .select(
-      "id, inquiry_id, buyer_id, seller_id, listing_id, unit_price, currency, quantity, incoterm, destination_port, status, validity_until"
+      "id, inquiry_id, buyer_id, seller_id, listing_id, unit_price, currency, quantity, incoterm, destination_port, status, validity_until, created_by"
     )
     .eq("id", quotationId)
     .single<{
@@ -273,11 +286,20 @@ export async function acceptQuotation(
       destination_port: string | null;
       status: string;
       validity_until: string;
+      created_by: string;
     }>();
 
   if (!q) return { data: null, error: { message: "Quotation not found." } };
-  if (q.buyer_id !== user.id) {
-    return { data: null, error: { message: "Only the buyer can accept this quotation." } };
+  if (q.buyer_id !== user.id && q.seller_id !== user.id) {
+    return { data: null, error: { message: "Access denied." } };
+  }
+  // The proposer cannot accept their own offer — only the OTHER party can.
+  // Either side may accept depending on who countered last.
+  if (q.created_by === user.id) {
+    return {
+      data: null,
+      error: { message: "You cannot accept your own offer. Wait for the other party to accept it." },
+    };
   }
   if (q.status !== "sent") {
     return { data: null, error: { message: `Quotation is ${q.status}.` } };
@@ -339,24 +361,37 @@ export async function acceptQuotation(
     await admin.from("inquiries").update({ status: "converted" }).eq("id", q.inquiry_id);
   }
 
-  // Notify seller to draft contract
+  // Notify the OTHER party that the quotation was accepted. The seller is
+  // always responsible for drafting the contract, so:
+  //  - if the buyer accepted → notify seller to draft
+  //  - if the seller accepted (a buyer's counter) → notify buyer that the
+  //    order is created; seller will draft the contract from the order page
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const { data: seller } = await admin
+    const otherPartyId = user.id === q.seller_id ? q.buyer_id : q.seller_id;
+    const sellerAccepted = user.id === q.seller_id;
+    const { data: other } = await admin
       .from("profiles")
       .select("email, full_name, phone")
-      .eq("id", q.seller_id)
+      .eq("id", otherPartyId)
       .single<{ email: string; full_name: string; phone: string | null }>();
+    const subject = sellerAccepted
+      ? "Your counter-offer was accepted — order created"
+      : "Quotation accepted — please draft the contract";
+    const body = sellerAccepted
+      ? `<p>Hi ${other?.full_name || "Buyer"},</p>
+         <p>The seller has accepted your counter-offer. An order has been created and the seller will draft the contract shortly.</p>`
+      : `<p>Hi ${other?.full_name || "Seller"},</p>
+         <p>The buyer has accepted your quotation. Please proceed to draft the sales contract.</p>`;
     await notifyUser({
-      email: seller?.email,
-      phone: seller?.phone,
-      subject: "Quotation accepted — please draft the contract",
+      email: other?.email,
+      phone: other?.phone,
+      subject,
       html: `
-          <p>Hi ${seller?.full_name || "Seller"},</p>
-          <p>The buyer has accepted your quotation. Please proceed to draft the sales contract.</p>
+          ${body}
           <p><a href="${appUrl}/orders/${order.id}">Open order</a></p>
         `,
-      smsText: `Mada Graphite: Quotation accepted. Draft contract: ${appUrl}/orders/${order.id}`,
+      smsText: `Mada Graphite: ${sellerAccepted ? "Counter-offer accepted" : "Quotation accepted"}. Order: ${appUrl}/orders/${order.id}`,
     });
   } catch (_) {}
 
@@ -381,13 +416,31 @@ export async function rejectQuotation(
 
   const { data: q } = await supabase
     .from("quotations")
-    .select("id, inquiry_id, buyer_id, seller_id, status")
+    .select("id, inquiry_id, buyer_id, seller_id, status, created_by")
     .eq("id", parsed.data.quotation_id)
-    .single<{ id: string; inquiry_id: string | null; buyer_id: string; seller_id: string; status: string }>();
+    .single<{
+      id: string;
+      inquiry_id: string | null;
+      buyer_id: string;
+      seller_id: string;
+      status: string;
+      created_by: string;
+    }>();
 
   if (!q) return { data: null, error: { message: "Quotation not found." } };
   if (q.buyer_id !== user.id && q.seller_id !== user.id) {
     return { data: null, error: { message: "Access denied." } };
+  }
+  if (q.status !== "sent" && q.status !== "countered") {
+    return { data: null, error: { message: `Cannot decline a ${q.status} quotation.` } };
+  }
+  // Proposer cannot decline their own offer — they can withdraw via a
+  // counter-offer if they want to change terms, or simply let it expire.
+  if (q.created_by === user.id) {
+    return {
+      data: null,
+      error: { message: "You cannot decline your own offer." },
+    };
   }
 
   const admin = createAdminClient();

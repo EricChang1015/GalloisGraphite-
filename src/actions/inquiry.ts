@@ -238,6 +238,7 @@ export async function acceptInquiry(
       inquiry_id: id,
       seller_id: user.id,
       buyer_id: inquiry.buyer_id,
+      created_by: user.id,
       listing_id: inquiry.listing_id,
       unit_price: inquiry.target_price ?? inquiry.listings.unit_price,
       currency: inquiry.listings.currency,

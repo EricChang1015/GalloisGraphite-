@@ -22,14 +22,12 @@ import type { QuotationInputSchema } from "@/lib/validations/quotation";
 interface QuotationActionsProps {
   quotationId: string;
   inquiryId: string;
-  myRole: "buyer" | "seller";
   defaults?: Partial<z.infer<typeof QuotationInputSchema>>;
 }
 
 export function QuotationActions({
   quotationId,
   inquiryId,
-  myRole,
   defaults,
 }: QuotationActionsProps) {
   const router = useRouter();
@@ -65,13 +63,13 @@ export function QuotationActions({
 
   return (
     <div className="flex flex-wrap gap-2">
-      {/* Buyer can accept; seller cannot accept their own quotation */}
-      {myRole === "buyer" && (
-        <Button size="sm" onClick={handleAccept} disabled={isPending}>
-          <Check className="size-3.5 mr-1" />
-          Accept
-        </Button>
-      )}
+      {/* Either party (whichever is the non-proposer for the live quotation)
+          can accept. The parent component already hides this whole component
+          for the proposer of the live offer. */}
+      <Button size="sm" onClick={handleAccept} disabled={isPending}>
+        <Check className="size-3.5 mr-1" />
+        Accept
+      </Button>
 
       {/* Either party can counter */}
       <Dialog open={counterOpen} onOpenChange={setCounterOpen}>

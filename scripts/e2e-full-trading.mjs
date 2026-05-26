@@ -152,11 +152,20 @@ async function seedNegotiationChain(inquiryId, listingId) {
     specs_confirmed: {},
   };
   await sb.from("quotations").insert([
-    { ...base, id: q1, unit_price: 4300, status: "countered", countered_by: BUYER_ID, responded_at: now },
+    {
+      ...base,
+      id: q1,
+      created_by: SELLER_ID,
+      unit_price: 4300,
+      status: "countered",
+      countered_by: BUYER_ID,
+      responded_at: now,
+    },
     {
       ...base,
       id: q2,
       parent_quotation_id: q1,
+      created_by: BUYER_ID,
       unit_price: 4250,
       status: "countered",
       countered_by: SELLER_ID,
@@ -166,6 +175,7 @@ async function seedNegotiationChain(inquiryId, listingId) {
       ...base,
       id: q3,
       parent_quotation_id: q2,
+      created_by: SELLER_ID,
       unit_price: 4280,
       status: "sent",
     },

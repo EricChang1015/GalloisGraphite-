@@ -136,13 +136,13 @@ async function createScenarioOrder({ tag, incoterm, totalAmount }) {
   // quotation
   await q(`
     insert into public.quotations (
-      id, inquiry_id, seller_id, buyer_id, listing_id,
+      id, inquiry_id, seller_id, buyer_id, created_by, listing_id,
       unit_price, currency, quantity, unit, incoterm,
       origin_port, destination_port, validity_until, status,
       responded_at, countered_by
     ) values (
       ${escape(quotationId)}, ${escape(inquiryId)}, ${escape(SELLER)},
-      ${escape(BUYER)}, ${escape(listingId)},
+      ${escape(BUYER)}, ${escape(SELLER)}, ${escape(listingId)},
       ${totalAmount / 50}, 'USDT', 50, 'MT', ${escape(incoterm)},
       'Toamasina', 'Macau Port',
       ${escape(validity.toISOString())}, 'accepted', now(), ${escape(BUYER)}

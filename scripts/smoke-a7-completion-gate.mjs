@@ -103,12 +103,12 @@ async function seedOrder3070() {
   validity.setDate(validity.getDate() + 14);
   await q(`
     insert into public.quotations (
-      id, inquiry_id, seller_id, buyer_id, listing_id,
+      id, inquiry_id, seller_id, buyer_id, created_by, listing_id,
       unit_price, currency, quantity, unit, incoterm,
       validity_until, status, responded_at
     ) values (
       ${esc(quotationId)}, ${esc(inquiryId)}, ${esc(SELLER)}, ${esc(BUYER)},
-      ${esc(listingId)}, ${total / 50}, 'USDT', 50, 'MT', 'CFR',
+      ${esc(SELLER)}, ${esc(listingId)}, ${total / 50}, 'USDT', 50, 'MT', 'CFR',
       ${esc(validity.toISOString())}, 'accepted', now()
     );
   `);

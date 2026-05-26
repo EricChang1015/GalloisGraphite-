@@ -68,11 +68,11 @@ async function makeOrder({ tag, incoterm, status, totalAmount, withSchedule }) {
       'Macau Port', 'Browser walk-through inquiry', 'quoted');
   `);
   await q(`
-    insert into public.quotations (id, inquiry_id, seller_id, buyer_id, listing_id,
+    insert into public.quotations (id, inquiry_id, seller_id, buyer_id, created_by, listing_id,
       unit_price, currency, quantity, unit, incoterm, origin_port, destination_port,
       validity_until, status, responded_at, countered_by)
     values (${esc(quotationId)}, ${esc(inquiryId)}, ${esc(SELLER)},
-      ${esc(BUYER)}, ${esc(listingId)}, ${totalAmount / 50}, 'USDT', 50, 'MT', ${esc(incoterm)},
+      ${esc(BUYER)}, ${esc(SELLER)}, ${esc(listingId)}, ${totalAmount / 50}, 'USDT', 50, 'MT', ${esc(incoterm)},
       'Toamasina', 'Macau Port', ${esc(validity.toISOString())}, 'accepted', now(), ${esc(BUYER)});
   `);
   await q(`

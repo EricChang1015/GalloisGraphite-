@@ -15,6 +15,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth/session";
 import {
   describeOrderAction,
+  getInquiriesNeedingMyResponse,
   getOrderActionOwner,
   getUserActionCounts,
 } from "@/lib/notifications/counts";
@@ -66,16 +67,13 @@ export default async function DashboardPage() {
 
   const counts = await getUserActionCounts(user.id, profile.role);
 
-  // Inquiries that are currently "your turn" — role-aware status set.
-  // Sellers: `pending` (first quotation owed) + `negotiating` (counter to respond)
-  // Buyers:  `quoted` (seller's quotation awaiting decision) + `negotiating`
-  // Admins:  none (admin oversight isn't surfaced here)
-  const inquiryStatuses: ("pending" | "quoted" | "negotiating")[] = isSeller
-    ? ["pending", "negotiating"]
-    : isBuyer
-      ? ["quoted", "negotiating"]
-      : [];
-  const inquiryCol = isSeller ? "seller_id" : "buyer_id";
+  // "My turn" inquiry IDs — accurate post-027: pending + live quotations
+  // whose `created_by` is the OTHER party. See `counts.ts` for details.
+  const myTurnIds = await getInquiriesNeedingMyResponse(
+    supabase,
+    user.id,
+    profile.role
+  );
 
   const [ordersRes, actionableInquiriesRes] = await Promise.all([
     supabase
@@ -89,14 +87,13 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false })
       .limit(8)
       .returns<OrderRow[]>(),
-    inquiryStatuses.length > 0
+    myTurnIds.size > 0
       ? supabase
           .from("inquiries")
           .select(
             "id, status, requested_qty, created_at, product_categories(name), listings(id, title)"
           )
-          .eq(inquiryCol, user.id)
-          .in("status", inquiryStatuses)
+          .in("id", Array.from(myTurnIds))
           .order("created_at", { ascending: false })
           .limit(5)
           .returns<InquiryRow[]>()

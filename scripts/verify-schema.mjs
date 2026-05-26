@@ -318,6 +318,26 @@ async function main() {
   `);
   check(moqCheck.length === 1, "listings_min_order_quantity_positive constraint exists");
 
+  console.log("\n=== quotations.created_by (027) ===");
+  const quotations = await cols("quotations");
+  check(quotations.has("created_by"), "quotations.created_by exists");
+  if (quotations.has("created_by")) {
+    const nullable = await q(`
+      select is_nullable from information_schema.columns
+       where table_schema='public' and table_name='quotations' and column_name='created_by';
+    `);
+    check(nullable[0]?.is_nullable === "NO", "quotations.created_by is NOT NULL");
+  }
+  const createdByOrphans = await q(`
+    select count(*)::int as n from public.quotations where created_by is null;
+  `);
+  check(Number(createdByOrphans[0]?.n) === 0, "no quotations.created_by NULL rows after backfill");
+  const createdByIdx = await q(`
+    select indexname from pg_indexes
+     where schemaname='public' and tablename='quotations' and indexname='idx_quotations_created_by';
+  `);
+  check(createdByIdx.length === 1, "idx_quotations_created_by exists");
+
   console.log(`\n==== ${pass} passed · ${fail} failed ====`);
   process.exit(fail === 0 ? 0 : 1);
 }

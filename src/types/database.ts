@@ -1073,6 +1073,7 @@ export type Database = {
           buyer_id: string
           countered_by: string | null
           created_at: string
+          created_by: string
           currency: string
           destination_port: string | null
           id: string
@@ -1097,6 +1098,7 @@ export type Database = {
           buyer_id: string
           countered_by?: string | null
           created_at?: string
+          created_by: string
           currency: string
           destination_port?: string | null
           id?: string
@@ -1121,6 +1123,7 @@ export type Database = {
           buyer_id?: string
           countered_by?: string | null
           created_at?: string
+          created_by?: string
           currency?: string
           destination_port?: string | null
           id?: string
@@ -1152,6 +1155,13 @@ export type Database = {
           {
             foreignKeyName: "quotations_countered_by_fkey"
             columns: ["countered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

@@ -77,9 +77,9 @@ console.log("✓ inquiry:", inquiryId);
 
 // 3) Quotation (already accepted - we'll create the order separately)
 await q(`
-  insert into public.quotations (id, inquiry_id, seller_id, buyer_id, listing_id, unit_price, currency, quantity, unit, incoterm, origin_port, destination_port, validity_until, status, responded_at, countered_by)
+  insert into public.quotations (id, inquiry_id, seller_id, buyer_id, created_by, listing_id, unit_price, currency, quantity, unit, incoterm, origin_port, destination_port, validity_until, status, responded_at, countered_by)
   values (
-    '${quotationId}', '${inquiryId}', '${SELLER}', '${BUYER}', '${listingId}',
+    '${quotationId}', '${inquiryId}', '${SELLER}', '${BUYER}', '${SELLER}', '${listingId}',
     4300, 'USDT', 50, 'MT', 'CFR', 'Toamasina', 'Macau Port',
     '${validity.toISOString()}', 'accepted', now(), '${BUYER}'
   );
