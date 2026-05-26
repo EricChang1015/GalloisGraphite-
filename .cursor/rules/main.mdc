@@ -22,6 +22,24 @@ Quick reminders that override training data:
   separation is critical — `SUPABASE_SERVICE_ROLE_KEY` must never reach the
   browser.
 
+## Dev runtime errors — do NOT rely on the overlay badge
+
+The Next.js dev floating error badge **resets on navigation** and is **not visible**
+to the agent. Use persistent sources instead:
+
+1. **After browser testing or before declaring "done"**, run:
+   ```powershell
+   npm run qa:check-dev
+   ```
+   This reads `.next/dev/logs/next-development.log` (JSON, accumulates across pages)
+   and writes a human summary to `dev-errors.latest.txt`. Exit code 1 = real ERRORs
+   remain — fix them before finishing.
+2. With **cursor-ide-browser** MCP: after every navigation call `browser_console_messages`.
+3. Hydration warnings: prove with `node scripts/probe-ssr.mjs http://localhost:3000/<path>`.
+4. `npm run build` alone is **not sufficient** for runtime / hydration issues.
+
+Full checklist: [`.cursor/rules/verify-before-commit.mdc`](mdc:.cursor/rules/verify-before-commit.mdc).
+
 ## Implementation flow
 1. Plan first, write code second.
 2. Validate inputs with `zod`.

@@ -9,11 +9,14 @@
 //   node scripts/check-dev-errors.mjs                    # default log path
 //   node scripts/check-dev-errors.mjs <path-to-log>
 //   node scripts/check-dev-errors.mjs --tail <N>         # last N entries only
+//   node scripts/check-dev-errors.mjs --report           # also write dev-errors.latest.txt
 //
 // Exit code is 0 when there are no real ERRORs left after filtering,
 // 1 otherwise — suitable for CI / pre-commit assertion.
+//
+// The report file survives page navigation (unlike the Next.js dev overlay badge).
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 const KNOWN_FALSE_POSITIVE_MARKERS = [
@@ -35,15 +38,20 @@ const args = process.argv.slice(2);
 let logPath = ".next/dev/logs/next-development.log";
 let tail = Number.POSITIVE_INFINITY;
 let showAll = false;
+let writeReport = false;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--tail") {
     tail = Number(args[++i] ?? "100");
   } else if (args[i] === "--all") {
     showAll = true;
+  } else if (args[i] === "--report") {
+    writeReport = true;
   } else if (!args[i].startsWith("--")) {
     logPath = args[i];
   }
 }
+
+const REPORT_PATH = resolve("dev-errors.latest.txt");
 
 const abs = resolve(logPath);
 if (!existsSync(abs)) {
@@ -122,6 +130,31 @@ if (real.length > 0) {
       .slice(0, 200);
     console.log(`[${e.timestamp}] ${e.source} ${e.level}: ${oneLine}`);
   }
+}
+
+if (writeReport) {
+  const generatedAt = new Date().toISOString();
+  const blocks = [
+    `# Dev errors report — ${generatedAt}`,
+    `# Log: ${abs}`,
+    `# Total ERROR+WARN in log: ${entries.length}`,
+    `# Considered: ${considered.length} | Filtered: ${filtered.length} | Real: ${real.length}`,
+    `# Real ERROR count: ${real.filter((e) => e.level === "ERROR").length}`,
+    "",
+  ];
+  if (real.length === 0) {
+    blocks.push("(no real ERROR/WARN entries after filtering)");
+  } else {
+    for (const e of real) {
+      const headline = String(e.message ?? "")
+        .split(/\n/)[0]
+        .slice(0, 300);
+      blocks.push(`[${e.timestamp}] ${e.source} ${e.level}: ${headline}`);
+      blocks.push("");
+    }
+  }
+  writeFileSync(REPORT_PATH, blocks.join("\n"), "utf8");
+  console.log(`Report written:          ${REPORT_PATH}`);
 }
 
 const realErrors = real.filter((e) => e.level === "ERROR");

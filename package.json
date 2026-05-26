@@ -13,7 +13,7 @@
     "db:migrate:dry": "node scripts/apply-migrations.mjs --dry-run",
     "db:types": "node scripts/gen-types.mjs",
     "qa:preflight": "npm run build && node scripts/apply-migrations.mjs --status && node scripts/verify-schema.mjs",
-    "qa:check-dev": "node scripts/check-dev-errors.mjs",
+    "qa:check-dev": "node scripts/check-dev-errors.mjs --report",
     "qa:seed-order": "node scripts/seed-test-order.mjs",
     "qa:cleanup": "node scripts/cleanup-test-data.mjs",
     "qa:chat": "node scripts/qa-chat-buyer-seller.mjs",

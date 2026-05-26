@@ -48,3 +48,8 @@ Quick reference:
     instances leak DB sockets and confuse smoke tests. On Windows:
     `Get-NetTCPConnection -LocalPort 3000 | Select OwningProcess` then
     `Stop-Process -Id <pid> -Force`.
+11. **Dev overlay errors are not evidence**: the floating Next.js error badge resets
+    on navigation and is invisible to agents. After UI work with `npm run dev`,
+    run `npm run qa:check-dev` (reads `.next/dev/logs/next-development.log`, writes
+    `dev-errors.latest.txt`). Exit code must be 0 before claiming "done". With
+    browser MCP, also call `browser_console_messages` after each navigation.

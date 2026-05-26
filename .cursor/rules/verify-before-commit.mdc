@@ -1,7 +1,7 @@
 ---
 description: Verification discipline before declaring code ready or committing
 globs: src/**,supabase/**
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Verify before commit — no guessing allowed
