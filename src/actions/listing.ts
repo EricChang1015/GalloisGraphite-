@@ -378,8 +378,22 @@ export async function deleteListing(
     };
   }
 
-  const { error } = await supabase.from("listings").delete().eq("id", id);
+  const { data: deleted, error } = await supabase
+    .from("listings")
+    .delete()
+    .eq("id", id)
+    .select("id");
   if (error) return { data: null, error: { message: error.message } };
+  if (!deleted?.length) {
+    return {
+      data: null,
+      error: {
+        message:
+          "Could not delete this listing. You may not have permission or it was already removed.",
+        code: "DELETE_FAILED",
+      },
+    };
+  }
 
   revalidatePath("/listings");
   revalidatePath("/market");
