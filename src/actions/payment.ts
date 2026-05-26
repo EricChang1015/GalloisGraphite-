@@ -45,6 +45,7 @@ export async function submitPayment(
   if (!order) return { data: null, error: { message: "Order not found." } };
   if (order.buyer_id !== user.id) return { data: null, error: { message: "Access denied." } };
 
+  // MVP: commercial profile only — no kyc_level gate on payment (see ROADMAP §A6).
   const missing = await findCommercialProfileGaps(user.id);
   if (missing.length > 0) {
     return {

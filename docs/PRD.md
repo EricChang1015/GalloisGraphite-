@@ -55,13 +55,13 @@
 詳見 [`ROADMAP.md` §A](./ROADMAP.md#a-mvp-補完項上線前必做)：
 
 - ~~**A1** Schema 對齊（payments / news / orders）~~ ✅ 已完成（migration 005）
-- **A2** 站內 IM（schema 已就位，但 `/messages` 與 `OrderChat` 待實作）
+- **A2** 站內 IM — **Party DM 已完成**（`/messages`、`MessageCounterpartyButton`、`npm run qa:chat`）；**仍待**：訂單詳情 Communication Tab、`chat` Storage bucket、訊息附件（見 ROADMAP §A2）
 - ~~**A3** 合約簽名掃描上傳 UI~~ ✅ 已完成（009 + `<SignedScanUploader />`，並可嵌入簽名後 PDF 預覽下載）
-- ~~**A4** `order-documents` Storage bucket + RLS~~ ✅ 已完成（migration 010）；其餘 buckets（avatars / kyc / listings / chat）依需要時補
+- ~~**A4** Storage buckets~~ ✅ `order-documents` / `avatars` / `kyc` / `listings` 已建立；`chat` bucket 與 A2 一起做
 - ~~**A5** Disputed / Cancelled UI 觸發點~~ ✅ 已完成（009 + `<OrderPhaseActions />`）
-- **A6** KYC 文件上傳（簡易版，提升 `kyc_level`） — commercial profile gate ✅；KYC 文件上傳仍待
-- **A7** 部署 ✅；full_prepay 端到端煙霧測試 ✅（2026-05-15）；net_after_arrival 走測待補
-- ~~**B1** B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心、回合制合約）~~ ✅ 已完成（migrations 007 + 009）
+- ~~**A6** KYC~~ ✅ 已完成（migrations 019/020、`/settings/kyc`、四級 level、admin 門檻）；非阻塞延伸見 ROADMAP §A6「仍待」
+- ~~**A7** 部署與 E2E 煙霧測試~~ ✅ 已完成（2026-05-25，`npm run qa:a7` + 分期 UI 走測，見 [`TESTING.md`](./TESTING.md) §8）
+- ~~**B1** B2B 全流程追蹤~~ ✅ 已完成（migrations 007 + 009；付款已抽離至 `payment_schedules`，見 ARCHITECTURE §4.4–4.5）
 
 ### OUT OF SCOPE（此次 MVP 不做）
 

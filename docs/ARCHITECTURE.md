@@ -86,7 +86,8 @@
 | `/inquiries/[id]` | **Inquiry detail**：quotation 歷史 timeline、`<QuotationForm />`（seller）、`<QuotationActions />`（accept / counter / decline） |
 | `/orders` | 買賣雙視角訂單列表 |
 | `/orders/[id]` | 7 個 Tab + **OrderProgressBar**：**Overview** / **Quotation** / **Contract**（含 buyer approve/reject + signed-scan upload） / **Payment** / **Shipment**（B/L、vessel、container、ETD/ATD/ETA/ATA） / **Documents**（13 種類型分組上傳） / **Timeline** |
-| `/messages` | ⚠️ **Placeholder（A2 待補）**：將顯示房間列表 |
+| `/messages` | Party DM 對話列表（`<ConversationList />`，依 `last_message_at` 排序） |
+| `/messages/[userId]` | 與指定對手方的全頁 thread（`<PartyChatPanel />`） |
 | `/settings` | 帳戶設定：commercial profile（full_name / company_name / country / phone）+ role/status/kyc badges +「Change password」連結；若 `?prompt=incomplete` 或 `profiles.{company_name,country}` 為空，最上方顯示黃色提示 banner |
 
 **Layout**：`(app)/layout.tsx` → 左側 sidebar nav；側欄項目從 `src/lib/notifications/counts.ts` 取 `getUserActionCounts()`，於 Inquiries / Orders 顯示金色數字 badge（`inquiriesNeedingMyResponse` / `ordersNeedingMyAction`），Orders 額外在有 disputed 時補上紅色「!」badge，Settings 在 commercial profile 缺欄時顯示紅點。Counter helper 用 `React.cache()` per-request 記憶化，所以 sidebar + dashboard 共用一次查詢。
@@ -151,14 +152,14 @@ provider 為 POE OpenAI-compatible endpoint，回傳 `toUIMessageStreamResponse(
 | Bucket | 用途 | 訪問模式 | 現況 |
 |---|---|---|---|
 | `avatars` | 使用者頭像 | public read, self write | ✅ 已建立 — `021_avatars.sql` |
-| `kyc` | KYC 證件 | private（owner + admin） | ⚠️ 待建立 |
-| `contracts` | 合約簽名掃描（legacy） | private（訂單雙方 + admin） | ⚠️ 待建立（已被 `order-documents` 取代） |
+| `kyc` | KYC 證件 | private（owner + admin） | ✅ 已建立 — `019_kyc_storage_and_settings.sql` |
+| `contracts` | 合約簽名掃描（legacy） | — | 不再使用；由 `order-documents` 取代 |
 | **`order-documents`** | 訂單通用文件中心（合約簽名、發票、B/L、檢驗、付款證明…） | private（owner / 訂單雙方 / admin） | ✅ 已建立 — `010_storage_order_documents.sql` |
-| `payments` | 付款憑證圖 | private（buyer + admin） | ✅ 由 `order-documents` 內 `payment_proof` 路徑覆蓋（單一 bucket，路徑命名分類） |
-| `listings` | 商品圖 | public read, seller write | ⚠️ 待建立 |
-| `chat` | 聊天室附件 | private（chat members） | ⚠️ 待建立 |
+| `payments` | 付款憑證圖 | — | 由 `order-documents` 內 `payment_proof` 路徑覆蓋 |
+| `listings` | 商品圖 | public read, seller write | ✅ 已建立 — `024_listings_bucket.sql` |
+| `chat` | 聊天室附件 | private（chat members） | ⚠️ 待建立（與 ROADMAP §A2 一起做） |
 
-> 剩餘 buckets（avatars / kyc / listings / chat）待寫成 migration，請參考 [`ROADMAP.md` §A4](./ROADMAP.md)。
+> 僅 `chat` bucket 仍待 migration；其餘見 [`ROADMAP.md` §A4](./ROADMAP.md)。
 > `010_storage_order_documents.sql` 已建立 `order-documents` bucket（private）並設好 RLS：
 > - SELECT：路徑首段為 `orders/<order_id>/...` 時，訂單雙方 / admin 可讀；其它路徑以上傳者 + admin 可讀
 > - INSERT：登入用戶可上傳，並由 server action 寫對應的 `order_documents` row
@@ -173,7 +174,7 @@ alter publication supabase_realtime add table public.messages;
 ```
 
 → 客戶端用 `supabase.channel('messages:room_id={uuid}')` + `postgres_changes` 監聽。
-**（`OrderChat` 組件待實作 — 見 ROADMAP §A2）**
+**Party DM** 已由 `<PartyChatPanel />` 實作；訂單詳情內嵌 chat 與附件 bucket 見 ROADMAP §A2。
 
 ---
 
@@ -614,10 +615,10 @@ npm run db:types             # 重新生成 src/types/database.ts
 | 7 | 簽名合約預覽嵌入買賣雙方簽名 + 下載 | ✅ 已完成 | `<ContractPreview />` 內嵌雙方 signed scan（image/PDF），可下載合併 PDF |
 | 8 | 付款證明上傳（非加密貨幣方式） | ✅ 已完成 | `<PaymentForm />` 對 `bank_transfer / usdi / mup` 顯示檔案上傳 input，存到 `order-documents` |
 | 9 | Full-prepay 端到端流程煙霧測試 | ✅ 已驗證 | 2026-05-15 走測 `ORD-TEST-MP6PL7MZ`：quotation → contract draft/approve/sign → payment submit/verify → ready/shipped/in_transit/arrived → customs_cleared → completed |
-| 10 | Net-after-arrival 端到端流程煙霧測試 | ⚠️ 待執行 | UI / actions 路徑相同，僅分支跳轉時點不同；需要實際走一次驗證 |
-| 11 | 站內 IM（A2） | ⚠️ 待實作 | schema 已就位（`chat_rooms` / `chat_members` / `messages`）；`OrderChat` 元件、自動建房、`/messages` 列表頁都未做 |
-| 12 | 其餘 Storage buckets（avatars / kyc / listings / chat） | ⚠️ 待實作 | 用到該功能時補上 |
-| 13 | KYC 上傳 + lazy-collect commercial profile（A6） | 🟡 部分完成 | Commercial profile gate（`createInquiry` / `createListing` / `submitPayment` 缺欄位時回 `error.code='PROFILE_INCOMPLETE'`）、`/settings` 編輯頁、`<CommercialProfileForm />`、client toast 帶 "Open Settings" action 已完成；KYC 文件上傳 + admin 升級 kyc_level 仍待 |
+| 10 | 分期付款 / 結案閘門（情境 B） | ✅ 已完成 | 2026-05-25：`npm run qa:a7` + `e2e-full-trading`（30/70，`customs_cleared` 未付清不得 `completed`） |
+| 11 | 站內 IM（A2） | 🟡 部分完成 | Party DM（`/messages`、`PartyChatPanel`、`qa:chat`）已完成；`chat` bucket、訊息附件、訂單 Tab 內嵌仍待 |
+| 12 | Storage `chat` bucket | ⚠️ 待實作 | `avatars` / `kyc` / `listings` / `order-documents` 已就位 |
+| 13 | KYC + lazy-collect commercial profile（A6） | ✅ 已完成 | migrations 019/020、`/settings/kyc`、`npm run qa:kyc`；`submitPayment` 僅 commercial gate（不要求 kyc_level，見 ROADMAP §A6 決策） |
 | 14 | `(app)` / `admin` layout 缺 Logout 按鈕 | ✅ 已完成 | `(app)/layout.tsx` 與 `admin/layout.tsx` 已掛上 `<Navbar />`，desktop 有 LogoutButton 在右上、mobile 有 `<MobileNav />` 抽屜 |
 | 15 | Dashboard 待辦通知不完整（要進 Inquiries 才知道有待處理項） | ✅ 已完成 | `src/lib/notifications/counts.ts` 統一計算 sidebar / dashboard 上的 action-needed 數字；`(app)/layout.tsx` 與 `admin/layout.tsx` 顯示金 / 紅 badge，dashboard 加上 incomplete-profile banner + Priority Actions 區塊 + Active Orders「Your turn」/「Disputed」hint |
 | 16 | Payment 由 admin 主審造成 admin 成為瓶頸 + Resend domain 未驗證導致通知信收不到 | ✅ 已完成 | **migration 015** 把 update RLS 改為 seller-of-order or admin；`verifyPayment` 改 role check + UI（`<PaymentVerifyActions />` 抽到 `src/components/order/`，admin/seller 共用，以 `reviewerLabel` 分頭顯示）；email service 從 Resend 改 `nodemailer` + AWS SES SMTP（`src/lib/email/smtp.ts`），`/admin/settings` 加「Send test email」一鍵驗證；通知矩陣調整為 `submitPayment` → seller + admin CC，`verifyPayment` 通知信標示 reviewer 角色 |

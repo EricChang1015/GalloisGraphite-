@@ -99,6 +99,11 @@ node scripts/verify-schema.mjs
 
 **通過標準**：build exit 0；所有 migration 已套用；`payment_schedules` 存在、`orders.payment_terms` 已不存在。
 
+**Production 部署額外確認（非阻塞）**：
+
+- Vercel env：`CRON_SECRET`（`/api/cron/payment-schedule`，`vercel.json` 每日 04:00 UTC）
+- Google OAuth：Supabase Provider + redirect URL（見 `.env.example` 註解、`npm run qa:oauth`）
+
 改動 **站內信（A2）** 時，額外執行：
 
 ```bash
@@ -414,10 +419,10 @@ select o.order_no, o.status, o.incoterm,
 | # | 項目 | 影響 |
 |---|---|---|
 | 1 | ~~站內 IM（A2）~~ | ✅ 已實作（party DM）；合併前跑 §3.5 + `qa:chat` |
-| 2 | KYC 上傳（A6） | 僅 commercial profile gate，無 `kyc_level` 升級 UI |
+| 2 | ~~KYC（A6）~~ | ✅ 已完成（`/settings/kyc`、`npm run qa:kyc`）；`submitPayment` 僅 commercial profile gate，不要求 `kyc_level`（見 ROADMAP §A6 決策） |
 | 3 | ~~情境 B 正式走測紀錄~~ | ✅ 2026-05-25：`qa:a7:gate` + `e2e-full-trading` → §8 |
 | 4 | ~~dispute / cancel / force~~ | ✅ 2026-05-25：`qa:a7:dispute` |
-| 5 | `bl_date_plus_N` cron | 需 Vercel cron + `bl_date`；日常 E2E 可略 |
+| 5 | ~~`bl_date_plus_N` cron~~ | ✅ 程式 + `vercel.json` 已就位；production 設 `CRON_SECRET`（見 `.env.example`）。日常 E2E 用手動 milestone / `qa:payment-schedule` 即可 |
 
 已解決（僅供對照）：`order-documents` bucket ✅；SES email ✅；seller-primary payment review ✅。
 
@@ -466,6 +471,7 @@ select o.order_no, o.status, o.incoterm,
 | 2026-05-20 | **重寫**：對齊 migration 014 / `payment_schedules`；新增 §0–§2 QA 分層、情境 A/B、regression 矩陣、SQL 快查；移除過時 `net_after_arrival` 章節 |
 | 2026-05-20 | 站內信 A2：§3.5 party DM QA、`qa:chat`、regression 矩陣更新 |
 | 2026-05-25 | **A7 收尾**：`npm run qa:a7` 套件、情境 B §8 紀錄、`e2e-full-trading` 報告 |
+| 2026-05-25 | **文件對齊**：PRD §2.2、ROADMAP §A2/A6/A8、ARCHITECTURE §2.3/§3.3/§11；A6 `submitPayment` KYC 決策、`.env.example` 加 `CRON_SECRET` |
 
 ---
 

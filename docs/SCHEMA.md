@@ -419,7 +419,7 @@ verify 後變 `paid`。
 
 索引：`messages(room_id, created_at desc)`
 
-> ⚠️ 表結構就緒，但 `OrderChat` 組件、自動建房邏輯、`/messages` 列表頁待實作（見 ROADMAP §A2）。
+> Party DM（`chat_rooms.type='party'`）已實作：`ensurePartyChat`、`/messages`、`PartyChatPanel`（migration 018）。`chat` Storage bucket 與訂單 Tab 內嵌仍待（ROADMAP §A2）。
 
 ## 7. 內容
 

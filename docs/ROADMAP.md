@@ -27,14 +27,24 @@
 > 部署到 production 後仍需重跑 `npx supabase gen types typescript ... > src/types/database.ts`
 > 以對齊型別（屬 A7 部署清單）。
 
-### A2. 站內 IM（原 Step 7，schema 已就位但 UI 是 placeholder）
+### A2. 站內 IM（Party DM ✅；訂單 Tab + 附件待補）
 
-- [ ] `acceptInquiry` 建單時自動建立 `chat_rooms (type='order')` + `chat_members`（buyer + seller）
-- [ ] `src/components/chat/OrderChat.tsx`：使用 Supabase Realtime `postgres_changes` 訂閱 `messages`
-- [ ] `(app)/orders/[id]` 加 「Communication」Tab 內嵌 `<OrderChat />`
-- [ ] `(app)/messages/page.tsx` 改為房間列表（依最後訊息時間排序）
-- [ ] 訊息附件上傳到 Supabase Storage `chat` bucket（`image/*`、`application/pdf`，limit 5MB）
-- [ ] 風險備案：若 Realtime 不穩定，fallback 為 SWR 5s polling（`src/hooks/useMessages.ts`）
+> **模型（migration 018）**：同一 buyer + seller 僅一條 `chat_rooms.type='party'` thread；訊息可帶
+> `context_type`（listing / inquiry / order）。**不再**為每張訂單開獨立 `type='order'` 房間。
+> 詳見 [`TESTING.md` §3.5](./TESTING.md#35-站內信party-dm合併-main-前必跑)。
+
+**已完成：**
+
+- [x] `ensurePartyChat` + `openPartyChat` / `getPartyChatWithUser`（`src/lib/chat/ensure-room.ts`、`src/actions/chat.ts`）
+- [x] `/messages` 對話列表 + `/messages/[userId]` 全頁 thread（`<ConversationList />`、`<PartyChatPanel />`）
+- [x] Market / 訂單 Overview 的 `<MessageCounterpartyButton />`（同一 party thread，非新房）
+- [x] Realtime 訂閱 `messages`（`PartyChatPanel` 內）；`npm run qa:chat`（7/7）
+
+**仍待（MVP 上線前若要做完整 IM）：**
+
+- [ ] `(app)/orders/[id]` 可選：內嵌精簡版 `<PartyChatPanel />`（或維持僅 Overview「Message」按鈕 — 見 TESTING §3.5 M4）
+- [ ] `chat` Storage bucket + RLS（private，僅 `chat_members` 可讀寫）— 訊息附件 `image/*`、`application/pdf` ≤5MB
+- [ ] 風險備案：若 Realtime 不穩定，fallback 為 5s polling（`src/hooks/useMessages.ts`，尚未建立）
 
 ### A3. ✅ 合約簽名掃描上傳 UI（已完成）
 
@@ -43,7 +53,7 @@
 - [x] `(app)/orders/[id]` Contract Tab 已內建 file input
 - [x] 上傳到 `order-documents` bucket（路徑 `{order_id}/contract_signed_{role}/{uuid}.{ext}`）
 - [x] 上傳同步寫入 `order_documents` row（type=`contract_signed_buyer/seller`）
-- [x] 雙方都簽完且 buyer 已 `approveContract` → 自動推進到 `contract_signed` → 依 `payment_terms` 跳到 `payment_pending` 或 `in_production`
+- [x] 雙方都簽完且 buyer 已 `approveContract` → 自動推進到 `contract_signed` → `in_production`（付款由 `payment_schedules` 獨立管理，migration 014 後訂單不再經 `payment_pending`）
 - [x] UI 顯示「Waiting for buyer to approve the contract before signature uploads are unlocked.」
 
 ### A4. Storage Buckets 與 Policy 初始化
@@ -88,10 +98,10 @@
 - [x] **四級 KYC + 電話 OTP**（migration 020）：0 信箱、1 電話、2 文件審核、3 進階（admin）；列表顯示 pending 文件數；一鍵核准 → Level 2
 - [x] `createInquiry` / `createListing`（seller）檢查平台門檻 → `KYC_REQUIRED` + toast 導向 `/settings/kyc`
 
-**仍待（非 MVP 阻塞）：**
+**仍待（非 MVP 阻塞 — 產品決策已記錄）：**
 
-- [ ] Seller 自助 buyer→seller role 切換需 admin 審核
-- [ ] `submitPayment` 是否也要 KYC 門檻（目前僅 inquiry + listing）
+- [ ] **Seller 自助 buyer→seller role 切換** — 延後 Phase 2；MVP 由 admin 在 `/admin/users` 手動改 `role`
+- [x] **`submitPayment` KYC 門檻** — **決策（2026-05-25）**：MVP **不要求** `kyc_level`；僅檢查 commercial profile（`company_name` + `country`，與現行程式一致）。平台可對 inquiry / listing 設 `kyc_min_level_*`（預設 0），付款不受此限
 
 ### A7. 部署與端到端煙霧測試（原 Step 9）
 
@@ -126,10 +136,10 @@
 server actions / UI 元件實作：
 
 - [x] `quotations` 議價表 + `order_documents` 文件中心
-- [x] 13 階段細粒度狀態機 + 雙分支（full_prepay / net_after_arrival）
+- [x] 12 階段線性狀態機（migration 014 後付款抽離；舊 `full_prepay` / `net_after_arrival` 改由 `payment_schedules` 表達）
 - [x] 合約回合制審核（draft → approve / reject → re-draft, revision_no++）
 - [x] B/L + vessel + container + ETD/ATD/ETA/ATA 追蹤
-- [x] OrderProgressBar UI（依 payment_terms 動態渲染）
+- [x] OrderProgressBar UI（12 階段線性 + Payments X/Y paid micro-badge）
 - [x] /inquiries/[id] 議價歷史頁
 - [x] /admin/orders/[id] + force transition
 
@@ -269,6 +279,7 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - [x] 新元件：`<PaymentScheduleBuilder />`、`<PaymentScheduleTable />`、`<MilestoneActionButtons />`
 - [x] `ListingForm.tsx`：Incoterm 限縮 FOB / CFR / CIF（移除 EXW / DDP）
 - [x] `/api/cron/payment-schedule` + `vercel.json`：每日 04:00 UTC 補算 `bl_date_plus_N` due_date、scheduled→due、due→overdue
+- [x] **部署備註（2026-05-25）**：`vercel.json` 已設定 cron path；production 需設 env `CRON_SECRET`（Vercel 亦接受 `x-vercel-cron`）。日常 E2E 可手動觸發 milestone，不依賴 cron
 - [x] `src/lib/notifications/dispatch.ts`：新增 `notifyScheduleDue` / `notifyScheduleOverdue`
 - [x] `src/lib/notifications/counts.ts`：buyer 的 `ordersNeedingMyAction` 加入 `payment_schedules.status='due'/overdue` 的 distinct order 數
 - [x] docs：PRD §2/§4.4/§4.5、SCHEMA +§5c、ARCHITECTURE §4.4/§4.5/§8/§10、CONTRACT_TEMPLATE §2/§4 同步
@@ -357,7 +368,7 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，所有 migrations 已套用
 - [x] A7 full_prepay 端到端 happy path 通過（2026-05-15 走測 `ORD-TEST-MP6PL7MZ`）
 - [x] A7 分期結案閘門 + dispute / cancel / force-transition + RLS 複查（2026-05-25，`npm run qa:a7`）
-- [x] A8 B2B 全流程追蹤（quotation 議價、13 階段狀態機、文件中心）已完成
+- [x] A8 B2B 全流程追蹤（quotation 議價、12 階段狀態機 + payment_schedules、文件中心）已完成
 - [x] A9 Migration 自動套用 runner 完成（`npm run db:migrate`）
 - [x] A13 Payment 改 seller-primary review + AWS SES SMTP（2026-05-20）
 - [x] A14 Category 重整 + Listing UX polish — migrations 022/023, structured spec_schema, MOQ, custom mesh range, auto-title, Select label fixes（commits `15fba5b → ff464c9`，2026-05-22）
