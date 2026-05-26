@@ -1049,6 +1049,23 @@ export async function cancelOrder(
     .eq("id", parsed.data.order_id);
   if (error) return { data: null, error: { message: error.message } };
 
+  // Outstanding installments on a cancelled order should not keep pinging
+  // buyers/sellers as "due" or "pending review".
+  await admin
+    .from("payment_schedules")
+    .update({ status: "waived" })
+    .eq("order_id", parsed.data.order_id)
+    .not("status", "in", "(paid,waived)");
+
+  await admin
+    .from("payments")
+    .update({
+      status: "rejected",
+      admin_note: "Auto-rejected: order cancelled.",
+    })
+    .eq("order_id", parsed.data.order_id)
+    .eq("status", "pending");
+
   await appendTimeline(parsed.data.order_id, "cancelled", ctx.user.id, {
     from: ctx.order.status,
     to: "cancelled",
@@ -1064,6 +1081,8 @@ export async function cancelOrder(
   });
 
   revalidatePath(`/orders/${parsed.data.order_id}`);
+  revalidatePath("/orders");
+  revalidatePath("/dashboard");
   return { data: true, error: null };
 }
 

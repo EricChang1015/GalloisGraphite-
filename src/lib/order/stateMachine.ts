@@ -132,3 +132,10 @@ export const STATUS_LABEL: Record<OrderStatus, string> = {
 };
 
 export const TERMINAL_STATUSES: OrderStatus[] = ["completed", "cancelled"];
+
+/** Orders that no longer need user action — shown under History Orders. */
+export const ORDER_HISTORY_STATUSES: OrderStatus[] = ["completed", "cancelled"];
+
+export function isOrderHistoryStatus(status: string): boolean {
+  return (ORDER_HISTORY_STATUSES as readonly string[]).includes(status);
+}

@@ -126,22 +126,24 @@ export const getUserActionCounts = cache(
       role === "buyer"
         ? supabase
             .from("payment_schedules")
-            .select("order_id, orders!inner(buyer_id)")
+            .select("order_id, orders!inner(buyer_id, status)")
             .in("status", ["due", "overdue"])
             .eq("orders.buyer_id", userId)
+            .not("orders.status", "in", "(cancelled,completed)")
             .returns<{ order_id: string }[]>()
         : Promise.resolve({ data: [] as { order_id: string }[] });
 
     // Payments awaiting seller review (seller is now primary reviewer
     // post-015). Count distinct orders so a multi-payment order pings
-    // once.
+    // once. Skip cancelled / completed orders — they no longer need action.
     const sellerPaymentReviewPromise =
       role === "seller"
         ? supabase
             .from("payments")
-            .select("order_id, orders!inner(seller_id)")
+            .select("order_id, orders!inner(seller_id, status)")
             .eq("status", "pending")
             .eq("orders.seller_id", userId)
+            .not("orders.status", "in", "(cancelled,completed)")
             .returns<{ order_id: string }[]>()
         : Promise.resolve({ data: [] as { order_id: string }[] });
 

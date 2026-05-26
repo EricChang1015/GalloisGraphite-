@@ -356,6 +356,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                 orderId={order.id}
                 schedules={schedules}
                 role={myRoleForChild}
+                orderClosed={order.status === "cancelled"}
                 limit={3}
               />
             </div>
@@ -537,6 +538,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
               orderId={order.id}
               schedules={schedules}
               role={myRoleForChild}
+              orderClosed={order.status === "cancelled"}
             />
           </div>
 

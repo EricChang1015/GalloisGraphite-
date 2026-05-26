@@ -55,6 +55,8 @@ interface Props {
   orderId: string;
   schedules: ScheduleRow[];
   role: "buyer" | "seller" | "other";
+  /** Hide buyer pay actions when the order is cancelled. */
+  orderClosed?: boolean;
   /** Hide rows below this index (used by the Overview tab summary). */
   limit?: number;
 }
@@ -68,7 +70,7 @@ const STATUS_BADGE_VARIANT: Record<PaymentScheduleStatus, string> = {
   waived: "border-border text-muted-foreground line-through",
 };
 
-export function PaymentScheduleTable({ orderId, schedules, role, limit }: Props) {
+export function PaymentScheduleTable({ orderId, schedules, role, orderClosed = false, limit }: Props) {
   const [active, setActive] = useState<ScheduleRow | null>(null);
   const visible = limit ? schedules.slice(0, limit) : schedules;
 
@@ -128,6 +130,7 @@ export function PaymentScheduleTable({ orderId, schedules, role, limit }: Props)
                 </td>
                 <td className="px-3 py-2 text-right">
                   {role === "buyer" &&
+                  !orderClosed &&
                   (s.status === "due" ||
                     s.status === "overdue" ||
                     s.status === "scheduled") ? (
