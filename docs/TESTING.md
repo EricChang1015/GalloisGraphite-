@@ -120,6 +120,14 @@ npm run qa:kyc
 
 **通過標準**：16 項全過（bucket、門檻預設 0、self-level guard、上傳、`kyc_docs`、admin override、gate 邏輯）。詳見 **§3.6**。
 
+改動 **Listings（A14–A16：spec/MOQ、圖片、賣家 edit-delete）** 時，額外執行：
+
+```bash
+npm run qa:listing-moq && npm run qa:listing-images && npm run qa:listing-delete
+```
+
+**通過標準**：三腳本皆 exit 0。詳見 **§3.7**。
+
 ### Tier 1 — 靜態與型別
 
 ```bash
@@ -152,6 +160,7 @@ node scripts/check-dev-errors.mjs
 | Contract reject + re-draft | §3 C1 變體 | ✅ `e2e-full-trading` C2–C3（2026-05-25） |
 | `PROFILE_INCOMPLETE` gate | 清空 settings 後試 inquiry | 建議補 |
 | Google OAuth 註冊 | ROADMAP A7 | ✅ `npm run qa:oauth`（程式路徑）；production 瀏覽器一鍵登入建議人工複核 |
+| Listing MOQ / 圖片 / 賣家 edit-delete | §3.7 | ✅ `qa:listing-moq` + `qa:listing-images` + `qa:listing-delete`（2026-05-24） |
 
 ### Tier 4 — 清理測試資料
 
@@ -276,6 +285,40 @@ E2E_BASE_URL=http://127.0.0.1:3000 npm run qa:kyc:e2e
 | K3 | Admin | `/admin/settings` 將 inquiry min 設 **1** | |
 | K4 | Buyer (level 0) | Market 詢價 | Toast `KYC_REQUIRED`；導向 `/settings/kyc` |
 | K5 | Admin | 門檻恢復 **0** | 詢價可送出 |
+
+---
+
+## 3.7 Listings（A14–A16）— 改動 listing / 圖片 / 賣家 CRUD 時必跑
+
+涵蓋：結構化 spec + MOQ（022/023）、商品圖 storage（024）、賣家 edit/delete UI。
+
+### 自動化（Tier 0+）
+
+```bash
+npm run qa:listing-moq      # migration 023 — BELOW_MOQ guard + DB constraint
+npm run qa:listing-images   # migration 024 — Storage RLS + images jsonb
+npm run qa:listing-delete   # edit/delete — LISTING_HAS_ORDERS + ownership
+```
+
+| 腳本 | 依賴 migration | 斷言重點 |
+|---|---|---|
+| `qa:listing-moq` | 023 | MOQ 欄位存在；`requested_qty` below / equal / above 三分支 |
+| `qa:listing-images` | 024 | owner INSERT 可、非 owner 被擋；`listings.images` 引用；owner DELETE 可 |
+| `qa:listing-delete` | —（業務邏輯） | full-form update round-trip；order-attached 刪除回 `LISTING_HAS_ORDERS`；無訂單可刪 |
+
+以上腳本皆支援 `--cleanup` 清掉 `SMOKE ·` / `TEST ·` 測試列。`qa:preflight` 內的 `verify-schema.mjs` 另含 `min_order_quantity`、`listings` bucket 與 4 條 storage policy 斷言。
+
+### 手動 UI（約 10 分鐘，Seller 帳號）
+
+| # | 動作 | 預期 |
+|---|---|---|
+| L1 | `/listings/new` 上傳 1–2 張圖 → Publish | Market 卡片出現 16:9 banner；詳情頁 `<ListingGallery />` 可切換 |
+| L2 | `/listings` → **Edit** → 改 title / MOQ → Save | `/market/[id]` 反映變更 |
+| L3 | `/listings` → **Pause** → **Resume** | status badge 切換；Market 僅顯示 active |
+| L4 | 對已有訂單引用的 listing 點 **Delete** | Toast `LISTING_HAS_ORDERS`；列仍在 |
+| L5 | 對無訂單的測試 listing 點 **Delete** → confirm | 列消失；storage 物件可選擇保留於 library |
+
+Buyer 端：Market 詢價時 `requested_qty < MOQ` 應回 `BELOW_MOQ`（見 `createInquiry`）。
 
 ---
 

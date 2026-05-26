@@ -60,7 +60,7 @@
 | phone | text | 含國碼 |
 | role | enum `user_role` | buyer / seller / admin / super_admin |
 | status | enum `user_status` | pending / active / frozen |
-| kyc_level | int | 0=email only, 1=企業文件已上傳, 2=超管驗證 |
+| kyc_level | int | 0=email only, 1=phone verified, 2=docs approved (admin), 3=advanced (admin only) — 見 migration 020 與 [`TESTING.md` §3.6](./TESTING.md#36-kyc-a6--合併-main-前必跑) |
 | kyc_docs | jsonb | 上傳憑證 URL 列表 |
 | avatar_url | text | Google OAuth 頭像或 Storage 上傳的公開 URL（`021_avatars.sql`） |
 | created_at / updated_at | timestamptz | |

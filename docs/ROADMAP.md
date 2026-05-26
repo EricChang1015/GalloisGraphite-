@@ -110,7 +110,7 @@
 
 - [x] 推 GitHub
 - [x] Vercel import + env（含 POE / Resend / Supabase / 平台收款資訊）
-- [x] Supabase production schema：所有 10 個 migrations（001 → 010）都已透過 `scripts/apply-migrations.mjs` 套用，並由 `_agent_migrations` 追蹤表記錄
+- [x] Supabase production schema：所有 24 個 migrations（001 → 024）都已透過 `scripts/apply-migrations.mjs` 套用，並由 `_agent_migrations` 追蹤表記錄
   > 注意：未來如增量 migration，**enum add value 與使用該值必須分檔**（007/009 是現有範例：007 加 enum value、009 才使用）
 - [x] RLS policy review（005 / 010 / 015 / 018）— `npm run qa:verify-rls`（17/17 pass，2026-05-25）
 - [x] ~~Resend domain DNS（或先用 `onboarding@resend.dev` 寄件）~~ — 2026-05-20 改用 **AWS SES SMTP**（`src/lib/email/smtp.ts`）；production env 需設 `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM_ADDRESS`（必須是 SES 已驗證 identity）

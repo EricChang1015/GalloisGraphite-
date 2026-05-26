@@ -78,10 +78,11 @@
 | 路由 | 內容 |
 |---|---|
 | `/dashboard` | 歡迎詞 + 角色 badge + commercial-profile incomplete banner（若有缺欄） + 快捷卡片（market/orders/inquiries/new listing for seller，**Orders/Inquiries 卡片右側顯示金色 action-needed badge**） + **Priority Actions**（最多 5 筆，混合 orders-needing-my-action 與 inquiries-needing-my-response，按時間排序） + Active Orders（每列額外顯示「Your turn」/「Disputed」 hint）+ Inquiries needing your response（角色感知：seller 看 `pending`+`negotiating`，buyer 看 `quoted`+`negotiating`） |
-| `/market` | 公開可瀏覽的 active listings 卡片網格 |
-| `/market/[id]` | 單一 listing 詳情 + `<InquiryDialog />` |
-| `/listings` | **My Listings**（賣家視角，建/暫停/恢復） |
-| `/listings/new` | `<ListingForm />` |
+| `/market` | 公開可瀏覽的 active listings 卡片網格（有圖時 16:9 banner + spec chip + MOQ） |
+| `/market/[id]` | 單一 listing 詳情 + `<ListingGallery />` hero + `<InquiryDialog />` |
+| `/listings` | **My Listings**（賣家視角：縮圖、Actions 欄 `<ListingRowActions />` — Edit / Pause / Resume / Sold out / Delete） |
+| `/listings/new` | `<ListingForm />`（含 optional 圖片上傳 `<ListingImageUploader />`） |
+| `/listings/[id]/edit` | 編輯既有 listing（復用 `<ListingForm existing={...}>`；deactivated category 仍會塞回 dropdown 第一格） |
 | `/inquiries` | 兩個 Tab：**Sent**（買家視角）/ **Received**（賣家視角，含「快速報價」） |
 | `/inquiries/[id]` | **Inquiry detail**：quotation 歷史 timeline、`<QuotationForm />`（seller）、`<QuotationActions />`（accept / counter / decline） |
 | `/orders` | 買賣雙視角訂單列表 |
@@ -90,7 +91,7 @@
 | `/messages/[userId]` | 與指定對手方的全頁 thread（`<PartyChatPanel />`） |
 | `/settings` | 帳戶設定：commercial profile（full_name / company_name / country / phone）+ role/status/kyc badges +「Change password」連結；若 `?prompt=incomplete` 或 `profiles.{company_name,country}` 為空，最上方顯示黃色提示 banner |
 
-**Layout**：`(app)/layout.tsx` → 左側 sidebar nav；側欄項目從 `src/lib/notifications/counts.ts` 取 `getUserActionCounts()`，於 Inquiries / Orders 顯示金色數字 badge（`inquiriesNeedingMyResponse` / `ordersNeedingMyAction`），Orders 額外在有 disputed 時補上紅色「!」badge，Settings 在 commercial profile 缺欄時顯示紅點。Counter helper 用 `React.cache()` per-request 記憶化，所以 sidebar + dashboard 共用一次查詢。
+**Layout**：`(app)/layout.tsx` → 左側 sidebar nav + 頂部 `<Navbar />`（desktop Logout、mobile `<MobileNav />` 抽屜）。Mobile 抽屜透過 `workspaceSection` prop **鏡像** desktop sidebar 連結與 action-needed badge（與 admin layout 相同模式）。側欄項目從 `src/lib/notifications/counts.ts` 取 `getUserActionCounts()`，於 Inquiries / Orders 顯示金色數字 badge（`inquiriesNeedingMyResponse` / `ordersNeedingMyAction`），Orders 額外在有 disputed 時補上紅色「!」badge，Settings 在 commercial profile 缺欄時顯示紅點。Counter helper 用 `React.cache()` per-request 記憶化，所以 sidebar + dashboard 共用一次查詢。
 
 ### 2.4 `admin/` — Admin Console
 
@@ -199,8 +200,13 @@ type ActionResult<T> =
 |  | `updatePassword(password)` | recovery session | 呼叫 `auth.updateUser({ password })` |
 | **`profile.ts`** | `updateCommercialProfile(input)` | self | 更新 `profiles.{full_name,company_name,country,phone}`；`/settings` 表單與「lazy-collect」入口都呼叫它 |
 | `components/auth/GoogleSignInButton.tsx` | client-side `supabase.auth.signInWithOAuth({ provider:'google' })` | — | 重導 Google → `/auth/callback` |
-| `listing.ts` | `createListing` | role ∈ {seller, admin}, status='active'；seller 角色另需 `company_name`/`country` non-empty | revalidate /listings, /market；commercial profile 缺漏時回 `error.code='PROFILE_INCOMPLETE'` |
-|  | `updateListing` / `pauseListing` / `resumeListing` | owner | revalidate /listings, /market |
+| `listing.ts` | `createListing` | role ∈ {seller, admin}, status='active'；seller 角色另需 `company_name`/`country` non-empty + `checkKycGate('create_listing')` | revalidate /listings, /market；缺 commercial profile 回 `PROFILE_INCOMPLETE`；KYC 不足回 `KYC_REQUIRED` |
+|  | `updateListing` | owner（seller）或 admin；**dual-mode**：(1) full-form edit（`/listings/[id]/edit`，跑 `ListingInputSchema` + 同上 gate）(2) status-only toggle（`pauseListing` / `resumeListing` / `markListingSoldOut`） | ownership 失敗回 `NOT_FOUND_OR_FORBIDDEN`；revalidate /listings, /market, `/market/{id}` |
+|  | `pauseListing` / `resumeListing` / `markListingSoldOut` | owner | `updateListing(id, { status })` 捷徑 |
+|  | `deleteListing` | owner 或 admin | 若 `orders.listing_id` 引用該 listing → `LISTING_HAS_ORDERS`；否則 hard delete（`inquiries` / `quotations` FK set null） |
+| **`listing-images.ts`** | `uploadListingImage(FormData)` | seller / admin；user-scoped client + Storage RLS（非 service-role） | MIME 白名單 + 2 MiB cap；路徑 `listings/{uid}/{uuid}.ext` |
+|  | `deleteListingImage(pathOrUrl)` | owner / admin | 刪 storage object + scrub 賣家所有 `listings.images` jsonb 引用 |
+|  | `listMyListingImages()` | seller / admin | 列出 `listings/{uid}/...`（供 uploader「From your library」tab，最多 200） |
 | `inquiry.ts` | `createInquiry` | role='buyer' + `profiles.company_name`/`country` non-empty | Email 通知 seller, revalidate /inquiries；commercial profile 缺漏時回 `error.code='PROFILE_INCOMPLETE'` |
 |  | `acceptInquiry` | seller_id = auth.uid() | **(007 變更)** 改為自動發出預設 quotation（用 listing 條件 + 14 天 validity），inquiry='quoted'，buyer 仍需 accept quotation |
 |  | `rejectInquiry` | seller_id = auth.uid() | inquiry='rejected' |
@@ -440,7 +446,9 @@ src/components/
                 ForgotPasswordForm / ResetPasswordForm /
                 CommercialProfileForm /
                 GoogleSignInButton / LogoutButton
-  listing/      ListingForm / InquiryDialog / InquiryActions /
+  listing/      ListingForm / ListingImageUploader / ListingGallery /
+                ListingRowActions / MarketListingCard /
+                InquiryDialog / InquiryActions /
                 QuotationForm / QuotationActions
   order/        OrderActions / OrderProgressBar / OrderPhaseActions /
                 ContractDraftForm / ContractApproveReject / ContractPreview /
@@ -455,6 +463,11 @@ src/components/
   chat/         AiChat / AiChatLauncher / FloatingAiChat /
                 ChatHistorySidebar / ChatPageBody / PinAiToggle
   theme/        ThemeProvider / ThemeToggle
+
+src/lib/（listing 相關）
+  categories/   spec.ts — 結構化 spec_schema、buildListingTitle、formatMeshSelection
+  images/       compress.ts — compressTo720pWebp（client 上傳前 720p WebP）
+  listings/     images.ts — bucket 常數、path helpers、MIME 白名單
 ```
 
 ### 7.4 Toast / Loading
