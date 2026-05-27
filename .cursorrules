@@ -15,7 +15,7 @@ B2B graphite trading platform connecting global buyers with Madagascar sellers.
 - react-hook-form + zod for forms
 - POE API (OpenAI-compatible) via `@ai-sdk/openai` + custom baseURL for AI assistant
   (POE supports Claude / GPT / Gemini / Llama under one key; switch model with POE_MODEL env var)
-- Resend for transactional email
+- AWS SES SMTP (nodemailer) for transactional email — `src/lib/email/smtp.ts`
 - lucide-react for icons
 - date-fns for date manipulation
 - sonner for toast notifications
@@ -40,28 +40,30 @@ B2B graphite trading platform connecting global buyers with Madagascar sellers.
 | product_categories | spec_schema (jsonb) | admin-managed |
 | listings | seller_id, qty, origin, available window, unit_price | seller posts |
 | inquiries | buyer_id, listing_id, requested_qty | buyer 詢價 |
-| orders | state machine | DRAFT → CONTRACT_GENERATED → SIGNED → PAYMENT_PENDING → PAID → SHIPPED → DELIVERED → COMPLETED |
-| contracts | content_html, signed scans | from template |
-| payments | tx_hash / proof_url, status | manual admin verification |
-| chat_rooms / chat_members / messages | order-bound IM | Supabase Realtime |
+| orders | state machine | 12-stage B2B linear: quotation_pending → … → customs_cleared → completed (payment decoupled to payment_schedules) |
+| payment_schedules | milestone, percentage, status | 1–10 installments per order; triggered by milestones + cron |
+| contracts | content_html, signed scans | from template; buyer approve/reject + revision_no |
+| payments | schedule_id, tx_hash / proof_url, status | buyer submits; **seller primary** verify (admin override) |
+| chat_rooms / chat_members / messages | party DM (type=party) | one thread per buyer+seller pair; Supabase Realtime |
 | news | published news articles | admin-managed |
 | audit_logs | who/what/when | admin actions |
 
 ## Roles
 - `buyer`: 詢價、下訂、付款、確認收貨
 - `seller`: 上貨、接受詢價、出貨、回報物流
-- `admin`: 平台運維 + 付款人工審核
+- `admin`: 平台運維 + 付款覆審 / 爭議介入
 - `super_admin`: 最高權限，可以管理 admin
 
 ## Status / State Machine Conventions
 - 每次 order 狀態轉換要寫入 `orders.timeline` (jsonb append)
 - 每次 admin 動作要寫入 `audit_logs`
-- payment.status: pending → verified | rejected (僅 admin 可變更)
+- payment.status: pending → verified | rejected (seller-of-order 或 admin 可變更，migration 015)
+- payment_schedule.status: scheduled → due → awaiting_review → paid (overdue / waived 旁支)
 
 ## Payment (MVP simplification)
 - **NO** blockchain integration / wallet connection
 - 用戶提交 tx_hash (text) 或上傳付款憑證 image 至 Supabase Storage
-- Admin 在 `/admin/payments` 人工核對後標記 paid
+- **Seller** 在訂單 Payment tab 主審；Admin 在 `/admin/payments` 覆審 / 介入
 - 支援 USDT (TRC20/ERC20)、USDI、MUP (自有 token)、bank_transfer
 
 ## Contract (MVP simplification)
@@ -81,7 +83,7 @@ B2B graphite trading platform connecting global buyers with Madagascar sellers.
 
 ## Security
 - 每張表必須有 RLS policy（migrations 內定義）
-- Admin 路由由 `src/middleware.ts` 檢查 `profile.role`
+- Admin 路由由 `src/proxy.ts`（Next.js 16，原 middleware）檢查 `profile.role`
 - `SUPABASE_SERVICE_ROLE_KEY` 只能在 Server (route handler / server action) 使用，**絕對不可** 出現在 Client Component
 - 所有用戶輸入用 zod 校驗
 - 文件上傳僅允許 `image/*`、`application/pdf`，並有 size limit
@@ -103,7 +105,7 @@ src/
     (public)/     公開頁面（含 SSG/ISR 適用的 marketing 頁）
     (auth)/       login / register / verify
     (app)/        登入後 dashboard / market / listings / orders / messages
-    admin/        後台（middleware 限制 role）
+    admin/        後台（proxy.ts 限制 role）
     api/          只放需要 streaming 或 webhook 的 route handler
   actions/        Server Actions（auth/listing/inquiry/order/admin/payment...）
   components/
@@ -114,12 +116,12 @@ src/
     supabase/     client / server / middleware / admin
     ai/           prompt / knowledge / tools
     contract/     template renderer
-    email/        resend wrapper
+    email/        smtp wrapper (AWS SES)
     utils.ts
   types/
     database.ts   由 Supabase CLI 生成
 supabase/
-  migrations/     001_init.sql, 002_xxx.sql ...
+  migrations/     001_init.sql … 027_quotations_created_by.sql (see docs/ARCHITECTURE.md §10)
 docs/
   PRD.md SCHEMA.md CONTRACT_TEMPLATE.md ROADMAP.md LEGACY_CONTENT.md
 ```

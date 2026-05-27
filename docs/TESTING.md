@@ -3,10 +3,13 @@
 > 本文件是 **B2B 交易流程** 的 QA 單一來源：測試帳號、分層驗證流程、端到端走測腳本、
 > DB 斷言 SQL、已知缺口與走測紀錄。
 >
-> **架構對齊（2026-05-19 migration 014）**：訂單為 **12 階段線性狀態機**；
+> **架構對齊（migration 014+）**：訂單為 **12 階段線性狀態機**；
 > 付款已抽離至 `payment_schedules`，**不再**使用 `full_prepay` /
-> `net_after_arrival` 或 `orders.payment_terms`。舊文件若仍提到 `payment_pending → paid`
-> 推進訂單，請以本文件與 [`ARCHITECTURE.md` §4.4–4.5](./ARCHITECTURE.md) 為準。
+> `net_after_arrival` 或 `orders.payment_terms`。付款由 **seller 主審**（admin 覆審）。
+> 舊文件若仍提到 `payment_pending → paid` 推進訂單，請以本文件與
+> [`ARCHITECTURE.md` §4.4–4.5](./ARCHITECTURE.md) 為準。
+>
+> **最後同步**：2026-05-27
 
 ---
 
@@ -398,7 +401,7 @@ select o.order_no, o.status, o.incoterm,
 | 進度條 | `<OrderProgressBar />` | ✅ | ✅ | 12 階段 + Payments X/Y |
 | 文件中心 | `<OrderDocumentsTab />` | 可選 | 可選 | |
 | 站內 IM | `MessageCounterpartyButton` / `/messages` | ✅ | ✅ | Party DM；`npm run qa:chat` |
-| KYC 上傳 | — | — | — | **未實作（A6）** |
+| KYC 上傳 | `/settings/kyc` + `npm run qa:kyc` | ✅ | ✅ | 四級 level + phone OTP；`submitPayment` 僅 commercial gate |
 
 ---
 

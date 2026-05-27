@@ -41,13 +41,13 @@ export default async function Page() {
 
 ## Storage
 
-- Bucket layout:
-  - `avatars` — profile photos
-  - `kyc` — KYC documents (private, signed URL only)
-  - `contracts` — signed contract scans
-  - `payments` — payment proofs
-  - `listings` — listing images
-  - `chat` — chat attachments
+- Bucket layout (see `docs/ARCHITECTURE.md` §3.3):
+  - `order-documents` — **primary** private bucket for contracts, payment proofs, B/L, invoices, etc.
+  - `avatars` — profile photos (public read, self write) — `021_avatars.sql`
+  - `kyc` — KYC documents (private, signed URL only) — `019_kyc_storage_and_settings.sql`
+  - `listings` — listing images (public read, seller write) — `024_listings_bucket.sql`
+  - `chat` — chat attachments (**not yet created**; see ROADMAP §A2/A4)
+- Legacy `contracts` / `payments` buckets are **not used** — everything goes to `order-documents`.
 - Always set bucket access (public/private) explicitly when creating.
 - Upload via Server Action so we can append audit/timeline entries.
 

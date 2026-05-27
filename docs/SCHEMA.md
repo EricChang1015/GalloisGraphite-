@@ -3,9 +3,9 @@
 > 對應 SQL 在 [`supabase/migrations/`](../supabase/migrations/)。
 > 此文件以「中文 + 設計理由」描述 schema,方便 AI agent 與工程師對齊。
 >
-> **注意**：001_init.sql 與目前代碼實際使用的欄位有部分差異，已由
-> [`005_align_payments_and_news.sql`](../supabase/migrations/005_align_payments_and_news.sql)
-> 修正。本文件描述的是 **執行完所有 migration 後的最終 schema**。
+> **注意**：001_init.sql 與目前代碼實際使用的欄位有部分差異，已由後續 migration 修正。
+> 本文件描述的是 **執行完 001–027 所有 migration 後的最終 schema**。
+> 完整 migration 清單亦見 [`ARCHITECTURE.md` §10](./ARCHITECTURE.md#10-migrations-順序)。
 
 ## Migration 順序
 
@@ -13,7 +13,7 @@
 |---|---|
 | `001_init.sql` | 全部 enum / table / RLS / Realtime publication / 預設 3 個 categories seed |
 | `002_seed_first_admin.sql` | 指引 — 手動把第一個帳號 promote 為 super_admin |
-| `003_seed_categories.sql` | 12 個標準 grade（MADA1/MADA2 × 6 mesh）+ Custom Grade |
+| `003_seed_categories.sql` | 12 個標準 grade（MADA1/MADA2 × 6 mesh）+ Custom Grade — **022 後 deactivate**，改由 flake-graphite 品類取代 |
 | `004_news_schema_update.sql` | `news` 加 `slug` / `content_html` / `cover_image_url` / `created_at` + 索引 |
 | `005_align_payments_and_news.sql` | 對齊實際代碼：`payments.payer_id → buyer_id`、加 `admin_note/reviewed_by/reviewed_at`、`news.author_id`、`orders.updated_at` + trigger |
 | `006_ai_chat_logs.sql` | AI chat 稽核日誌（session_id / IP / geo / user-agent + admin-only RLS） |
@@ -35,6 +35,9 @@
 | `022_flake_graphite_categories.sql` | **品類重整**：移除 MADA1/MADA2 mining-brand 命名（mining region 留在 marketing copy 而不入 schema）；`product_categories.spec_schema` 改成結構化 jsonb（`product_type` / `mesh_size` / `fixed_carbon_min/max` / `moisture_max` / `size_distribution_min_pct` / `is_custom`）；7 個 active 品類（`Flake Graphite +35 / +50 / +80 / +100 / +150 / -100 Mesh` + `Custom Grade`）；舊 MADA brand rows 被 deactivate（保留以維持既有 listings FK） |
 | `023_listings_moq.sql` | **Listing MOQ**：`listings.min_order_quantity numeric(18,3) null`（`check (min_order_quantity is null or min_order_quantity > 0)`）；optional — 為 null 時表示沒有最小訂購量門檻。`createInquiry` server action 會在 buyer `requested_qty < min_order_quantity` 時回 `error.code='BELOW_MOQ'` |
 | `024_listings_bucket.sql` | **Listing images bucket**：建立 `listings` public storage bucket（2 MiB / `image/jpeg` / `image/png` / `image/webp`）+ `storage.objects` 4 條 RLS（公開 SELECT；INSERT/UPDATE 限路徑首段 = `auth.uid()`；DELETE owner 或 admin）。路徑慣例 `listings/{seller_user_id}/{uuid}.{ext}`，搭配 client-side `compressTo720pWebp` 把圖縮到 720 px / WebP 再上傳 |
+| `025_listings_delete_policy.sql` | **Listing DELETE RLS**：補 `listings_owner_delete` policy（先前 policy 名稱誤導，seller 無法真正刪除 listing） |
+| `026_waive_schedules_on_cancelled_orders.sql` | **取消訂單付款清理**：`orders.status='cancelled'` 時將未結清 `payment_schedules` 改 `waived`、pending `payments` 自動 `rejected` |
+| `027_quotations_created_by.sql` | **報價提案人**：`quotations.created_by` NOT NULL FK profiles；backfill 後 server/UI 用此欄判定「不能對自己的 offer 動作」與 Round 標籤 |
 
 > ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >
@@ -60,7 +63,7 @@
 | phone | text | 含國碼 |
 | role | enum `user_role` | buyer / seller / admin / super_admin |
 | status | enum `user_status` | pending / active / frozen |
-| kyc_level | int | 0=email only, 1=企業文件已上傳, 2=超管驗證 |
+| kyc_level | int | 0=email verified, 1=phone verified, 2=docs verified, 3=premium（admin 指派）；見 `src/lib/kyc/types.ts` `KYC_LEVEL_LABELS` |
 | kyc_docs | jsonb | 上傳憑證 URL 列表 |
 | avatar_url | text | Google OAuth 頭像或 Storage 上傳的公開 URL（`021_avatars.sql`） |
 | created_at / updated_at | timestamptz | |

@@ -1,9 +1,11 @@
 # Architecture — 現有實作架構
 
-> 此文件描述**現在實際長什麼樣子**的 Mada Graphite 平台。
-> - 規劃／需求面請看 [`PRD.md`](./PRD.md)
-> - 資料表細節請看 [`SCHEMA.md`](./SCHEMA.md)
+> 此文件描述**現在實際長什麼樣子**的 Mada Graphite 平台（**實作單一真相來源**）。
+> - 規劃／需求面請看 [`PRD.md`](./PRD.md)（含 ✅/待補狀態）
+> - 資料表細節請看 [`SCHEMA.md`](./SCHEMA.md)（001–027 執行後的最終 schema）
 > - 待補完項目請看 [`ROADMAP.md`](./ROADMAP.md)
+>
+> **最後同步**：2026-05-27（對齊 migration 027、`quotations.created_by`、Party DM、seller-primary payment）
 
 ---
 
@@ -610,7 +612,7 @@ npm run db:types             # 重新生成 src/types/database.ts
 | # | 項目 | 狀態 | 備註 |
 |---|---|---|---|
 | 1 | Schema 對齊（payments / news / orders） | ✅ 已完成 | `005_align_payments_and_news.sql` |
-| 2 | B2B 全流程追蹤（13 階段、quotation、document hub、合約回合審核） | ✅ 已完成 | `007_b2b_progress_enums.sql` + `009_b2b_progress_tables.sql` + 大量 server actions / UI 元件 |
+| 2 | B2B 全流程追蹤（12 階段訂單 + payment_schedules、quotation、document hub、合約回合審核） | ✅ 已完成 | `007`–`014` migrations + 大量 server actions / UI 元件 |
 | 3 | 合約簽名掃描上傳 UI（A3） | ✅ 已完成 | `<SignedScanUploader />` + `uploadSignedScan` server action |
 | 4 | Disputed / Cancelled 觸發 UI（A5） | ✅ 已完成 | `<OrderPhaseActions />` + `<AdminOrderActions />` |
 | 5 | Migration 自動套用 runner | ✅ 已完成 | `scripts/apply-migrations.mjs` + `npm run db:migrate` |

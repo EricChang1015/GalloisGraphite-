@@ -2,8 +2,8 @@
 
 > 此文件是基於原始 [`Requirements.md`](./Requirements.md) 重新整理出的可執行 PRD。
 >
-> **實作狀態**：Day 1–2 MVP 主要功能已實作完成，補完項與 Phase 2 規劃見 [`ROADMAP.md`](./ROADMAP.md)。
-> 已實作的真實架構請見 [`ARCHITECTURE.md`](./ARCHITECTURE.md)。
+> **實作狀態**：MVP 主要功能已實作完成，補完項與 Phase 2 規劃見 [`ROADMAP.md`](./ROADMAP.md)。
+> **實作單一真相來源**：[`ARCHITECTURE.md`](./ARCHITECTURE.md)（最後同步 2026-05-27）。
 
 ## 1. 願景
 
@@ -177,17 +177,27 @@ quotation_pending → quoted ↔ negotiating
 > 部分情況回傳 size hint 為 0 導致沒付完款的訂單被誤推到 `completed`（ORD-260520-601b6b
 > 案例）。現改為 `select("id", { count: "exact", head: true })` 取真實 count。
 
-### 4.6 站內 IM ⚠️ 待實作（A2）
-- 建立訂單時自動建 `chat_rooms (type='order')` + `chat_members(buyer, seller)`
-- Realtime via Supabase `postgres_changes` event on `messages`
-- 支援文字 + 圖片附件（Storage `chat` bucket，A4 待建）
-- Admin 可選擇加入
+### 4.6 站內 IM（Party DM ✅；附件與訂單 Tab 待補 — A2）
+
+**已實作（migration 016–018）**：
+
+- 同一 buyer + seller 僅一條 `chat_rooms.type='party'` thread（不再為每張訂單開獨立 order room）
+- `/messages` 對話列表 + `/messages/[userId]` 全頁 thread（`<PartyChatPanel />`）
+- Market / 訂單 Overview 的 `<MessageCounterpartyButton />` 開啟同一 party thread
+- Realtime：`postgres_changes` on `messages`（`PartyChatPanel` 內訂閱）
+- 訊息可帶 `context_type`（listing / inquiry / order / none）+ `context_id`
+
+**仍待（見 ROADMAP §A2）**：
+
+- 訂單詳情可選內嵌精簡版 chat（目前僅 Overview「Message」按鈕）
+- `chat` Storage bucket + 訊息附件（image/PDF ≤5MB）
+- Realtime 不穩時的 polling fallback
 
 ## 5. 非功能需求
 
 | 類別 | 要求 | 現況 |
 |---|---|---|
-| 部署 | Vercel（前端 + Server Actions），Supabase（Postgres / Auth / Storage / Realtime） | ✅ 已部署 <https://galloisgraphite.vercel.app/>；端到端煙霧測試列為 ROADMAP §A7 |
+| 部署 | Vercel（前端 + Server Actions），Supabase（Postgres / Auth / Storage / Realtime） | ✅ 已部署 <https://galloisgraphite.vercel.app/>；E2E 煙霧測試已完成（ROADMAP §A7，見 [`TESTING.md`](./TESTING.md)） |
 | 效能 | 公開頁 SSG/ISR；市場頁 SSR + RSC；首屏 LCP < 2.5s（WiFi） | ✅ 公開頁 ISR、SSR 已實作 |
 | 安全 | 全表 RLS、service_role key 永不入 client、輸入用 zod | ✅ |
 | 可觀測性 | `audit_logs` + `ai_chat_logs` 記錄；Vercel Logs；後續可接 Sentry | ✅ audit/AI logs；Sentry 為 Phase 2 |
@@ -226,4 +236,5 @@ quotation_pending → quoted ↔ negotiating
 | 2026-05-20 | feat(payment/email/shipment) seller-review-and-ses：(1) Payment 改 seller 主審 admin 覆審（migration 015 `payments_seller_or_admin_update`，`<PaymentVerifyActions />` 抽到 `src/components/order/` 雙處使用）；(2) Email 從 Resend 改 nodemailer + AWS SES SMTP（`src/lib/email/smtp.ts`，`/admin/settings` 加「Send test email」）；(3) `acceptQuotation` 寫入 `orders.incoterm = q.incoterm`，解決議價更動後合約 draft 仍用 listing 原 Incoterm 的 bug；(4) `<ShipmentForm />` 加 optional B/L + Inspection Report 上傳；(5) `submitPayment` 接受 `scheduled` 期讓買家「Pay Early」；(6) `autoCompleteIfReady` 修正 Supabase count 用法（`{ count: "exact", head: true }`），解決 ORD-260520-601b6b 未付完款就被推到 completed 的 bug；(7) seller `getUserActionCounts` 加 `paymentsAwaitingMyReview` |
 | 2026-05-24 | feat(listings) seller-edit-and-delete：`updateListing` 升級為 dual-mode（full-form zod 校驗 + commercial profile / KYC gate；bare status toggle 不變）；新 `deleteListing` 在 `orders.listing_id` 引用該 listing 時回 `LISTING_HAS_ORDERS`（`inquiries` / `quotations` FK 設 `set null` 自動處理）；新 `markListingSoldOut` 快速 action；新 `/listings/[id]/edit` 頁復用 `<ListingForm existing>` pre-fill；`/listings` 新「Actions」欄含 `<ListingRowActions />`（Edit / Pause↔Resume / Sold out / Delete with confirm dialog）；smoke `scripts/smoke-listing-delete.mjs` 11 assertions 全綠 |
 | 2026-05-24 | feat(listings) image-upload-720p-with-library：migration 024 建立 `listings` public storage bucket（2 MiB / JPEG/PNG/WebP / owner-scoped RLS）；新 `<ListingImageUploader />`（drag-drop + 從庫重用既往上傳的 thumbnail grid，最多 5 張）；client-side `compressTo720pWebp`（720 px / WebP / q=0.82）在上傳前縮邊重編碼（實測 12 KB PNG → 1.2 KB，~90% reduction）；server actions `uploadListingImage` / `deleteListingImage`（含 scrub `listings.images` 引用）/ `listMyListingImages`；market 卡片 16:9 banner、`/market/[id]` 用新 `<ListingGallery />`（hero + thumbnail 切換）、`/listings` seller 列表加縮圖；9 個 smoke-listing-images RLS assertion + 10 個 verify-schema bucket assertion 全綠 |
+| 2026-05-27 | docs: 全面對齊實作 — 修正 migration 計數（001→027）、KYC 四級、Party DM 狀態、付款 seller-primary、Email SES；`.cursorrules` / `README` / `AGENTS.md` 同步 |
 | 2026-05-22 | feat(categories+listings) flake-graphite-restructure-followup：(1) migration 022 已合併 — `product_categories` 改用結構化 `spec_schema`（product_type / mesh_size / fixed_carbon_min/max / moisture_max / size_distribution_min_pct / is_custom），移除 MADA1/MADA2 brand 命名；(2) migration 023：optional `listings.min_order_quantity`；`createInquiry` 加 `BELOW_MOQ` server-side guard；(3) `<ListingForm />` Category / Mesh 改用 `<SelectValue>{(v)=>label}</SelectValue>`（修正 base-ui Select.Value 顯示 raw UUID/enum code 的 bug）；同步 `<CategoryFormDialog />` 的 Product Type / Mesh Size；(4) `buildListingTitle()` helper + 「Generate title」按鈕；(5) Custom Grade 的 `specs.mesh_size` 改 `MeshSize[]`，UI 變 checkbox grid，`formatMeshSelection` 渲染 "+35 to -100 Mesh"；(6) `<InquiryDialog />` 預設 `requested_qty = MOQ ?? 1`、`target_price` 改空白 placeholder、加 listing summary card；(7) Market 卡片 / 詳情顯示 spec chip（mesh + carbon）+ "Available" / "Min order" 雙行；(8) Admin Category 列表加「Listings: N」count cell；(9) 測試：`scripts/test-listing-spec-helpers.mjs`（17 cases）+ `scripts/smoke-listing-moq.mjs`（10 cases）+ `verify-schema.mjs` 補 7 個 022/023 assertion；(10) 防禦性修正（commit `ff464c9`）：`/listings` 與 `/inquiries` 對 `user!.id` 的 non-null assertion 改成顯示「Session expired」卡片，避免 session 過渡時的 `TypeError: Cannot read properties of null (reading 'id')` |

@@ -16,14 +16,14 @@ Quick reference:
 
 - `docs/ARCHITECTURE.md` — **current implemented architecture** (start here)
 - `docs/PRD.md` — product requirements (with implementation status)
-- `docs/SCHEMA.md` — database schema rationale (post-010 migration)
+- `docs/SCHEMA.md` — database schema rationale (post-027 migration)
 - `docs/AI_PROMPT.md` — AI assistant prompt & FAQ maintenance guide
 - `docs/ROADMAP.md` — remaining MVP gaps + Phase 2 plan
 - `docs/TESTING.md` — **QA process** + test accounts + B2B E2E walkthrough (payment_schedules)
 - `docs/CONTRACT_TEMPLATE.md` — graphite sales contract template
 - `docs/LEGACY_CONTENT.md` — content migrated from old static madagraphite.com
 - `docs/COPY_DRAFTS.md` — marketing copy drafts
-- `supabase/migrations/` — SQL migrations (currently 001 → 010)
+- `supabase/migrations/` — SQL migrations (currently 001 → 027)
 - `.cursor/rules/migrations.mdc` — **migration authoring rules** (read before writing SQL)
 - `.env.example` — required environment variables
 
@@ -34,7 +34,7 @@ Quick reference:
 3. Forms use `react-hook-form` + `zod`, rendered with shadcn `Form`.
 4. DB access uses `@supabase/ssr` clients in `src/lib/supabase/`.
 5. Tailwind v4 + shadcn (style: `base-nova`, base library: `@base-ui/react`).
-6. No blockchain / wallet SDKs — payments are manually verified by admins.
+6. No blockchain / wallet SDKs — payments are manually verified by **sellers** (admin can override); see migration 015.
 7. Never expose `SUPABASE_SERVICE_ROLE_KEY` outside server-only modules.
 8. **Schema changes** must go through `supabase/migrations/NNN_*.sql` and be
    applied with `npm run db:migrate` (Supabase Management API, no DB password).
