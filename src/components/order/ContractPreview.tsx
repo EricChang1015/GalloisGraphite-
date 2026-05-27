@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Printer, Download } from "lucide-react";
 import {
@@ -8,6 +9,19 @@ import {
   prepareContractHtmlForPreview,
 } from "@/lib/contract/embed";
 import { cn } from "@/lib/utils";
+
+// =====================================================================
+// NOTE on i18n scope (see docs/I18N_PLAN.md):
+//
+//   - The contract BODY (the HTML in `contentHtml`, rendered into the
+//     scoped preview div and the print window) is ALWAYS English.
+//   - The contract PDF export (window.print()) is ALWAYS English —
+//     the section headers and signature labels inside `buildPrintableDoc`
+//     remain hard-coded English strings.
+//   - Only the surrounding UI chrome (header line, action buttons, signed
+//     pane labels and dates that the user sees IN the dashboard) is
+//     translated.
+// =====================================================================
 
 interface Props {
   contractNo: string;
@@ -49,6 +63,10 @@ function SignaturePane({
   url: string | null | undefined;
   signedAt: string | null | undefined;
 }) {
+  // Note: we intentionally don't pipe `label` through i18n here because
+  // it's already passed as a localized prop by the caller — keeps this
+  // primitive free of translation lookups in case it's later reused on
+  // the PDF export path (which must stay English-only).
   return (
     <div className="rounded-lg border bg-white text-black p-3 space-y-2">
       <div className="flex items-center justify-between text-xs">

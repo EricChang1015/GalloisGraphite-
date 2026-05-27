@@ -1,0 +1,67 @@
+{
+  "role": {
+    "buyer": "Buyer",
+    "seller": "Seller",
+    "admin": "Admin",
+    "super_admin": "Super Admin"
+  },
+  "accountStatus": {
+    "active": "Active",
+    "pending": "Pending",
+    "frozen": "Frozen"
+  },
+  "order": {
+    "status": {
+      "draft": "Draft",
+      "contract_generated": "Contract generated",
+      "contract_pending": "Contract pending",
+      "signed": "Signed",
+      "contract_signed": "Contract signed",
+      "payment_pending": "Payment pending",
+      "paid": "Paid",
+      "in_production": "In production",
+      "ready_to_ship": "Ready to ship",
+      "shipped": "Shipped",
+      "in_transit": "In transit",
+      "arrived": "Arrived",
+      "customs_cleared": "Customs cleared",
+      "delivered": "Delivered",
+      "disputed": "Disputed",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "action": {
+      "awaitingAdmin": "Awaiting admin",
+      "awaitingCounterparty": "Awaiting counterparty",
+      "reviewContract": "Review the contract",
+      "awaitingBuyerReview": "Awaiting buyer review",
+      "confirmCustomsCleared": "Confirm customs cleared",
+      "awaitingCustoms": "Awaiting customs",
+      "markInProduction": "Mark in production",
+      "markReadyToShip": "Mark ready to ship",
+      "shipAndAddBL": "Ship + add B/L",
+      "markInTransitOrArrived": "Mark in transit / arrived",
+      "markArrived": "Mark arrived"
+    }
+  },
+  "inquiry": {
+    "status": {
+      "pending": "Pending",
+      "quoted": "Quoted",
+      "negotiating": "Negotiating",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "expired": "Expired",
+      "converted": "Converted"
+    }
+  },
+  "kyc": {
+    "level": {
+      "0": "Unverified",
+      "1": "Phone verified",
+      "2": "Documents verified",
+      "3": "Trusted seller"
+    },
+    "levelLabel": "KYC level {level}"
+  }
+}

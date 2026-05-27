@@ -1,0 +1,7 @@
+{
+  "_doc": "Server actions keep returning English `error.message` (decision: error codes stay English). This namespace is for *user-facing* UI errors that the client originates locally (network drop, validation messages we already render).",
+  "generic": "Something went wrong. Please try again.",
+  "network": "Network error. Check your connection and try again.",
+  "unauthorized": "You don't have permission to do that.",
+  "unknown": "Unknown error."
+}

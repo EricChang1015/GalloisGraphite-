@@ -43,10 +43,70 @@ export function getOrderActionOwner(status: string): OrderActionOwner {
 }
 
 /**
- * Short human label for the "Your turn / Awaiting other side" hint on the
- * Active Orders list in the dashboard. Returns null for statuses where no
- * single party is blocking. Payment-related rows now surface separately
- * via the schedule count, so they're not handled here.
+ * Translation key (relative to the `enums` namespace) describing the next
+ * action on an order from `myRole`'s perspective. Returns `null` when no
+ * party is currently blocking from this side.
+ *
+ * Use with `useTranslations('enums')` / `getTranslations('enums')`:
+ *
+ *   const key = describeOrderActionKey(o.status, role);
+ *   const label = key ? t(key) : null;
+ *
+ * Centralised here so the dashboard, sidebar badges, mobile drawer, and
+ * any future channel (email, push) share the same logic and translation
+ * surface. The string-returning variant `describeOrderAction` is kept as a
+ * thin wrapper for legacy callers and English-only fallbacks.
+ */
+export type OrderActionKey =
+  | "order.action.awaitingAdmin"
+  | "order.action.awaitingCounterparty"
+  | "order.action.reviewContract"
+  | "order.action.awaitingBuyerReview"
+  | "order.action.confirmCustomsCleared"
+  | "order.action.awaitingCustoms"
+  | "order.action.markInProduction"
+  | "order.action.markReadyToShip"
+  | "order.action.shipAndAddBL"
+  | "order.action.markInTransitOrArrived"
+  | "order.action.markArrived";
+
+export function describeOrderActionKey(
+  status: string,
+  myRole: "buyer" | "seller"
+): OrderActionKey | null {
+  const owner = getOrderActionOwner(status);
+  if (owner === "admin") return "order.action.awaitingAdmin";
+  if (owner === "none") return null;
+  if (owner !== myRole) return "order.action.awaitingCounterparty";
+
+  switch (status) {
+    case "contract_pending":
+      return myRole === "buyer"
+        ? "order.action.reviewContract"
+        : "order.action.awaitingBuyerReview";
+    case "arrived":
+      return myRole === "buyer"
+        ? "order.action.confirmCustomsCleared"
+        : "order.action.awaitingCustoms";
+    case "contract_signed":
+      return myRole === "seller" ? "order.action.markInProduction" : null;
+    case "in_production":
+      return myRole === "seller" ? "order.action.markReadyToShip" : null;
+    case "ready_to_ship":
+      return myRole === "seller" ? "order.action.shipAndAddBL" : null;
+    case "shipped":
+      return myRole === "seller" ? "order.action.markInTransitOrArrived" : null;
+    case "in_transit":
+      return myRole === "seller" ? "order.action.markArrived" : null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * @deprecated Prefer `describeOrderActionKey` + i18n. Kept temporarily for
+ * legacy English-only callers (e.g. server-side email body assembly which is
+ * intentionally English per docs/I18N_PLAN.md).
  */
 export function describeOrderAction(
   status: string,

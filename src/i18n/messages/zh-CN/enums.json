@@ -1,0 +1,67 @@
+{
+  "role": {
+    "buyer": "买家",
+    "seller": "卖家",
+    "admin": "管理员",
+    "super_admin": "超级管理员"
+  },
+  "accountStatus": {
+    "active": "已激活",
+    "pending": "审核中",
+    "frozen": "已冻结"
+  },
+  "order": {
+    "status": {
+      "draft": "草稿",
+      "contract_generated": "合同已生成",
+      "contract_pending": "合同待审核",
+      "signed": "已签署",
+      "contract_signed": "合同已签署",
+      "payment_pending": "待付款",
+      "paid": "已付款",
+      "in_production": "生产中",
+      "ready_to_ship": "待发运",
+      "shipped": "已发运",
+      "in_transit": "运输中",
+      "arrived": "已抵达",
+      "customs_cleared": "已清关",
+      "delivered": "已送达",
+      "disputed": "争议中",
+      "completed": "已完成",
+      "cancelled": "已取消"
+    },
+    "action": {
+      "awaitingAdmin": "等待管理员处理",
+      "awaitingCounterparty": "等待对方处理",
+      "reviewContract": "请审核合同",
+      "awaitingBuyerReview": "等待买家审核",
+      "confirmCustomsCleared": "确认已清关",
+      "awaitingCustoms": "等待清关",
+      "markInProduction": "标记为生产中",
+      "markReadyToShip": "标记为待发运",
+      "shipAndAddBL": "发运并上传提单",
+      "markInTransitOrArrived": "标记为运输中 / 已抵达",
+      "markArrived": "标记为已抵达"
+    }
+  },
+  "inquiry": {
+    "status": {
+      "pending": "待处理",
+      "quoted": "已报价",
+      "negotiating": "议价中",
+      "accepted": "已接受",
+      "rejected": "已拒绝",
+      "expired": "已过期",
+      "converted": "已成单"
+    }
+  },
+  "kyc": {
+    "level": {
+      "0": "未认证",
+      "1": "手机已认证",
+      "2": "证件已认证",
+      "3": "信任卖家"
+    },
+    "levelLabel": "KYC 等级 {level}"
+  }
+}

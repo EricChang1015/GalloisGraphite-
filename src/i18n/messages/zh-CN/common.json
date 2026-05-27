@@ -1,0 +1,32 @@
+{
+  "appName": "Mada Graphite",
+  "actions": {
+    "save": "保存",
+    "saving": "保存中…",
+    "cancel": "取消",
+    "edit": "编辑",
+    "delete": "删除",
+    "submit": "提交",
+    "submitting": "提交中…",
+    "confirm": "确认",
+    "close": "关闭",
+    "back": "返回",
+    "next": "下一步",
+    "viewAll": "查看全部",
+    "openSettings": "打开设置",
+    "retry": "重试",
+    "loading": "加载中…"
+  },
+  "states": {
+    "empty": "暂无内容。",
+    "loading": "加载中…",
+    "error": "出错了。"
+  },
+  "units": {
+    "tons": "{count} 吨"
+  },
+  "yourTurn": "等你处理",
+  "disputed": "争议中",
+  "awaiting": "等待",
+  "noMatch": "无匹配项"
+}

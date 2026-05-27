@@ -1,0 +1,32 @@
+{
+  "appName": "Mada Graphite",
+  "actions": {
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "submit": "Submit",
+    "submitting": "Submitting…",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "viewAll": "View all",
+    "openSettings": "Open Settings",
+    "retry": "Retry",
+    "loading": "Loading…"
+  },
+  "states": {
+    "empty": "Nothing to show.",
+    "loading": "Loading…",
+    "error": "Something went wrong."
+  },
+  "units": {
+    "tons": "{count} MT"
+  },
+  "yourTurn": "Your turn",
+  "disputed": "Disputed",
+  "awaiting": "Awaiting",
+  "noMatch": "No match"
+}

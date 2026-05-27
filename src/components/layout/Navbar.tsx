@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -15,7 +16,11 @@ import {
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { NavSearchTrigger } from "@/components/layout/NavSearchTrigger";
 
-const NAV_LINKS = [
+// Public marketing pages are deferred for i18n (decision: docs/I18N_PLAN.md).
+// The navbar labels here are kept in English on purpose — they link to
+// English-only marketing content. When public pages are translated later,
+// promote these to nav.json keys.
+const PUBLIC_LINKS = [
   { href: "/about", label: "About" },
   { href: "/products", label: "Products" },
   { href: "/sustainability", label: "Sustainability" },
@@ -44,6 +49,7 @@ export async function Navbar({
 }: {
   workspace?: WorkspaceMobileSection;
 } = {}) {
+  const tNav = await getTranslations("nav");
   const user = await getCurrentUser();
   const profile = user ? await getCurrentProfile() : null;
   const isAuthenticated = Boolean(user);
@@ -70,9 +76,9 @@ export async function Navbar({
           </span>
         </Link>
 
-        {/* Desktop nav */}
+        {/* Desktop nav (public marketing links — English-only for now) */}
         <nav className="hidden lg:flex items-center gap-1 text-sm">
-          {NAV_LINKS.map((link) => (
+          {PUBLIC_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -100,7 +106,7 @@ export async function Navbar({
                     buttonVariants({ variant: "ghost", size: "sm" })
                   )}
                 >
-                  Dashboard
+                  {tNav("items.dashboard")}
                 </Link>
                 <Link
                   href="/messages"
@@ -108,7 +114,7 @@ export async function Navbar({
                     buttonVariants({ variant: "ghost", size: "sm" })
                   )}
                 >
-                  Messages
+                  {tNav("items.messages")}
                 </Link>
                 {isAdmin && (
                   <Link
@@ -117,7 +123,7 @@ export async function Navbar({
                       buttonVariants({ variant: "ghost", size: "sm" })
                     )}
                   >
-                    Admin
+                    {tNav("items.admin")}
                   </Link>
                 )}
                 <LogoutButton />
@@ -130,20 +136,20 @@ export async function Navbar({
                     buttonVariants({ variant: "ghost", size: "sm" })
                   )}
                 >
-                  Log in
+                  {tNav("items.login")}
                 </Link>
                 <Button
                   render={<Link href="/register" />}
                   size="sm"
                   className="bg-signal text-signal-foreground hover:bg-signal/90"
                 >
-                  Sign up
+                  {tNav("items.signUp")}
                 </Button>
               </>
             )}
           </div>
           <MobileNav
-            links={NAV_LINKS}
+            links={PUBLIC_LINKS}
             isAuthenticated={isAuthenticated}
             isAdmin={isAdmin}
             workspace={workspace}

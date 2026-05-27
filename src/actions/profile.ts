@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -10,10 +11,21 @@ import {
   CommercialProfileSchema,
   type CommercialProfileInput,
 } from "@/lib/validations/auth";
+import {
+  isSupportedLocale,
+  LOCALE_COOKIE,
+  LOCALE_COOKIE_MAX_AGE,
+  SUPPORTED_LOCALES,
+  type Locale,
+} from "@/i18n/config";
 import type { ActionResult } from "./auth";
 
 const AvatarUrlSchema = z.object({
   avatarUrl: z.string().url().max(2048),
+});
+
+const LocaleSchema = z.object({
+  locale: z.enum(SUPPORTED_LOCALES as readonly [Locale, ...Locale[]]),
 });
 
 /**
@@ -111,6 +123,65 @@ export async function updateProfileAvatar(
   revalidatePath("/dashboard");
   revalidatePath("/messages");
   return { data: true, error: null };
+}
+
+/**
+ * Persist the user's preferred UI language. Writes both `profiles.locale`
+ * (survives device changes) and the `mg-locale` cookie (so unauthenticated
+ * navigations on the same browser stay consistent until they log in
+ * elsewhere).
+ *
+ * Decision (see docs/I18N_PLAN.md): contracts and email/SMS notifications
+ * always render English, so this setting only impacts dashboard UI chrome.
+ */
+export async function updateProfileLocale(
+  input: { locale: Locale }
+): Promise<ActionResult<true>> {
+  const parsed = LocaleSchema.safeParse(input);
+  if (!parsed.success) {
+    return { data: null, error: { message: "Unsupported locale." } };
+  }
+
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { data: null, error: { message: "Not authenticated." } };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({ locale: parsed.data.locale })
+    .eq("id", user.id);
+
+  if (error) return { data: null, error: { message: error.message } };
+
+  const cookieStore = await cookies();
+  cookieStore.set(LOCALE_COOKIE, parsed.data.locale, {
+    maxAge: LOCALE_COOKIE_MAX_AGE,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  revalidatePath("/", "layout");
+  return { data: true, error: null };
+}
+
+/**
+ * Helper used by client islands (e.g. an inline language switcher) when we
+ * accept the locale as a raw string from a `<select>` value. Re-validates
+ * via `LocaleSchema`. Re-uses `updateProfileLocale` for the write.
+ */
+export async function setLocaleFromString(
+  value: string
+): Promise<ActionResult<true>> {
+  if (!isSupportedLocale(value)) {
+    return { data: null, error: { message: "Unsupported locale." } };
+  }
+  return updateProfileLocale({ locale: value });
 }
 
 /** Remove custom avatar; initials fallback is shown in the UI. */

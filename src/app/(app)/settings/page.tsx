@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
-
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { CommercialProfileForm } from "@/components/auth/CommercialProfileForm";
 import { AvatarUploader } from "@/components/profile/AvatarUploader";
+import { LanguageSelector } from "@/components/settings/LanguageSelector";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createServerClient } from "@/lib/supabase/server";
@@ -22,6 +23,11 @@ type ProfileRow = {
   status: string;
   kyc_level: number | null;
 };
+
+export async function generateMetadata() {
+  const t = await getTranslations("settings");
+  return { title: `${t("metaTitle")} — Mada Graphite` };
+}
 
 export default async function SettingsPage({
   searchParams,
@@ -49,36 +55,37 @@ export default async function SettingsPage({
   const missing = await findCommercialProfileGaps(user.id);
   const showPrompt = prompt === "incomplete" || missing.length > 0;
 
+  const t = await getTranslations("settings");
+  const tEnums = await getTranslations("enums");
+
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <header className="space-y-2">
-        <h1 className="font-serif text-3xl tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Your account profile. Inquiries, listings and payments will use
-          these details on contracts and admin records.
-        </p>
+        <h1 className="font-serif text-3xl tracking-tight">{t("heading")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         <div className="flex flex-wrap gap-2 pt-1">
           <Badge variant="outline" className="text-xs">
-            {profile.role}
+            {tEnums(`role.${profile.role as "buyer" | "seller" | "admin" | "super_admin"}`)}
           </Badge>
           <Badge
             variant={profile.status === "active" ? "default" : "outline"}
             className="text-xs"
           >
-            {profile.status}
+            {tEnums(`accountStatus.${profile.status as "active" | "pending" | "frozen"}`)}
           </Badge>
           <Badge variant="outline" className="text-xs">
-            KYC level {profile.kyc_level ?? 0}
+            {tEnums("kyc.levelLabel", { level: profile.kyc_level ?? 0 })}
           </Badge>
         </div>
       </header>
 
       <section className="rounded-lg border border-border bg-card/40 p-6 space-y-6">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Profile photo</h2>
+          <h2 className="text-sm font-semibold text-foreground">
+            {t("photoSection.title")}
+          </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Shown in messages and on your account. Google sign-in imports your
-            Google photo automatically.
+            {t("photoSection.body")}
           </p>
           <div className="mt-4">
             <AvatarUploader
@@ -105,19 +112,25 @@ export default async function SettingsPage({
       </section>
 
       <section className="rounded-lg border border-border bg-card/40 p-6 space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">
+          {t("languageSection.title")}
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          {t("languageSection.body")}
+        </p>
+        <LanguageSelector />
+      </section>
+
+      <section className="rounded-lg border border-border bg-card/40 p-6 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-foreground">
-            KYC verification
+            {t("kycSection.title")}
           </h2>
           <Button variant="outline" size="sm" render={<Link href="/settings/kyc" />}>
-            Manage KYC documents
+            {t("kycSection.manage")}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Verify your phone (Level 1) and upload ID or company documents for
-          Level 2. Level 3 is assigned by admin for trusted sellers. Gates may
-          require higher levels when enabled in admin settings.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("kycSection.body")}</p>
       </section>
     </div>
   );

@@ -1,0 +1,26 @@
+{
+  "metaTitle": "Settings",
+  "heading": "Settings",
+  "subtitle": "Your account profile. Inquiries, listings and payments will use these details on contracts and admin records.",
+  "photoSection": {
+    "title": "Profile photo",
+    "body": "Shown in messages and on your account. Google sign-in imports your Google photo automatically."
+  },
+  "kycSection": {
+    "title": "KYC verification",
+    "manage": "Manage KYC documents",
+    "body": "Verify your phone (Level 1) and upload ID or company documents for Level 2. Level 3 is assigned by admin for trusted sellers. Gates may require higher levels when enabled in admin settings."
+  },
+  "languageSection": {
+    "title": "Language",
+    "body": "Choose the UI language. Legal documents (contracts) and email notifications remain in English regardless of this setting.",
+    "label": "Display language",
+    "save": "Save language",
+    "saving": "Saving…",
+    "saved": "Language updated.",
+    "options": {
+      "en": "English",
+      "zh-CN": "简体中文 (Simplified Chinese)"
+    }
+  }
+}

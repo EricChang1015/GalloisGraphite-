@@ -1,0 +1,23 @@
+{
+  "workspace": "Workspace",
+  "site": "Site",
+  "openNav": "Open navigation",
+  "tagline": "Madagascar natural flake graphite",
+  "items": {
+    "dashboard": "Dashboard",
+    "market": "Market",
+    "myListings": "My Listings",
+    "inquiries": "Inquiries",
+    "orders": "Orders",
+    "messages": "Messages",
+    "settings": "Settings",
+    "admin": "Admin",
+    "login": "Log in",
+    "signUp": "Sign up",
+    "logOut": "Log out"
+  },
+  "badges": {
+    "profileIncomplete": "Profile incomplete",
+    "disputedOrders": "Disputed orders need attention"
+  }
+}

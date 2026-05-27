@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { signOut } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,8 @@ export function LogoutButton({
 }: LogoutButtonProps) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
+  const t = useTranslations("nav");
+  const tCommon = useTranslations("common");
 
   function onClick() {
     startTransition(async () => {
@@ -43,7 +46,7 @@ export function LogoutButton({
       onClick={onClick}
       className={cn(size === "lg" && "w-full", className)}
     >
-      {pending ? "Signing out…" : "Log out"}
+      {pending ? tCommon("actions.loading") : t("items.logOut")}
     </Button>
   );
 }

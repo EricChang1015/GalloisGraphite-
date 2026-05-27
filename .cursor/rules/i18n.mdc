@@ -1,0 +1,130 @@
+---
+description: i18n authoring rules — when to translate, what NEVER to translate, dictionary layout.
+globs:
+alwaysApply: true
+---
+
+# i18n authoring rules
+
+This project uses **next-intl** with **cookie-based** locale resolution
+(no `/[locale]/` URL prefix). Resolution order is hard-coded in
+`src/i18n/get-locale.ts`:
+
+```
+cookie mg-locale → profiles.locale → Accept-Language → 'en'
+```
+
+Supported locales (must match `src/i18n/config.ts` AND the CHECK
+constraint on `profiles.locale`):
+
+| Code     | Name                  | Status        |
+|----------|-----------------------|---------------|
+| `en`     | English               | Default       |
+| `zh-CN`  | Simplified Chinese    | Shipping      |
+| `zh-TW`  | Traditional Chinese   | Planned       |
+| `ja`     | Japanese              | Planned       |
+| `fr`     | French                | Planned       |
+| `de`     | German                | Planned       |
+
+## What MUST be translated
+
+- Any user-visible string inside `src/app/(app)/**` (logged-in dashboard).
+- Any user-visible string inside `src/app/admin/**` (when added later).
+- Any component imported by those pages — `src/components/{order, listing,
+  inquiry, messages, layout, profile, kyc, settings, auth, chat}/*.tsx`.
+- The Navbar / MobileNav auth buttons (Dashboard / Messages / Admin /
+  Log in / Sign up / Log out).
+- Status / role / KYC-level labels — go through `src/i18n/messages/<locale>/enums.json`.
+
+## What MUST NOT be translated (business decision)
+
+- **`src/lib/contract/template.ts`** — contract HTML body. English only.
+- **`ContractPreview.tsx` chrome that ends up in print PDF** — signature
+  pane labels, "Pending upload.", "Print / Save PDF". English only because
+  these strings get embedded in the PDF export.
+- **`src/lib/email/*`** — email subjects and bodies stay English.
+- **`src/actions/*` error messages** — server-action `error.message`
+  strings stay English (decision: error codes maintained English).
+- **SMS messages** — short and English-only.
+- **Audit log entries / timeline events** — stored English in DB.
+- **Public marketing pages** (`src/app/(public)/**`) — deferred until
+  marketing copy stabilises. The Navbar's public link labels (About,
+  Products, Sustainability, Geopolitics, News, AI Assistant) are
+  English-only for now and held inline in `Navbar.tsx`.
+
+If you're tempted to translate any of the above, STOP. Talk to the user.
+
+## Server Component pattern
+
+```tsx
+import { getTranslations } from "next-intl/server";
+
+export default async function Page() {
+  const t = await getTranslations("dashboard");
+  const tEnums = await getTranslations("enums");
+  return (
+    <h1>{t("title")}</h1>
+    // Pluralisation / variables use ICU:
+    // dashboard.json:  "needingResponse": "{count, plural, one {# item} other {# items}}"
+  );
+}
+```
+
+## Client Component pattern
+
+```tsx
+"use client";
+import { useTranslations, useLocale } from "next-intl";
+
+export function Widget() {
+  const t = useTranslations("settings");
+  const locale = useLocale();
+  return <span>{t("languageSection.label")}</span>;
+}
+```
+
+## Adding a new translation key
+
+1. Add the key to **every** locale file under
+   `src/i18n/messages/<locale>/<namespace>.json` (en, zh-CN at minimum).
+   English is the source of truth — never leave en empty.
+2. If the key is a status / role / KYC label, prefer extending `enums.json`
+   over duplicating the label per page.
+3. ICU plural / select messages: always provide explicit `one` and `other`
+   (English needs both; Chinese collapses to `other`).
+4. Don't concatenate translated fragments — use a single ICU placeholder
+   so word order can change per locale:
+   - ✅ `"welcome": "Welcome back, {name}"`
+   - ❌ `"welcomeFragment1" + name + "welcomeFragment2"`
+
+## Adding a new namespace
+
+1. Drop `src/i18n/messages/<locale>/<name>.json` for every locale.
+2. Append `<name>` to the `NAMESPACES` array in `src/i18n/messages.ts`.
+
+## Adding a new supported locale
+
+1. Drop a complete `src/i18n/messages/<code>/` folder (all namespaces).
+2. Extend `SUPPORTED_LOCALES` in `src/i18n/config.ts`.
+3. Write a migration that **drops + re-adds** the
+   `profiles_locale_check` constraint with the new code included.
+4. Update this rule file's table.
+5. Add an option label to `src/i18n/messages/<locale>/settings.json` →
+   `languageSection.options.<code>` for every other locale too.
+
+## DB column
+
+`profiles.locale text not null default 'en'` with a CHECK constraint
+restricting to current supported codes (migration 028+). Updated only
+through `updateProfileLocale` server action which also writes the
+`mg-locale` cookie for cross-device consistency.
+
+## QA before committing UI changes
+
+1. `npm run build` — exit 0.
+2. `npm run dev` then visit dashboard with each supported locale:
+   - To force a locale during testing, set the `mg-locale` cookie via
+     DevTools or hit `/settings` and use the language selector.
+3. `npm run qa:check-dev` — exit 0 (no real ERROR entries).
+4. Open the contract preview tab on an order — confirm the contract body
+   is still English regardless of UI language.

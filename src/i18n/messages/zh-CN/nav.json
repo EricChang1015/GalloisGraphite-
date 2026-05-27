@@ -1,0 +1,23 @@
+{
+  "workspace": "工作台",
+  "site": "网站",
+  "openNav": "打开导航",
+  "tagline": "马达加斯加天然鳞片石墨",
+  "items": {
+    "dashboard": "仪表板",
+    "market": "市场",
+    "myListings": "我的商品",
+    "inquiries": "询盘",
+    "orders": "订单",
+    "messages": "消息",
+    "settings": "设置",
+    "admin": "管理后台",
+    "login": "登录",
+    "signUp": "注册",
+    "logOut": "退出"
+  },
+  "badges": {
+    "profileIncomplete": "资料未完善",
+    "disputedOrders": "存在争议订单待处理"
+  }
+}

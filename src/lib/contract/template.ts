@@ -8,6 +8,24 @@
  * Post-013/014 cutover: payment terms are no longer encoded as a single
  * `full_prepay`/`net_after_arrival` flag. The renderer now emits a
  * formal payment-schedule table from the array passed in.
+ *
+ * =====================================================================
+ * !! DO NOT INTERNATIONALIZE — legal documents are English-only !!
+ * ---------------------------------------------------------------------
+ * Per docs/I18N_PLAN.md (business decision): contracts always render
+ * in English regardless of the buyer or seller's UI locale. Do NOT
+ * import `getTranslations()` / `useTranslations()` in this file or in
+ * downstream renderers (PDF export, signed scan composer).
+ *
+ * Likewise:
+ *   - Email notifications (src/lib/email/*) remain English.
+ *   - SMS messages remain English (and short).
+ *   - Audit log entries remain English.
+ *
+ * Only the UI *chrome* around the contract (e.g. "Print / Save PDF"
+ * button label, "Pending upload." placeholder, signature pane labels)
+ * may be translated — that lives in `ContractPreview.tsx`.
+ * =====================================================================
  */
 
 import {

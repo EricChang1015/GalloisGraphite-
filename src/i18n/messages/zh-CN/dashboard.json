@@ -1,0 +1,56 @@
+{
+  "metaTitle": "仪表板",
+  "welcome": "欢迎回来",
+  "welcomeNamed": "欢迎回来，{name}",
+  "company": "{company}",
+  "noCompany": "—",
+  "goToAdmin": "前往管理后台",
+  "profileIncomplete": {
+    "title": "请完善公司资料",
+    "body": "提交询盘、发布商品或付款前，请先填写公司名称与所在国家。"
+  },
+  "quick": {
+    "market": "市场",
+    "marketSub": "浏览石墨商品",
+    "orders": "我的订单",
+    "ordersActive": "{count} 个进行中",
+    "ordersNeedingAction": "{count} 项需要您处理",
+    "ordersDisputed": "{count} 项存在争议",
+    "inquiries": "询盘",
+    "inquiriesAllCaughtUp": "暂无待办",
+    "inquiriesNeedingResponse": "{count} 项需要您回复",
+    "inquiriesEmDash": "—",
+    "myListings": "我的商品",
+    "myListingsSub": "编辑、暂停或删除您的商品",
+    "newListing": "新增商品",
+    "newListingSub": "发布商品",
+    "settings": "设置",
+    "settingsNeedsAttention": "资料待完善",
+    "settingsDefault": "个人资料与偏好"
+  },
+  "priority": {
+    "title": "优先处理事项",
+    "subtitle": "以下事项等您处理，请优先完成。",
+    "orderLabel": "订单 {orderNo}"
+  },
+  "activeOrders": {
+    "title": "进行中订单",
+    "empty": "暂无进行中订单。"
+  },
+  "inquiriesPanel": {
+    "titleSeller": "待报价询盘",
+    "titleBuyer": "待审核报价",
+    "titleDefault": "最近询盘",
+    "emptySeller": "暂无等待您报价的询盘。",
+    "emptyBuyer": "暂无等待您决定的报价。",
+    "emptyDefault": "暂无询盘。",
+    "statusNegotiating": "议价中",
+    "statusYourTurn": "等你处理"
+  },
+  "inquiryDefaultName": "石墨询盘",
+  "inquiryAction": {
+    "respondCounter": "回复议价",
+    "sendQuotation": "发送报价",
+    "reviewQuotation": "审核卖家报价"
+  }
+}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import {
   ShoppingBagIcon,
   PackageIcon,
@@ -14,7 +15,7 @@ import {
 import { createServerClient } from "@/lib/supabase/server";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth/session";
 import {
-  describeOrderAction,
+  describeOrderActionKey,
   getInquiriesNeedingMyResponse,
   getOrderActionOwner,
   getUserActionCounts,
@@ -23,7 +24,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export const metadata = { title: "Dashboard — Mada Graphite" };
+export async function generateMetadata() {
+  const t = await getTranslations("dashboard");
+  return { title: `${t("metaTitle")} — Mada Graphite` };
+}
 
 // Counts can shift after any server-action mutation that revalidates
 // `/dashboard`; never serve a stale prerender.
@@ -54,9 +58,6 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   const profile = await getCurrentProfile();
 
-  // Defensive: middleware should have redirected, but if a request races a
-  // sign-out (revalidate fires while the session cookie is being cleared)
-  // we'd otherwise crash on `user!.id` below. Bounce to /login.
   if (!user || !profile) redirect("/login");
 
   const supabase = await createServerClient();
@@ -66,6 +67,9 @@ export default async function DashboardPage() {
   const isAdmin = profile.role === "admin" || profile.role === "super_admin";
 
   const counts = await getUserActionCounts(user.id, profile.role);
+  const t = await getTranslations("dashboard");
+  const tCommon = await getTranslations("common");
+  const tEnums = await getTranslations("enums");
 
   // "My turn" inquiry IDs — accurate post-027: pending + live quotations
   // whose `created_by` is the OTHER party. See `counts.ts` for details.
@@ -127,12 +131,15 @@ export default async function DashboardPage() {
     .map((o) => {
       const role: "buyer" | "seller" =
         o.buyer_id === user.id ? "buyer" : "seller";
-      const hint = describeOrderAction(o.status, role) ?? o.status;
+      const actionKey = describeOrderActionKey(o.status, role);
+      const hint = actionKey
+        ? tEnums(actionKey)
+        : tEnums(`order.status.${o.status as "draft"}`);
       const tone: "gold" | "red" = o.status === "disputed" ? "red" : "gold";
       return {
         key: `order-${o.id}`,
         href: `/orders/${o.id}`,
-        title: `Order ${o.order_no}`,
+        title: t("priority.orderLabel", { orderNo: o.order_no }),
         sub: hint,
         createdAt: o.created_at,
         tone,
@@ -141,14 +148,16 @@ export default async function DashboardPage() {
 
   const inquiryPriorities: Priority[] = actionableInquiries.map((inq) => {
     const productName =
-      inq.listings?.title ?? inq.product_categories?.name ?? "graphite inquiry";
+      inq.listings?.title ??
+      inq.product_categories?.name ??
+      t("inquiryDefaultName");
     const sub = isSeller
       ? inq.status === "negotiating"
-        ? "Respond to counter-offer"
-        : "Send a quotation"
+        ? t("inquiryAction.respondCounter")
+        : t("inquiryAction.sendQuotation")
       : inq.status === "negotiating"
-        ? "Respond to counter-offer"
-        : "Review the seller's quotation";
+        ? t("inquiryAction.respondCounter")
+        : t("inquiryAction.reviewQuotation");
     return {
       key: `inquiry-${inq.id}`,
       href: "/inquiries",
@@ -183,20 +192,28 @@ export default async function DashboardPage() {
 
   const inquirySubtitle = counts
     ? counts.inquiriesNeedingMyResponse > 0
-      ? `${counts.inquiriesNeedingMyResponse} needing your response`
-      : "All caught up"
-    : "—";
+      ? t("quick.inquiriesNeedingResponse", {
+          count: counts.inquiriesNeedingMyResponse,
+        })
+      : t("quick.inquiriesAllCaughtUp")
+    : t("quick.inquiriesEmDash");
 
   const orderSubtitleParts: string[] = [];
   if (counts) {
     if (counts.ordersNeedingMyAction > 0) {
-      orderSubtitleParts.push(`${counts.ordersNeedingMyAction} needing your action`);
+      orderSubtitleParts.push(
+        t("quick.ordersNeedingAction", { count: counts.ordersNeedingMyAction })
+      );
     }
     if (counts.ordersDisputed > 0) {
-      orderSubtitleParts.push(`${counts.ordersDisputed} disputed`);
+      orderSubtitleParts.push(
+        t("quick.ordersDisputed", { count: counts.ordersDisputed })
+      );
     }
     if (orderSubtitleParts.length === 0) {
-      orderSubtitleParts.push(`${activeOrders.length} active`);
+      orderSubtitleParts.push(
+        t("quick.ordersActive", { count: activeOrders.length })
+      );
     }
   }
 
@@ -205,18 +222,20 @@ export default async function DashboardPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">
-            Welcome back{profile.full_name ? `, ${profile.full_name}` : ""}
+            {profile.full_name
+              ? t("welcomeNamed", { name: profile.full_name })
+              : t("welcome")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {profile.company_name ?? "—"} ·{" "}
+            {profile.company_name ?? t("noCompany")} ·{" "}
             <Badge variant="secondary" className="text-xs">
-              {profile.role}
+              {tEnums(`role.${profile.role}`)}
             </Badge>
           </p>
         </div>
         {isAdmin && (
           <Button variant="outline" render={<Link href="/admin" />}>
-            Go to Admin Console
+            {t("goToAdmin")}
           </Button>
         )}
       </div>
@@ -226,15 +245,14 @@ export default async function DashboardPage() {
           <AlertTriangleIcon className="mt-0.5 h-4 w-4 text-destructive" />
           <div className="flex-1">
             <p className="font-medium text-foreground">
-              Complete your commercial profile
+              {t("profileIncomplete.title")}
             </p>
             <p className="text-muted-foreground">
-              Add your company name and country before sending inquiries,
-              posting listings, or submitting payments.
+              {t("profileIncomplete.body")}
             </p>
           </div>
           <Button size="sm" variant="outline" render={<Link href="/settings" />}>
-            Open Settings
+            {tCommon("actions.openSettings")}
           </Button>
         </div>
       )}
@@ -247,9 +265,9 @@ export default async function DashboardPage() {
             <CardContent className="flex items-center gap-3 pt-4">
               <ShoppingBagIcon className="w-5 h-5 text-amber-400" />
               <div>
-                <p className="text-sm font-medium">Market</p>
+                <p className="text-sm font-medium">{t("quick.market")}</p>
                 <p className="text-xs text-muted-foreground">
-                  Browse graphite listings
+                  {t("quick.marketSub")}
                 </p>
               </div>
             </CardContent>
@@ -260,9 +278,10 @@ export default async function DashboardPage() {
             <CardContent className="flex items-center gap-3 pt-4">
               <PackageIcon className="w-5 h-5 text-blue-400" />
               <div className="flex-1">
-                <p className="text-sm font-medium">My Orders</p>
+                <p className="text-sm font-medium">{t("quick.orders")}</p>
                 <p className="text-xs text-muted-foreground">
-                  {orderSubtitleParts.join(" · ") || `${activeOrders.length} active`}
+                  {orderSubtitleParts.join(" · ") ||
+                    t("quick.ordersActive", { count: activeOrders.length })}
                 </p>
               </div>
               {counts && counts.ordersNeedingMyAction > 0 && (
@@ -281,7 +300,7 @@ export default async function DashboardPage() {
             <CardContent className="flex items-center gap-3 pt-4">
               <ClipboardListIcon className="w-5 h-5 text-purple-400" />
               <div className="flex-1">
-                <p className="text-sm font-medium">Inquiries</p>
+                <p className="text-sm font-medium">{t("quick.inquiries")}</p>
                 <p className="text-xs text-muted-foreground">{inquirySubtitle}</p>
               </div>
               {counts && counts.inquiriesNeedingMyResponse > 0 && (
@@ -301,9 +320,9 @@ export default async function DashboardPage() {
               <CardContent className="flex items-center gap-3 pt-4">
                 <ListIcon className="w-5 h-5 text-cyan-400" />
                 <div>
-                  <p className="text-sm font-medium">My Listings</p>
+                  <p className="text-sm font-medium">{t("quick.myListings")}</p>
                   <p className="text-xs text-muted-foreground">
-                    Edit, pause or delete your listings
+                    {t("quick.myListingsSub")}
                   </p>
                 </div>
               </CardContent>
@@ -316,8 +335,10 @@ export default async function DashboardPage() {
               <CardContent className="flex items-center gap-3 pt-4">
                 <PlusIcon className="w-5 h-5 text-green-400" />
                 <div>
-                  <p className="text-sm font-medium">New Listing</p>
-                  <p className="text-xs text-muted-foreground">Post a product</p>
+                  <p className="text-sm font-medium">{t("quick.newListing")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("quick.newListingSub")}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -328,17 +349,17 @@ export default async function DashboardPage() {
             <CardContent className="flex items-center gap-3 pt-4">
               <SettingsIcon className="w-5 h-5 text-muted-foreground" />
               <div className="flex-1">
-                <p className="text-sm font-medium">Settings</p>
+                <p className="text-sm font-medium">{t("quick.settings")}</p>
                 <p className="text-xs text-muted-foreground">
                   {counts?.profileIncomplete
-                    ? "Profile needs attention"
-                    : "Profile & preferences"}
+                    ? t("quick.settingsNeedsAttention")
+                    : t("quick.settingsDefault")}
                 </p>
               </div>
               {counts?.profileIncomplete && (
                 <span
                   className="inline-block size-2 rounded-full bg-destructive"
-                  aria-label="Profile incomplete"
+                  aria-label={t("quick.settingsNeedsAttention")}
                 />
               )}
             </CardContent>
@@ -352,10 +373,10 @@ export default async function DashboardPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <span className="text-[color:var(--gold)]">⭐</span>
-              Priority Actions
+              {t("priority.title")}
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              Items waiting on you. Tackle these first.
+              {t("priority.subtitle")}
             </p>
           </CardHeader>
           <CardContent>
@@ -378,7 +399,7 @@ export default async function DashboardPage() {
                         : "shrink-0 border-[color:var(--gold)]/40 text-[color:var(--gold)]"
                     }
                   >
-                    {p.tone === "red" ? "Disputed" : "Your turn"}
+                    {p.tone === "red" ? tCommon("disputed") : tCommon("yourTurn")}
                   </Badge>
                 </Link>
               ))}
@@ -391,19 +412,21 @@ export default async function DashboardPage() {
         {/* Active Orders */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-base">Active Orders</CardTitle>
+            <CardTitle className="text-base">{t("activeOrders.title")}</CardTitle>
             <Button
               variant="ghost"
               size="sm"
               render={<Link href="/orders" />}
               className="text-xs h-7"
             >
-              View all <ArrowRightIcon className="w-3 h-3 ml-1" />
+              {tCommon("actions.viewAll")} <ArrowRightIcon className="w-3 h-3 ml-1" />
             </Button>
           </CardHeader>
           <CardContent>
             {activeOrders.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No active orders.</p>
+              <p className="text-sm text-muted-foreground">
+                {t("activeOrders.empty")}
+              </p>
             ) : (
               <div className="space-y-2">
                 {activeOrders.map((o) => {
@@ -427,21 +450,21 @@ export default async function DashboardPage() {
                       <div className="flex items-center gap-1">
                         {isDisputed ? (
                           <Badge variant="destructive" className="text-xs">
-                            Disputed
+                            {tCommon("disputed")}
                           </Badge>
                         ) : isMyTurn ? (
                           <Badge
                             variant="outline"
                             className="text-xs border-[color:var(--gold)]/40 text-[color:var(--gold)]"
                           >
-                            Your turn
+                            {tCommon("yourTurn")}
                           </Badge>
                         ) : null}
                         <Badge
                           variant="outline"
                           className={`text-xs ${statusColor[o.status] ?? ""}`}
                         >
-                          {o.status.replace(/_/g, " ")}
+                          {tEnums(`order.status.${o.status as "draft"}`)}
                         </Badge>
                       </div>
                     </Link>
@@ -457,10 +480,10 @@ export default async function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base">
               {isSeller
-                ? "Inquiries to quote"
+                ? t("inquiriesPanel.titleSeller")
                 : isBuyer
-                  ? "Quotations to review"
-                  : "Recent Inquiries"}
+                  ? t("inquiriesPanel.titleBuyer")
+                  : t("inquiriesPanel.titleDefault")}
             </CardTitle>
             <Button
               variant="ghost"
@@ -468,17 +491,17 @@ export default async function DashboardPage() {
               render={<Link href="/inquiries" />}
               className="text-xs h-7"
             >
-              View all <ArrowRightIcon className="w-3 h-3 ml-1" />
+              {tCommon("actions.viewAll")} <ArrowRightIcon className="w-3 h-3 ml-1" />
             </Button>
           </CardHeader>
           <CardContent>
             {actionableInquiries.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {isSeller
-                  ? "No inquiries waiting on your quote."
+                  ? t("inquiriesPanel.emptySeller")
                   : isBuyer
-                    ? "No quotations awaiting your decision."
-                    : "No inquiries."}
+                    ? t("inquiriesPanel.emptyBuyer")
+                    : t("inquiriesPanel.emptyDefault")}
               </p>
             ) : (
               <div className="space-y-2">
@@ -494,13 +517,15 @@ export default async function DashboardPage() {
                         "—"}
                     </span>
                     <span className="text-muted-foreground text-xs">
-                      {inq.requested_qty} MT
+                      {tCommon("units.tons", { count: inq.requested_qty })}
                     </span>
                     <Badge
                       variant="outline"
                       className="text-xs border-[color:var(--gold)]/40 text-[color:var(--gold)]"
                     >
-                      {inq.status === "negotiating" ? "negotiating" : "your turn"}
+                      {inq.status === "negotiating"
+                        ? t("inquiriesPanel.statusNegotiating")
+                        : t("inquiriesPanel.statusYourTurn")}
                     </Badge>
                   </Link>
                 ))}

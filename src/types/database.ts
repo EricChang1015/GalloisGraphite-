@@ -1028,6 +1028,7 @@ export type Database = {
           id: string
           kyc_docs: Json
           kyc_level: number
+          locale: string
           phone: string | null
           phone_verified_at: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -1044,6 +1045,7 @@ export type Database = {
           id: string
           kyc_docs?: Json
           kyc_level?: number
+          locale?: string
           phone?: string | null
           phone_verified_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -1060,6 +1062,7 @@ export type Database = {
           id?: string
           kyc_docs?: Json
           kyc_level?: number
+          locale?: string
           phone?: string | null
           phone_verified_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]

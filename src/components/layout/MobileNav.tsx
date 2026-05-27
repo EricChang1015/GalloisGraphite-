@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { MenuIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -50,6 +51,7 @@ export function MobileNav({
   workspace?: WorkspaceMobileSection;
 }) {
   const [open, setOpen] = React.useState(false);
+  const t = useTranslations("nav");
 
   const close = () => setOpen(false);
 
@@ -60,7 +62,7 @@ export function MobileNav({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Open navigation"
+            aria-label={t("openNav")}
             className="text-muted-foreground hover:text-foreground md:hidden"
           />
         }
@@ -76,7 +78,7 @@ export function MobileNav({
             <span className="size-5 rounded-sm bg-[color:var(--gold)]" />
             <span className="font-semibold tracking-wide">MADA GRAPHITE</span>
           </SheetTitle>
-          <SheetDescription>Madagascar natural flake graphite</SheetDescription>
+          <SheetDescription>{t("tagline")}</SheetDescription>
         </SheetHeader>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
@@ -104,12 +106,12 @@ export function MobileNav({
               ))}
               <div className="my-2 border-t border-border" aria-hidden />
               <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                Site
+                {t("site")}
               </p>
             </div>
           )}
 
-          {/* Public marketing links — always present */}
+          {/* Public marketing links — labels passed from Navbar (English for now) */}
           {links.map((link) => (
             <SheetClose
               key={link.href}
@@ -143,7 +145,7 @@ export function MobileNav({
                   />
                 }
               >
-                Dashboard
+                {t("items.dashboard")}
               </SheetClose>
               <SheetClose
                 nativeButton={false}
@@ -158,7 +160,7 @@ export function MobileNav({
                   />
                 }
               >
-                Messages
+                {t("items.messages")}
               </SheetClose>
               {isAdmin && (
                 <SheetClose
@@ -174,7 +176,7 @@ export function MobileNav({
                     />
                   }
                 >
-                  Admin
+                  {t("items.admin")}
                 </SheetClose>
               )}
               <LogoutButton variant="outline" size="lg" />
@@ -194,7 +196,7 @@ export function MobileNav({
                   />
                 }
               >
-                Log in
+                {t("items.login")}
               </SheetClose>
               <SheetClose
                 nativeButton={false}
@@ -206,7 +208,7 @@ export function MobileNav({
                   />
                 }
               >
-                Sign up
+                {t("items.signUp")}
               </SheetClose>
             </>
           )}

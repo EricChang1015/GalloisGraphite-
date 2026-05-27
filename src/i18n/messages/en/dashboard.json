@@ -1,0 +1,56 @@
+{
+  "metaTitle": "Dashboard",
+  "welcome": "Welcome back",
+  "welcomeNamed": "Welcome back, {name}",
+  "company": "{company}",
+  "noCompany": "—",
+  "goToAdmin": "Go to Admin Console",
+  "profileIncomplete": {
+    "title": "Complete your commercial profile",
+    "body": "Add your company name and country before sending inquiries, posting listings, or submitting payments."
+  },
+  "quick": {
+    "market": "Market",
+    "marketSub": "Browse graphite listings",
+    "orders": "My Orders",
+    "ordersActive": "{count} active",
+    "ordersNeedingAction": "{count} needing your action",
+    "ordersDisputed": "{count} disputed",
+    "inquiries": "Inquiries",
+    "inquiriesAllCaughtUp": "All caught up",
+    "inquiriesNeedingResponse": "{count} needing your response",
+    "inquiriesEmDash": "—",
+    "myListings": "My Listings",
+    "myListingsSub": "Edit, pause or delete your listings",
+    "newListing": "New Listing",
+    "newListingSub": "Post a product",
+    "settings": "Settings",
+    "settingsNeedsAttention": "Profile needs attention",
+    "settingsDefault": "Profile & preferences"
+  },
+  "priority": {
+    "title": "Priority Actions",
+    "subtitle": "Items waiting on you. Tackle these first.",
+    "orderLabel": "Order {orderNo}"
+  },
+  "activeOrders": {
+    "title": "Active Orders",
+    "empty": "No active orders."
+  },
+  "inquiriesPanel": {
+    "titleSeller": "Inquiries to quote",
+    "titleBuyer": "Quotations to review",
+    "titleDefault": "Recent Inquiries",
+    "emptySeller": "No inquiries waiting on your quote.",
+    "emptyBuyer": "No quotations awaiting your decision.",
+    "emptyDefault": "No inquiries.",
+    "statusNegotiating": "negotiating",
+    "statusYourTurn": "your turn"
+  },
+  "inquiryDefaultName": "graphite inquiry",
+  "inquiryAction": {
+    "respondCounter": "Respond to counter-offer",
+    "sendQuotation": "Send a quotation",
+    "reviewQuotation": "Review the seller's quotation"
+  }
+}
