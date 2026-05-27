@@ -124,20 +124,20 @@ export function renderContractHtml(ctx: ContractContext): string {
   <h2>Parties</h2>
   <div class="meta">
     <div>
+      <strong>Buyer (Purchaser)</strong><br />
+      ${escapeHtml(ctx.buyer.company_name ?? "")}<br />
+      ${escapeHtml(ctx.buyer.address ?? "")}<br />
+      ${escapeHtml(ctx.buyer.country ?? "")}<br />
+      Contact: ${escapeHtml(ctx.buyer.full_name ?? "")} &lt;${escapeHtml(ctx.buyer.email ?? "")}&gt;<br />
+      Phone: ${escapeHtml(ctx.buyer.phone ?? "")}
+    </div>
+    <div>
       <strong>Seller</strong><br />
       ${escapeHtml(ctx.seller.company_name ?? "")}<br />
       ${escapeHtml(ctx.seller.address ?? "")}<br />
       ${escapeHtml(ctx.seller.country ?? "")}<br />
       Contact: ${escapeHtml(ctx.seller.full_name ?? "")} &lt;${escapeHtml(ctx.seller.email ?? "")}&gt;<br />
       Phone: ${escapeHtml(ctx.seller.phone ?? "")}
-    </div>
-    <div>
-      <strong>Buyer</strong><br />
-      ${escapeHtml(ctx.buyer.company_name ?? "")}<br />
-      ${escapeHtml(ctx.buyer.address ?? "")}<br />
-      ${escapeHtml(ctx.buyer.country ?? "")}<br />
-      Contact: ${escapeHtml(ctx.buyer.full_name ?? "")} &lt;${escapeHtml(ctx.buyer.email ?? "")}&gt;<br />
-      Phone: ${escapeHtml(ctx.buyer.phone ?? "")}
     </div>
   </div>
 
@@ -201,16 +201,16 @@ export function renderContractHtml(ctx: ContractContext): string {
 
   <div class="signature">
     <div>
+      <strong>Buyer (Purchaser)</strong><br />
+      Name: ${escapeHtml(ctx.buyer.full_name ?? "")}<br />
+      Title: ${escapeHtml(ctx.buyer.title ?? "Authorized Signatory")}<br />
+      Date: ${escapeHtml(ctx.contract.buyer_signed_at ?? "______________")}
+    </div>
+    <div>
       <strong>Seller</strong><br />
       Name: ${escapeHtml(ctx.seller.full_name ?? "")}<br />
       Title: ${escapeHtml(ctx.seller.title ?? "Authorized Signatory")}<br />
       Date: ${escapeHtml(ctx.contract.seller_signed_at ?? "______________")}
-    </div>
-    <div>
-      <strong>Buyer</strong><br />
-      Name: ${escapeHtml(ctx.buyer.full_name ?? "")}<br />
-      Title: ${escapeHtml(ctx.buyer.title ?? "Authorized Signatory")}<br />
-      Date: ${escapeHtml(ctx.contract.buyer_signed_at ?? "______________")}
     </div>
   </div>
   </div>

@@ -40,6 +40,35 @@ function extractStyleBlocks(html: string): string {
   return styles.join("\n");
 }
 
+/**
+ * Legacy contracts rendered Seller (left) then Buyer (right). Preview should
+ * match the docx layout: Purchaser/Buyer left, Seller right.
+ */
+function swapContractPartyColumns(markup: string): string {
+  let out = markup;
+
+  const pairSwap = (
+    html: string,
+    wrapperClass: "meta" | "signature"
+  ): string => {
+    const re = new RegExp(
+      `(<div class="${wrapperClass}">\\s*)<div>([\\s\\S]*?)<\\/div>\\s*<div>([\\s\\S]*?)<\\/div>(\\s*<\\/div>)`,
+      "i"
+    );
+    return html.replace(re, (full, pre, block1, block2, post) => {
+      const leftIsSeller = /<strong>\s*Seller\s*<\/strong>/i.test(block1);
+      const rightIsBuyer =
+        /<strong>\s*Buyer/i.test(block2) || /<strong>\s*Purchaser/i.test(block2);
+      if (!leftIsSeller || !rightIsBuyer) return full;
+      return `${pre}<div>${block2}</div>\n    <div>${block1}</div>${post}`;
+    });
+  };
+
+  out = pairSwap(out, "meta");
+  out = pairSwap(out, "signature");
+  return out;
+}
+
 function extractBodyMarkup(html: string): string {
   const bodyMatch = html.match(/<body\b[^>]*>([\s\S]*)<\/body>/i);
   if (bodyMatch) return bodyMatch[1].trim();
@@ -60,7 +89,7 @@ function extractBodyMarkup(html: string): string {
 export function prepareContractHtmlForPreview(fullHtml: string): PreparedContractPreview {
   const rawStyles = extractStyleBlocks(fullHtml);
   const scopedStyles = rawStyles ? scopeContractStyles(rawStyles) : "";
-  const markup = extractBodyMarkup(fullHtml);
+  const markup = swapContractPartyColumns(extractBodyMarkup(fullHtml));
 
   return { scopedStyles, markup };
 }
