@@ -1,0 +1,42 @@
+{
+  "metaTitle": "市场 — Mada Graphite",
+  "metaTitleListing": "{title} — 市场",
+  "metaTitleFallback": "商品",
+  "heading": "市场",
+  "subheading": "浏览在售石墨商品。可直接联系卖家或打开商品页提交询盘。",
+  "empty": "目前暂无在售商品，请稍后再来。",
+  "card": {
+    "available": "可售",
+    "minOrder": "起订量",
+    "price": "单价",
+    "incoterm": "贸易术语",
+    "origin": "产地"
+  },
+  "detail": {
+    "categoryFallback": "石墨",
+    "activeBadge": "在售",
+    "sellerSubtitle": "卖家",
+    "sellerLine": "卖家：{company} · {country}",
+    "sellerLineNoCountry": "卖家：{company}",
+    "fields": {
+      "available": "可售数量",
+      "minOrder": "起订量",
+      "unitPrice": "单价",
+      "incoterm": "贸易术语",
+      "origin": "产地",
+      "availableFrom": "可发运起始日",
+      "availableTo": "可发运截止日"
+    },
+    "specsHeading": "规格",
+    "specs": {
+      "productType": "产品类型",
+      "meshSize": "目数",
+      "fixedCarbon": "固定碳",
+      "moisture": "水分",
+      "sizeDistribution": "粒度分布"
+    },
+    "sellerNotes": "卖家备注",
+    "descriptionHeading": "描述",
+    "priceNote": "{incoterm} — 价格可议"
+  }
+}

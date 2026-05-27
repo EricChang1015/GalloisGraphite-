@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CounterpartyCard } from "@/components/messages/CounterpartyCard";
@@ -34,6 +36,7 @@ interface Props {
 }
 
 export function MarketListingCard({ listing, currentUserId }: Props) {
+  const t = useTranslations("market.card");
   return (
     <Card className="h-full flex flex-col transition-colors hover:border-primary/50 hover:bg-card/80">
       <Link href={`/market/${listing.id}`} className="flex-1 flex flex-col">
@@ -63,31 +66,31 @@ export function MarketListingCard({ listing, currentUserId }: Props) {
         </CardHeader>
         <CardContent className="space-y-2 text-sm flex-1">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Available</span>
+            <span className="text-muted-foreground">{t("available")}</span>
             <span className="font-medium">
               {listing.quantity.toLocaleString()} {listing.unit}
             </span>
           </div>
           {listing.min_order_quantity != null && listing.min_order_quantity > 0 && (
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Min order</span>
+              <span className="text-muted-foreground">{t("minOrder")}</span>
               <span className="font-medium">
                 {listing.min_order_quantity.toLocaleString()} {listing.unit}
               </span>
             </div>
           )}
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Price</span>
+            <span className="text-muted-foreground">{t("price")}</span>
             <span className="font-semibold text-amber-400">
               {listing.unit_price} {listing.currency}/{listing.unit}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Incoterm</span>
+            <span className="text-muted-foreground">{t("incoterm")}</span>
             <span>{listing.incoterm}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Origin</span>
+            <span className="text-muted-foreground">{t("origin")}</span>
             <span>{listing.origin_location}</span>
           </div>
         </CardContent>

@@ -1,0 +1,42 @@
+{
+  "metaTitle": "Market — Mada Graphite",
+  "metaTitleListing": "{title} — Market",
+  "metaTitleFallback": "Listing",
+  "heading": "Market",
+  "subheading": "Browse active graphite listings. Message sellers directly or open a listing to inquire.",
+  "empty": "No active listings at the moment. Check back soon.",
+  "card": {
+    "available": "Available",
+    "minOrder": "Min order",
+    "price": "Price",
+    "incoterm": "Incoterm",
+    "origin": "Origin"
+  },
+  "detail": {
+    "categoryFallback": "Graphite",
+    "activeBadge": "Active",
+    "sellerSubtitle": "Seller",
+    "sellerLine": "Seller: {company} · {country}",
+    "sellerLineNoCountry": "Seller: {company}",
+    "fields": {
+      "available": "Available",
+      "minOrder": "Min Order",
+      "unitPrice": "Unit Price",
+      "incoterm": "Incoterm",
+      "origin": "Origin",
+      "availableFrom": "Available From",
+      "availableTo": "Available To"
+    },
+    "specsHeading": "Specifications",
+    "specs": {
+      "productType": "Product Type",
+      "meshSize": "Mesh Size",
+      "fixedCarbon": "Fixed Carbon",
+      "moisture": "Moisture",
+      "sizeDistribution": "Size Distribution"
+    },
+    "sellerNotes": "Seller Notes",
+    "descriptionHeading": "Description",
+    "priceNote": "{incoterm} — price subject to negotiation"
+  }
+}

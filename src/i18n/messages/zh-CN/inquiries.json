@@ -1,0 +1,77 @@
+{
+  "metaTitle": "询盘 — Mada Graphite",
+  "metaTitleDetail": "询盘 {code} — Mada Graphite",
+  "heading": "询盘",
+  "subheading": "活跃询盘需要您的回应。已拒绝和已成单的询盘归档于历史询盘。",
+  "sessionExpired": "会话已过期，请重新登录。",
+  "tabs": {
+    "sent": "发出 ({count})",
+    "received": "收到 ({count})"
+  },
+  "list": {
+    "emptySent": "您还未发出任何询盘。",
+    "emptyReceived": "尚未收到任何询盘。",
+    "activeEmpty": "暂无活跃询盘。展开下方的历史询盘可查看已关闭项目。",
+    "historyTitle": "历史询盘"
+  },
+  "columns": {
+    "product": "产品",
+    "seller": "卖家",
+    "buyer": "买家",
+    "qty": "数量",
+    "livePrice": "当前报价",
+    "destination": "目的地",
+    "status": "状态",
+    "actions": "操作"
+  },
+  "row": {
+    "noValue": "—",
+    "targetSuffix": "{value}（目标价）",
+    "review": "查看 →",
+    "awaitingSeller": "等待卖家",
+    "awaitingBuyer": "等待买家"
+  },
+  "detail": {
+    "breadcrumb": "询盘",
+    "fallbackTitle": "询盘",
+    "buyer": "买家",
+    "seller": "卖家",
+    "noValue": "—",
+    "fields": {
+      "listing": "商品",
+      "requestedQty": "询盘数量",
+      "targetPrice": "目标单价",
+      "destination": "目的地",
+      "origin": "产地",
+      "listingIncoterm": "商品贸易术语",
+      "buyerMessage": "买家留言",
+      "created": "创建时间"
+    },
+    "qtyValue": "{value} MT",
+    "history": {
+      "heading": "报价历史",
+      "sendButton": "发送报价",
+      "dialogTitle": "发送报价",
+      "empty": "尚无报价。",
+      "emptyBuyerHint": " 正在等待卖家回应。",
+      "round": "第 {n} 轮 · 由",
+      "youSuffix": "（您）",
+      "expiredBadge": "已过期",
+      "fields": {
+        "qty": "数量",
+        "unitPrice": "单价",
+        "total": "总额",
+        "incoterm": "贸易术语",
+        "origin": "起运港",
+        "destination": "目的港",
+        "validUntil": "有效期至"
+      },
+      "waitingForBuyer": "等待买家回应中…",
+      "waitingForSeller": "等待卖家回应中…",
+      "rolePlain": {
+        "buyer": "买家",
+        "seller": "卖家"
+      }
+    }
+  }
+}

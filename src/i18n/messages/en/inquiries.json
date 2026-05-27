@@ -1,0 +1,77 @@
+{
+  "metaTitle": "Inquiries — Mada Graphite",
+  "metaTitleDetail": "Inquiry {code} — Mada Graphite",
+  "heading": "Inquiries",
+  "subheading": "Active inquiries need your response. Rejected and converted inquiries are archived under History Inquiries.",
+  "sessionExpired": "Your session expired. Please sign in again.",
+  "tabs": {
+    "sent": "Sent ({count})",
+    "received": "Received ({count})"
+  },
+  "list": {
+    "emptySent": "You haven't sent any inquiries yet.",
+    "emptyReceived": "No inquiries received yet.",
+    "activeEmpty": "No active inquiries. Expand History Inquiries below to review closed items.",
+    "historyTitle": "History Inquiries"
+  },
+  "columns": {
+    "product": "Product",
+    "seller": "Seller",
+    "buyer": "Buyer",
+    "qty": "Qty",
+    "livePrice": "Live Price",
+    "destination": "Destination",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "row": {
+    "noValue": "—",
+    "targetSuffix": "{value} (target)",
+    "review": "Review →",
+    "awaitingSeller": "Awaiting seller",
+    "awaitingBuyer": "Awaiting buyer"
+  },
+  "detail": {
+    "breadcrumb": "Inquiries",
+    "fallbackTitle": "Inquiry",
+    "buyer": "Buyer",
+    "seller": "Seller",
+    "noValue": "—",
+    "fields": {
+      "listing": "Listing",
+      "requestedQty": "Requested Qty",
+      "targetPrice": "Target Price",
+      "destination": "Destination",
+      "origin": "Origin",
+      "listingIncoterm": "Listing Incoterm",
+      "buyerMessage": "Buyer Message",
+      "created": "Created"
+    },
+    "qtyValue": "{value} MT",
+    "history": {
+      "heading": "Quotation history",
+      "sendButton": "Send Quotation",
+      "dialogTitle": "Send Quotation",
+      "empty": "No quotations yet.",
+      "emptyBuyerHint": " Waiting for the seller to respond.",
+      "round": "Round #{n} · by ",
+      "youSuffix": "(you)",
+      "expiredBadge": "expired",
+      "fields": {
+        "qty": "Qty",
+        "unitPrice": "Unit Price",
+        "total": "Total",
+        "incoterm": "Incoterm",
+        "origin": "Origin",
+        "destination": "Destination",
+        "validUntil": "Valid until"
+      },
+      "waitingForBuyer": "Waiting for the buyer to respond…",
+      "waitingForSeller": "Waiting for the seller to respond…",
+      "rolePlain": {
+        "buyer": "buyer",
+        "seller": "seller"
+      }
+    }
+  }
+}

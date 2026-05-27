@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+
 import { createServerClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +28,12 @@ export async function generateMetadata({ params }: PageProps) {
     .select("title")
     .eq("id", id)
     .single<{ title: string }>();
-  return { title: data?.title ? `${data.title} — Market` : "Listing" };
+  const t = await getTranslations("market");
+  return {
+    title: data?.title
+      ? t("metaTitleListing", { title: data.title })
+      : t("metaTitleFallback"),
+  };
 }
 
 export default async function ListingDetailPage({ params }: PageProps) {
@@ -75,31 +82,37 @@ export default async function ListingDetailPage({ params }: PageProps) {
 
   if (!listing || listing.status !== "active") notFound();
 
+  const t = await getTranslations("market.detail");
+  const tFields = await getTranslations("market.detail.fields");
+  const tSpecs = await getTranslations("market.detail.specs");
+
   const categorySpec = parseCategorySpec(listing.product_categories?.spec_schema);
   const overrides = parseListingSpecs(listing.specs);
   const resolved = resolveListingSpecs(categorySpec, overrides);
   const specRows: Array<[string, string]> = [
-    ["Product Type", PRODUCT_TYPE_LABEL[categorySpec.product_type]],
-    ["Mesh Size", resolved.mesh_size],
-    ["Fixed Carbon", resolved.fixed_carbon],
-    ["Moisture", resolved.moisture],
-    ["Size Distribution", resolved.size_distribution],
+    [tSpecs("productType"), PRODUCT_TYPE_LABEL[categorySpec.product_type]],
+    [tSpecs("meshSize"), resolved.mesh_size],
+    [tSpecs("fixedCarbon"), resolved.fixed_carbon],
+    [tSpecs("moisture"), resolved.moisture],
+    [tSpecs("sizeDistribution"), resolved.size_distribution],
   ];
 
   return (
     <div className="max-w-3xl space-y-8">
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{listing.product_categories?.name ?? "Graphite"}</Badge>
+          <Badge variant="secondary">
+            {listing.product_categories?.name ?? t("categoryFallback")}
+          </Badge>
           <Badge variant="outline" className="text-green-400 border-green-400/40">
-            Active
+            {t("activeBadge")}
           </Badge>
         </div>
         <h1 className="text-3xl font-bold tracking-tight">{listing.title}</h1>
       </div>
 
       {listing.profiles && user ? (
-        <CounterpartyCard profile={listing.profiles} subtitle="Seller">
+        <CounterpartyCard profile={listing.profiles} subtitle={t("sellerSubtitle")}>
           <MessageCounterpartyButton
             counterparty={listing.profiles}
             currentUserId={user.id}
@@ -113,8 +126,14 @@ export default async function ListingDetailPage({ params }: PageProps) {
         </CounterpartyCard>
       ) : (
         <p className="text-muted-foreground text-sm">
-          Seller: {listing.profiles?.company_name ?? "—"} ·{" "}
-          {listing.profiles?.country ?? ""}
+          {listing.profiles?.country
+            ? t("sellerLine", {
+                company: listing.profiles?.company_name ?? "—",
+                country: listing.profiles.country,
+              })
+            : t("sellerLineNoCountry", {
+                company: listing.profiles?.company_name ?? "—",
+              })}
         </p>
       )}
 
@@ -127,21 +146,27 @@ export default async function ListingDetailPage({ params }: PageProps) {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 text-sm">
         {[
-          ["Available", `${listing.quantity.toLocaleString()} ${listing.unit}`],
+          [
+            tFields("available"),
+            `${listing.quantity.toLocaleString()} ${listing.unit}`,
+          ],
           listing.min_order_quantity != null && listing.min_order_quantity > 0
             ? [
-                "Min Order",
+                tFields("minOrder"),
                 `${listing.min_order_quantity.toLocaleString()} ${listing.unit}`,
               ]
             : null,
-          ["Unit Price", `${listing.unit_price} ${listing.currency}/${listing.unit}`],
-          ["Incoterm", listing.incoterm],
-          ["Origin", listing.origin_location],
+          [
+            tFields("unitPrice"),
+            `${listing.unit_price} ${listing.currency}/${listing.unit}`,
+          ],
+          [tFields("incoterm"), listing.incoterm],
+          [tFields("origin"), listing.origin_location],
           listing.available_from
-            ? ["Available From", listing.available_from]
+            ? [tFields("availableFrom"), listing.available_from]
             : null,
           listing.available_to
-            ? ["Available To", listing.available_to]
+            ? [tFields("availableTo"), listing.available_to]
             : null,
         ]
           .filter((item): item is [string, string] => item !== null)
@@ -155,7 +180,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
 
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Specifications
+          {t("specsHeading")}
         </h2>
         <div className="rounded-md border divide-y text-sm">
           {specRows.map(([key, val]) => (
@@ -168,7 +193,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
         {resolved.additional_notes && (
           <div className="mt-3 rounded-md border bg-card/40 p-3 text-sm">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-              Seller Notes
+              {t("sellerNotes")}
             </p>
             <p className="whitespace-pre-line">{resolved.additional_notes}</p>
           </div>
@@ -178,7 +203,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
       {listing.description && (
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-            Description
+            {t("descriptionHeading")}
           </h2>
           <p className="text-sm leading-relaxed">{listing.description}</p>
         </div>
@@ -192,7 +217,9 @@ export default async function ListingDetailPage({ params }: PageProps) {
             {listing.unit_price} {listing.currency}
             <span className="text-base font-normal text-muted-foreground">/{listing.unit}</span>
           </p>
-          <p className="text-xs text-muted-foreground">{listing.incoterm} — price subject to negotiation</p>
+          <p className="text-xs text-muted-foreground">
+            {t("priceNote", { incoterm: listing.incoterm })}
+          </p>
         </div>
         <InquiryDialog
           listing={{

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +41,10 @@ const quotationStatusColor: Record<string, string> = {
 
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
-  return { title: `Inquiry ${id.slice(0, 8).toUpperCase()} — Mada Graphite` };
+  const t = await getTranslations("inquiries");
+  return {
+    title: t("metaTitleDetail", { code: id.slice(0, 8).toUpperCase() }),
+  };
 }
 
 export default async function InquiryDetailPage({ params }: PageProps) {
@@ -96,6 +100,45 @@ export default async function InquiryDetailPage({ params }: PageProps) {
   const isSeller = inquiry.seller_id === user.id;
   if (!isBuyer && !isSeller && !isAdmin) notFound();
 
+  const t = await getTranslations("inquiries.detail");
+  const tFields = await getTranslations("inquiries.detail.fields");
+  const tHistory = await getTranslations("inquiries.detail.history");
+  const tHistoryFields = await getTranslations("inquiries.detail.history.fields");
+  const tRolePlain = await getTranslations("inquiries.detail.history.rolePlain");
+  const tEnums = await getTranslations("enums");
+
+  function translateInquiryStatus(status: string): string {
+    const known = [
+      "pending",
+      "quoted",
+      "negotiating",
+      "accepted",
+      "rejected",
+      "expired",
+      "converted",
+    ] as const;
+    return (known as readonly string[]).includes(status)
+      ? tEnums(`inquiry.status.${status}`)
+      : status;
+  }
+
+  function translateQuotationStatus(status: string): string {
+    const known = [
+      "pending",
+      "accepted",
+      "rejected",
+      "countered",
+      "superseded",
+      "expired",
+    ] as const;
+    if ((known as readonly string[]).includes(status)) {
+      return tEnums(`quotation.status.${status}`);
+    }
+    // Legacy DB value "sent" still surfaces as "pending" in the UI semantics.
+    if (status === "sent") return tEnums("quotation.status.pending");
+    return status;
+  }
+
   // Quotations history (newest first)
   const { data: quotations } = await supabase
     .from("quotations")
@@ -135,34 +178,34 @@ export default async function InquiryDetailPage({ params }: PageProps) {
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">
             <Link href="/inquiries" className="hover:text-foreground">
-              Inquiries
+              {t("breadcrumb")}
             </Link>{" "}
             / {id.slice(0, 8).toUpperCase()}
           </p>
           <h1 className="text-2xl font-semibold">
-            {inquiry.product_categories?.name ?? "Inquiry"}
+            {inquiry.product_categories?.name ?? t("fallbackTitle")}
           </h1>
         </div>
         <Badge variant="outline" className={inquiryStatusColor[inquiry.status] ?? ""}>
-          {inquiry.status}
+          {translateInquiryStatus(inquiry.status)}
         </Badge>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-lg border p-4 space-y-1 text-sm">
           <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-            Buyer
+            {t("buyer")}
           </p>
-          <p className="font-medium">{inquiry.buyer?.company_name ?? "—"}</p>
+          <p className="font-medium">{inquiry.buyer?.company_name ?? t("noValue")}</p>
           <p className="text-muted-foreground">
             {inquiry.buyer?.full_name} · {inquiry.buyer?.country}
           </p>
         </div>
         <div className="rounded-lg border p-4 space-y-1 text-sm">
           <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-            Seller
+            {t("seller")}
           </p>
-          <p className="font-medium">{inquiry.seller?.company_name ?? "—"}</p>
+          <p className="font-medium">{inquiry.seller?.company_name ?? t("noValue")}</p>
           <p className="text-muted-foreground">
             {inquiry.seller?.full_name} · {inquiry.seller?.country}
           </p>
@@ -171,14 +214,22 @@ export default async function InquiryDetailPage({ params }: PageProps) {
 
       <div className="rounded-lg border divide-y text-sm">
         {[
-          ["Listing", inquiry.listings?.title ?? "—"],
-          ["Requested Qty", `${inquiry.requested_qty} MT`],
-          ["Target Price", inquiry.target_price ? `${inquiry.target_price} ${inquiry.listings?.currency ?? ""}` : "—"],
-          ["Destination", inquiry.destination ?? "—"],
-          ["Origin", inquiry.listings?.origin_location ?? "—"],
-          ["Listing Incoterm", inquiry.listings?.incoterm ?? "—"],
-          ["Buyer Message", inquiry.message ?? "—"],
-          ["Created", new Date(inquiry.created_at).toLocaleString()],
+          [tFields("listing"), inquiry.listings?.title ?? t("noValue")],
+          [
+            tFields("requestedQty"),
+            t("qtyValue", { value: inquiry.requested_qty }),
+          ],
+          [
+            tFields("targetPrice"),
+            inquiry.target_price
+              ? `${inquiry.target_price} ${inquiry.listings?.currency ?? ""}`
+              : t("noValue"),
+          ],
+          [tFields("destination"), inquiry.destination ?? t("noValue")],
+          [tFields("origin"), inquiry.listings?.origin_location ?? t("noValue")],
+          [tFields("listingIncoterm"), inquiry.listings?.incoterm ?? t("noValue")],
+          [tFields("buyerMessage"), inquiry.message ?? t("noValue")],
+          [tFields("created"), new Date(inquiry.created_at).toLocaleString()],
         ].map(([label, value]) => (
           <div key={label} className="flex items-start px-4 py-2">
             <span className="w-36 text-muted-foreground shrink-0">{label}</span>
@@ -190,15 +241,15 @@ export default async function InquiryDetailPage({ params }: PageProps) {
       {/* Quotation history */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Quotation history</h2>
+          <h2 className="text-lg font-semibold">{tHistory("heading")}</h2>
           {isSeller && !liveQuotation && inquiry.status !== "converted" && inquiry.status !== "rejected" && (
             <Dialog>
               <DialogTrigger render={<Button size="sm" />}>
-                Send Quotation
+                {tHistory("sendButton")}
               </DialogTrigger>
               <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Send Quotation</DialogTitle>
+                  <DialogTitle>{tHistory("dialogTitle")}</DialogTitle>
                 </DialogHeader>
                 <QuotationForm
                   inquiryId={id}
@@ -218,8 +269,8 @@ export default async function InquiryDetailPage({ params }: PageProps) {
 
         {!quotations || quotations.length === 0 ? (
           <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground text-sm">
-            No quotations yet.
-            {isBuyer && " Waiting for the seller to respond."}
+            {tHistory("empty")}
+            {isBuyer && tHistory("emptyBuyerHint")}
           </div>
         ) : (
           <ol className="space-y-3">
@@ -243,18 +294,20 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                 >
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="text-xs text-muted-foreground">
-                      Round #{quotations.length - idx} · by{" "}
-                      <span className="text-foreground">{senderRole}</span>
+                      {tHistory("round", { n: quotations.length - idx })}
+                      <span className="text-foreground">{tRolePlain(senderRole)}</span>
                       {isMyOffer && (
-                        <span className="ml-1 text-foreground/70">(you)</span>
+                        <span className="ml-1 text-foreground/70">
+                          {tHistory("youSuffix")}
+                        </span>
                       )}
                     </span>
                     <Badge variant="outline" className={quotationStatusColor[q.status] ?? ""}>
-                      {q.status}
+                      {translateQuotationStatus(q.status)}
                     </Badge>
                     {isLive && expired && (
                       <Badge variant="outline" className="text-red-400 border-red-400/40">
-                        expired
+                        {tHistory("expiredBadge")}
                       </Badge>
                     )}
                     <span className="text-xs text-muted-foreground ml-auto">
@@ -264,31 +317,31 @@ export default async function InquiryDetailPage({ params }: PageProps) {
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div>
-                      <p className="text-muted-foreground">Qty</p>
+                      <p className="text-muted-foreground">{tHistoryFields("qty")}</p>
                       <p className="font-medium">{q.quantity} {q.unit}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Unit Price</p>
+                      <p className="text-muted-foreground">{tHistoryFields("unitPrice")}</p>
                       <p className="font-medium">{q.unit_price} {q.currency}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Total</p>
+                      <p className="text-muted-foreground">{tHistoryFields("total")}</p>
                       <p className="font-medium">{total.toFixed(2)} {q.currency}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Incoterm</p>
+                      <p className="text-muted-foreground">{tHistoryFields("incoterm")}</p>
                       <p className="font-medium">{q.incoterm}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Origin</p>
-                      <p className="font-medium">{q.origin_port ?? "—"}</p>
+                      <p className="text-muted-foreground">{tHistoryFields("origin")}</p>
+                      <p className="font-medium">{q.origin_port ?? t("noValue")}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Destination</p>
-                      <p className="font-medium">{q.destination_port ?? "—"}</p>
+                      <p className="text-muted-foreground">{tHistoryFields("destination")}</p>
+                      <p className="font-medium">{q.destination_port ?? t("noValue")}</p>
                     </div>
                     <div className="col-span-2">
-                      <p className="text-muted-foreground">Valid until</p>
+                      <p className="text-muted-foreground">{tHistoryFields("validUntil")}</p>
                       <p className="font-medium">{new Date(q.validity_until).toLocaleString()}</p>
                     </div>
                   </div>
@@ -319,7 +372,9 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                   )}
                   {isLive && !expired && isMyOffer && (
                     <div className="pt-2 border-t border-border/40 text-xs text-muted-foreground">
-                      Waiting for the {senderRole === "buyer" ? "seller" : "buyer"} to respond…
+                      {senderRole === "buyer"
+                        ? tHistory("waitingForSeller")
+                        : tHistory("waitingForBuyer")}
                     </div>
                   )}
                 </li>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { CollapsibleHistorySection } from "@/components/layout/CollapsibleHistorySection";
@@ -21,8 +22,13 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export const metadata = { title: "Inquiries — Mada Graphite" };
+export async function generateMetadata() {
+  const t = await getTranslations("inquiries");
+  return { title: t("metaTitle") };
+}
 export const dynamic = "force-dynamic";
+
+type Translator = Awaited<ReturnType<typeof getTranslations<string>>>;
 
 const statusColor: Record<string, string> = {
   pending: "text-yellow-400 border-yellow-400/40",
@@ -64,19 +70,31 @@ function splitInquiries<T extends { status: string }>(rows: T[]) {
   return { active, history };
 }
 
-function BuyerInquiriesTable({ rows }: { rows: RowWithTurn<BuyerInquiryRow>[] }) {
+function BuyerInquiriesTable({
+  rows,
+  t,
+  tCols,
+  tRow,
+  tEnums,
+}: {
+  rows: RowWithTurn<BuyerInquiryRow>[];
+  t: Translator;
+  tCols: Translator;
+  tRow: Translator;
+  tEnums: Translator;
+}) {
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Product</TableHead>
-            <TableHead>Seller</TableHead>
-            <TableHead className="text-right">Qty</TableHead>
-            <TableHead className="text-right">Live Price</TableHead>
-            <TableHead>Destination</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>{tCols("product")}</TableHead>
+            <TableHead>{tCols("seller")}</TableHead>
+            <TableHead className="text-right">{tCols("qty")}</TableHead>
+            <TableHead className="text-right">{tCols("livePrice")}</TableHead>
+            <TableHead>{tCols("destination")}</TableHead>
+            <TableHead>{tCols("status")}</TableHead>
+            <TableHead>{tCols("actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -84,30 +102,30 @@ function BuyerInquiriesTable({ rows }: { rows: RowWithTurn<BuyerInquiryRow>[] })
             <TableRow key={inq.id} className="hover:bg-muted/30">
               <TableCell className="font-medium">
                 <Link href={`/inquiries/${inq.id}`} className="hover:underline">
-                  {inq.product_categories?.name ?? "—"}
+                  {inq.product_categories?.name ?? tRow("noValue")}
                 </Link>
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {inq.profiles?.company_name ?? "—"}
+                {inq.profiles?.company_name ?? tRow("noValue")}
               </TableCell>
               <TableCell className="text-right">{inq.requested_qty}</TableCell>
               <TableCell className="text-right">
                 {inq.liveUnitPrice != null
                   ? `${inq.liveUnitPrice} ${inq.liveCurrency ?? ""}`.trim()
                   : inq.target_price != null
-                    ? `${inq.target_price} (target)`
-                    : "—"}
+                    ? tRow("targetSuffix", { value: inq.target_price })
+                    : tRow("noValue")}
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {inq.destination ?? "—"}
+                {inq.destination ?? tRow("noValue")}
               </TableCell>
               <TableCell>
                 <Badge variant="outline" className={statusColor[inq.status] ?? ""}>
-                  {inq.status}
+                  {translateInquiryStatus(inq.status, tEnums)}
                 </Badge>
               </TableCell>
               <TableCell>
-                <BuyerRowActions inquiryId={inq.id} turn={inq.turn} />
+                <BuyerRowActions inquiryId={inq.id} turn={inq.turn} t={t} tRow={tRow} />
               </TableCell>
             </TableRow>
           ))}
@@ -117,38 +135,77 @@ function BuyerInquiriesTable({ rows }: { rows: RowWithTurn<BuyerInquiryRow>[] })
   );
 }
 
-function BuyerRowActions({ inquiryId, turn }: { inquiryId: string; turn: InquiryTurn }) {
+function translateInquiryStatus(status: string, tEnums: Translator): string {
+  const known = [
+    "pending",
+    "quoted",
+    "negotiating",
+    "accepted",
+    "rejected",
+    "expired",
+    "converted",
+  ] as const;
+  return (known as readonly string[]).includes(status)
+    ? tEnums(`inquiry.status.${status}`)
+    : status;
+}
+
+function BuyerRowActions({
+  inquiryId,
+  turn,
+  t,
+  tRow,
+}: {
+  inquiryId: string;
+  turn: InquiryTurn;
+  t: Translator;
+  tRow: Translator;
+}) {
   if (turn === "my-review") {
     return (
       <Link
         href={`/inquiries/${inquiryId}`}
         className="text-xs text-primary underline"
       >
-        Review →
+        {tRow("review")}
       </Link>
     );
   }
   if (turn === "their-review" || turn === "seller-quote") {
     return (
-      <span className="text-xs text-muted-foreground">Awaiting seller</span>
+      <span className="text-xs text-muted-foreground">{tRow("awaitingSeller")}</span>
     );
   }
-  return <span className="text-xs text-muted-foreground">—</span>;
+  return <span className="text-xs text-muted-foreground">{tRow("noValue")}</span>;
+  // `t` parameter retained for future row-level copy (e.g. tooltips).
+  void t;
 }
 
-function SellerInquiriesTable({ rows }: { rows: RowWithTurn<SellerInquiryRow>[] }) {
+function SellerInquiriesTable({
+  rows,
+  t,
+  tCols,
+  tRow,
+  tEnums,
+}: {
+  rows: RowWithTurn<SellerInquiryRow>[];
+  t: Translator;
+  tCols: Translator;
+  tRow: Translator;
+  tEnums: Translator;
+}) {
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Product</TableHead>
-            <TableHead>Buyer</TableHead>
-            <TableHead className="text-right">Qty</TableHead>
-            <TableHead className="text-right">Live Price</TableHead>
-            <TableHead>Destination</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>{tCols("product")}</TableHead>
+            <TableHead>{tCols("buyer")}</TableHead>
+            <TableHead className="text-right">{tCols("qty")}</TableHead>
+            <TableHead className="text-right">{tCols("livePrice")}</TableHead>
+            <TableHead>{tCols("destination")}</TableHead>
+            <TableHead>{tCols("status")}</TableHead>
+            <TableHead>{tCols("actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -156,30 +213,30 @@ function SellerInquiriesTable({ rows }: { rows: RowWithTurn<SellerInquiryRow>[] 
             <TableRow key={inq.id} className="hover:bg-muted/30">
               <TableCell className="font-medium">
                 <Link href={`/inquiries/${inq.id}`} className="hover:underline">
-                  {inq.product_categories?.name ?? "—"}
+                  {inq.product_categories?.name ?? tRow("noValue")}
                 </Link>
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {inq.profiles?.company_name ?? "—"}
+                {inq.profiles?.company_name ?? tRow("noValue")}
               </TableCell>
               <TableCell className="text-right">{inq.requested_qty}</TableCell>
               <TableCell className="text-right">
                 {inq.liveUnitPrice != null
                   ? `${inq.liveUnitPrice} ${inq.liveCurrency ?? ""}`.trim()
                   : inq.target_price != null
-                    ? `${inq.target_price} (target)`
-                    : "—"}
+                    ? tRow("targetSuffix", { value: inq.target_price })
+                    : tRow("noValue")}
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {inq.destination ?? "—"}
+                {inq.destination ?? tRow("noValue")}
               </TableCell>
               <TableCell>
                 <Badge variant="outline" className={statusColor[inq.status] ?? ""}>
-                  {inq.status}
+                  {translateInquiryStatus(inq.status, tEnums)}
                 </Badge>
               </TableCell>
               <TableCell>
-                <SellerRowActions inquiryId={inq.id} turn={inq.turn} />
+                <SellerRowActions inquiryId={inq.id} turn={inq.turn} t={t} tRow={tRow} />
               </TableCell>
             </TableRow>
           ))}
@@ -189,32 +246,37 @@ function SellerInquiriesTable({ rows }: { rows: RowWithTurn<SellerInquiryRow>[] 
   );
 }
 
-function SellerRowActions({ inquiryId, turn }: { inquiryId: string; turn: InquiryTurn }) {
-  // status='pending' (no quotation yet): legacy fast Accept (sends a default
-  // quotation derived from the listing) + Reject. Both are safe here because
-  // there's no live counter-offer to overwrite.
+function SellerRowActions({
+  inquiryId,
+  turn,
+  t,
+  tRow,
+}: {
+  inquiryId: string;
+  turn: InquiryTurn;
+  t: Translator;
+  tRow: Translator;
+}) {
   if (turn === "seller-quote") {
     return <InquiryActions inquiryId={inquiryId} />;
   }
-  // A live quotation exists, my counterparty made it — go review on the
-  // detail page (Accept / Counter / Decline).
   if (turn === "my-review") {
     return (
       <Link
         href={`/inquiries/${inquiryId}`}
         className="text-xs text-primary underline"
       >
-        Review →
+        {tRow("review")}
       </Link>
     );
   }
-  // I sent the live offer; awaiting buyer.
   if (turn === "their-review") {
     return (
-      <span className="text-xs text-muted-foreground">Awaiting buyer</span>
+      <span className="text-xs text-muted-foreground">{tRow("awaitingBuyer")}</span>
     );
   }
-  return <span className="text-xs text-muted-foreground">—</span>;
+  return <span className="text-xs text-muted-foreground">{tRow("noValue")}</span>;
+  void t;
 }
 
 function InquiryListSection<T extends { status: string }>({
@@ -223,12 +285,16 @@ function InquiryListSection<T extends { status: string }>({
   active,
   history,
   renderTable,
+  historyTitle,
+  activeEmptyLabel,
 }: {
   emptyLabel: string;
   historyOpen: boolean;
   active: T[];
   history: T[];
   renderTable: (rows: T[]) => React.ReactNode;
+  historyTitle: string;
+  activeEmptyLabel: string;
 }) {
   if (active.length === 0 && history.length === 0) {
     return (
@@ -242,8 +308,7 @@ function InquiryListSection<T extends { status: string }>({
     <>
       {active.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          No active inquiries. Expand History Inquiries below to review closed
-          items.
+          {activeEmptyLabel}
         </div>
       ) : (
         renderTable(active)
@@ -251,7 +316,7 @@ function InquiryListSection<T extends { status: string }>({
 
       <Suspense fallback={null}>
         <CollapsibleHistorySection
-          title="History Inquiries"
+          title={historyTitle}
           count={history.length}
           defaultOpen={historyOpen}
         >
@@ -274,10 +339,17 @@ export default async function InquiriesPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const t = await getTranslations("inquiries");
+  const tCols = await getTranslations("inquiries.columns");
+  const tRow = await getTranslations("inquiries.row");
+  const tList = await getTranslations("inquiries.list");
+  const tTabs = await getTranslations("inquiries.tabs");
+  const tEnums = await getTranslations("enums");
+
   if (!user) {
     return (
       <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-        Your session expired. Please sign in again.
+        {t("sessionExpired")}
       </div>
     );
   }
@@ -346,43 +418,60 @@ export default async function InquiriesPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Inquiries</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Active inquiries need your response. Rejected and converted inquiries
-          are archived under History Inquiries.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("heading")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("subheading")}</p>
       </div>
 
       <Tabs defaultValue="sent">
         <TabsList>
           <TabsTrigger value="sent">
-            Sent ({buyerSplit.active.length})
+            {tTabs("sent", { count: buyerSplit.active.length })}
           </TabsTrigger>
           {isSeller && (
             <TabsTrigger value="received">
-              Received ({sellerSplit.active.length})
+              {tTabs("received", { count: sellerSplit.active.length })}
             </TabsTrigger>
           )}
         </TabsList>
 
         <TabsContent value="sent" className="mt-4">
           <InquiryListSection
-            emptyLabel="You haven't sent any inquiries yet."
+            emptyLabel={tList("emptySent")}
+            activeEmptyLabel={tList("activeEmpty")}
+            historyTitle={tList("historyTitle")}
             historyOpen={historyOpen}
             active={buyerSplit.active}
             history={buyerSplit.history}
-            renderTable={(rows) => <BuyerInquiriesTable rows={rows} />}
+            renderTable={(rows) => (
+              <BuyerInquiriesTable
+                rows={rows}
+                t={t}
+                tCols={tCols}
+                tRow={tRow}
+                tEnums={tEnums}
+              />
+            )}
           />
         </TabsContent>
 
         {isSeller && (
           <TabsContent value="received" className="mt-4">
             <InquiryListSection
-              emptyLabel="No inquiries received yet."
+              emptyLabel={tList("emptyReceived")}
+              activeEmptyLabel={tList("activeEmpty")}
+              historyTitle={tList("historyTitle")}
               historyOpen={historyOpen}
               active={sellerSplit.active}
               history={sellerSplit.history}
-              renderTable={(rows) => <SellerInquiriesTable rows={rows} />}
+              renderTable={(rows) => (
+                <SellerInquiriesTable
+                  rows={rows}
+                  t={t}
+                  tCols={tCols}
+                  tRow={tRow}
+                  tEnums={tEnums}
+                />
+              )}
             />
           </TabsContent>
         )}

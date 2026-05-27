@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { createServerClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
@@ -10,11 +12,16 @@ import {
   resolveListingSpecs,
 } from "@/lib/categories/spec";
 
-export const metadata = { title: "Market — [REDACTED]" };
+export async function generateMetadata() {
+  const t = await getTranslations("market");
+  return { title: t("metaTitle") };
+}
 
 export default async function MarketPage() {
   const user = await getCurrentUser();
   const supabase = await createServerClient();
+  const t = await getTranslations("market");
+  const tListings = await getTranslations("listings");
 
   const { data: listings } = await supabase
     .from("listings")
@@ -73,7 +80,7 @@ export default async function MarketPage() {
       origin_location: l.origin_location,
       available_from: l.available_from,
       available_to: l.available_to,
-      categoryName: l.product_categories?.name ?? "—",
+      categoryName: l.product_categories?.name ?? tListings("row.noCategory"),
       specChip,
       coverImage: (l.images ?? [])[0] ?? null,
       seller: {
@@ -88,16 +95,13 @@ export default async function MarketPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Market</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Browse active graphite listings. Message sellers directly or open a
-          listing to inquire.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("heading")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("subheading")}</p>
       </div>
 
       {!items.length ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-          No active listings at the moment. Check back soon.
+          {t("empty")}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
