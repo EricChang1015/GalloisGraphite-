@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -85,10 +84,9 @@ const TEMPLATES: Template[] = [
   },
 ];
 
-let _idCounter = 0;
-function nextKey() {
-  _idCounter += 1;
-  return `s_${_idCounter}_${Math.random().toString(36).slice(2, 6)}`;
+/** Stable list keys across percentage edits (must not depend on stale useMemo). */
+function entryKey(e: PaymentScheduleEntry, idx: number) {
+  return `${idx}-${e.category}-${e.milestone}`;
 }
 
 export function PaymentScheduleBuilder({
@@ -99,11 +97,10 @@ export function PaymentScheduleBuilder({
   currency,
   className,
 }: Props) {
-  const entries: Entry[] = useMemo(
-    () => value.map((e) => ({ ...e, _key: nextKey() })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [value.length, incoterm]
-  );
+  const entries: Entry[] = value.map((e, idx) => ({
+    ...e,
+    _key: entryKey(e, idx),
+  }));
 
   const total = entries.reduce((acc, e) => acc + (Number(e.percentage) || 0), 0);
   const totalsOk = Math.abs(total - 100) < 0.01;
@@ -241,10 +238,14 @@ export function PaymentScheduleBuilder({
                         min={0.01}
                         max={100}
                         step={0.01}
-                        value={e.percentage}
-                        onChange={(ev) =>
-                          update(idx, { percentage: parseFloat(ev.target.value || "0") })
-                        }
+                        value={Number.isFinite(e.percentage) ? e.percentage : 0}
+                        onChange={(ev) => {
+                          const raw = ev.target.value;
+                          const parsed = raw === "" ? 0 : Number.parseFloat(raw);
+                          update(idx, {
+                            percentage: Number.isFinite(parsed) ? parsed : 0,
+                          });
+                        }}
                         className="text-xs h-8"
                       />
                     </div>

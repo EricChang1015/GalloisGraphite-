@@ -234,6 +234,15 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
   const paidCount = schedules.filter((s) => s.status === "paid").length;
   const paymentsSummary = { paid: paidCount, total: schedules.length };
 
+  const pendingPaymentByScheduleId = Object.fromEntries(
+    payments
+      .filter((p) => p.status === "pending" && p.schedule_id)
+      .map((p) => [p.schedule_id as string, p.id])
+  );
+  const canReviewPayments = isSeller || isAdmin;
+  const awaitingReviewCount = schedules.filter((s) => s.status === "awaiting_review").length;
+  const pendingPaymentCount = payments.filter((p) => p.status === "pending").length;
+
   const milestoneTimestamps = {
     before_production_at: order.before_production_at,
     before_shipment_at: order.before_shipment_at,
@@ -344,12 +353,32 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
             ))}
           </div>
 
+          {canReviewPayments && pendingPaymentCount > 0 && (
+            <div className="rounded-lg border border-blue-400/40 bg-blue-400/10 px-4 py-3 text-sm">
+              <p className="font-medium text-blue-200">
+                {pendingPaymentCount} payment{pendingPaymentCount > 1 ? "s" : ""} awaiting your
+                review
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Click <strong>Review</strong> in the schedule table below, or open the{" "}
+                <Link href={`/orders/${order.id}?tab=payment`} className="underline text-primary">
+                  Payment
+                </Link>{" "}
+                tab for full payment history. Shipment milestones do not require payment
+                verification first.
+              </p>
+            </div>
+          )}
+
           {schedules.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Payment Schedule</p>
                 <p className="text-xs text-muted-foreground">
                   {paidCount} / {schedules.length} paid
+                  {awaitingReviewCount > 0 && canReviewPayments
+                    ? ` · ${awaitingReviewCount} awaiting review`
+                    : ""}
                 </p>
               </div>
               <PaymentScheduleTable
@@ -358,6 +387,9 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                 role={myRoleForChild}
                 orderClosed={order.status === "cancelled"}
                 limit={3}
+                canReviewPayments={canReviewPayments}
+                reviewerLabel={isAdmin ? "Admin" : "Seller"}
+                pendingPaymentByScheduleId={pendingPaymentByScheduleId}
               />
             </div>
           )}
@@ -539,6 +571,9 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
               schedules={schedules}
               role={myRoleForChild}
               orderClosed={order.status === "cancelled"}
+              canReviewPayments={canReviewPayments}
+              reviewerLabel={isAdmin ? "Admin" : "Seller"}
+              pendingPaymentByScheduleId={pendingPaymentByScheduleId}
             />
           </div>
 

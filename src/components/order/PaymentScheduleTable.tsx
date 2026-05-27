@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { submitPayment } from "@/actions/payment";
+import { PaymentVerifyActions } from "@/components/order/PaymentVerifyActions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +60,11 @@ interface Props {
   orderClosed?: boolean;
   /** Hide rows below this index (used by the Overview tab summary). */
   limit?: number;
+  /** Seller or admin can verify pending payments tied to schedule rows. */
+  canReviewPayments?: boolean;
+  reviewerLabel?: "Admin" | "Seller";
+  /** schedule_id → pending payment id (from order.payments). */
+  pendingPaymentByScheduleId?: Record<string, string>;
 }
 
 const STATUS_BADGE_VARIANT: Record<PaymentScheduleStatus, string> = {
@@ -70,7 +76,16 @@ const STATUS_BADGE_VARIANT: Record<PaymentScheduleStatus, string> = {
   waived: "border-border text-muted-foreground line-through",
 };
 
-export function PaymentScheduleTable({ orderId, schedules, role, orderClosed = false, limit }: Props) {
+export function PaymentScheduleTable({
+  orderId,
+  schedules,
+  role,
+  orderClosed = false,
+  limit,
+  canReviewPayments = false,
+  reviewerLabel = "Seller",
+  pendingPaymentByScheduleId = {},
+}: Props) {
   const [active, setActive] = useState<ScheduleRow | null>(null);
   const visible = limit ? schedules.slice(0, limit) : schedules;
 
@@ -129,11 +144,19 @@ export function PaymentScheduleTable({ orderId, schedules, role, orderClosed = f
                   </Badge>
                 </td>
                 <td className="px-3 py-2 text-right">
-                  {role === "buyer" &&
-                  !orderClosed &&
-                  (s.status === "due" ||
-                    s.status === "overdue" ||
-                    s.status === "scheduled") ? (
+                  {canReviewPayments &&
+                  s.status === "awaiting_review" &&
+                  pendingPaymentByScheduleId[s.id] ? (
+                    <SchedulePaymentReviewDialog
+                      paymentId={pendingPaymentByScheduleId[s.id]}
+                      reviewerLabel={reviewerLabel}
+                      installmentLabel={`#${s.sequence + 1} · ${s.amount.toFixed(2)} ${s.currency}`}
+                    />
+                  ) : role === "buyer" &&
+                    !orderClosed &&
+                    (s.status === "due" ||
+                      s.status === "overdue" ||
+                      s.status === "scheduled") ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -165,6 +188,43 @@ export function PaymentScheduleTable({ orderId, schedules, role, orderClosed = f
         schedule={active}
         onClose={() => setActive(null)}
       />
+    </>
+  );
+}
+
+/** Seller/admin review for a pending payment on an awaiting_review schedule row. */
+function SchedulePaymentReviewDialog({
+  paymentId,
+  reviewerLabel,
+  installmentLabel,
+}: {
+  paymentId: string;
+  reviewerLabel: "Admin" | "Seller";
+  installmentLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        size="sm"
+        className="h-7 text-[11px]"
+        onClick={() => setOpen(true)}
+      >
+        Review
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Review payment</DialogTitle>
+            <DialogDescription>
+              Installment {installmentLabel}. As {reviewerLabel.toLowerCase()}, verify
+              the buyer&apos;s proof or on-chain transfer, then approve or reject.
+            </DialogDescription>
+          </DialogHeader>
+          <PaymentVerifyActions paymentId={paymentId} reviewerLabel={reviewerLabel} />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -253,7 +313,7 @@ function PaymentSubmitDialog({
         toast.error(result.error.message);
         return;
       }
-      toast.success("Payment submitted. Pending admin review.");
+      toast.success("Payment submitted. Pending seller review.");
       onClose();
       router.refresh();
     });
