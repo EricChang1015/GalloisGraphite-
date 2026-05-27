@@ -1,0 +1,15 @@
+*Mada Graphite — 每日工程摘要*
+*涵蓋期間：* 2026-05-26 17:02 UTC → 2026-05-27 17:02 UTC
+
+*資料來源：* `main` 在此視窗內 **0 筆 commit、0 個 merged PR**；下列變更來自尚未合併的 `cursor/daily-engineering-digest-e5e0`（相對 `main` 共 13 commits，`104` 檔、`+5805/-1062` 行，證據：`git log main..HEAD`、`git diff main..HEAD --stat`）。
+
+• *登入後儀表板 i18n（en + zh-CN）整批落地* — `c0683dd` 起 8 個 feat commit：以 `next-intl`（`package.json` 新增 `next-intl@^4.12.0`）+ cookie `mg-locale` → `profiles.locale` 解析；`028_profile_locale.sql` 新增 `profiles.locale`（CHECK：`en`/`zh-CN`）。已翻譯 KYC、Messages、Listings、Market、Inquiries、Orders（含 7 tabs / 付款與合約互動元件）、設定與導覽搜尋。合約 HTML、email/SMS、server-action 錯誤訊息維持英文（`docs/I18N_PLAN.md`）。
+• *i18n 執行期修正* — `2ed094a`：移除 listings/orders 翻譯值中的 `<strong>`，避免 `dangerouslySetInnerHTML` + `t()` 觸發 next-intl `FORMATTING_ERROR`；並更新 ARCHITECTURE / PRD / ROADMAP 標記 dashboard i18n 已 ship。
+• *訂單／付款／合約 UX 修復* — `c1e4549`：賣家可在 Overview / Payment 對 `awaiting_review` 排程做 Review；修正 `PaymentScheduleBuilder` 百分比輸入 stale `useMemo`；`23008b2`：依待辦自動聚焦 contract/payment/shipment tab 並顯示買方付款駁回重提提示；`0b2d967`：合約預覽買方左／賣方右（舊 HTML 於 `embed.ts` 預覽時校正）；`67c37f1`：合約預覽 CSS 限域，避免 dark mode 重擬稿時全域樣式外洩。
+• *詢價列表與報價輪次一致* — `866d4bd`：`/inquiries` 列表 Accept/Reject 與詳情頁對齊；`acceptInquiry` 僅 `pending`；`rejectInquiry` 阻擋己方 live offer；Actions 由 `quotations.created_by` + `classifyInquiryTurn` 驅動（延續 migration 027 模型）。
+• *文件對齊實作現況* — `d150361`：ARCHITECTURE / PRD / ROADMAP / SCHEMA / TESTING 與 migrations 001–027、12 階段訂單、`payment_schedules`、賣家主審付款、Party DM、四級 KYC、AWS SES 等一致。
+
+*Watchlist*
+• **尚未合併 `main`**：整包 i18n + migration `028` 需 PR 審查；部署前必跑 `npm run db:migrate` 並以 `mg-locale` cookie / `/settings` 語言切換做 zh-CN 煙測（commit 訊息稱 `npm run build` 通過，但無專用 i18n E2E）。
+• **migration 028 上線風險**：新欄位 `profiles.locale` 僅限 `en`/`zh-CN`；未跑 migration 的環境會在讀寫 profile 時失敗。
+• **大面積 UI 字串變更**：Orders 單次 commit 即 `16` 檔 `+931` 行；建議合併前跑 `npm run qa:check-dev` 與關鍵 B2B 流程（付款排程、合約預覽列印）手動回歸。
