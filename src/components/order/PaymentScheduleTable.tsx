@@ -65,6 +65,8 @@ interface Props {
   reviewerLabel?: "Admin" | "Seller";
   /** schedule_id → pending payment id (from order.payments). */
   pendingPaymentByScheduleId?: Record<string, string>;
+  /** Installments rejected by reviewer — buyer should resubmit on `due` rows. */
+  resubmitScheduleIds?: string[];
 }
 
 const STATUS_BADGE_VARIANT: Record<PaymentScheduleStatus, string> = {
@@ -85,7 +87,9 @@ export function PaymentScheduleTable({
   canReviewPayments = false,
   reviewerLabel = "Seller",
   pendingPaymentByScheduleId = {},
+  resubmitScheduleIds = [],
 }: Props) {
+  const resubmitSet = new Set(resubmitScheduleIds);
   const [active, setActive] = useState<ScheduleRow | null>(null);
   const visible = limit ? schedules.slice(0, limit) : schedules;
 
@@ -136,12 +140,19 @@ export function PaymentScheduleTable({
                 </td>
                 <td className="px-3 py-2 text-muted-foreground">{s.due_date ?? "—"}</td>
                 <td className="px-3 py-2">
-                  <Badge
-                    variant="outline"
-                    className={cn("text-[10px]", STATUS_BADGE_VARIANT[s.status])}
-                  >
-                    {SCHEDULE_STATUS_LABEL[s.status]}
-                  </Badge>
+                  <div className="flex flex-col items-start gap-1">
+                    <Badge
+                      variant="outline"
+                      className={cn("text-[10px]", STATUS_BADGE_VARIANT[s.status])}
+                    >
+                      {SCHEDULE_STATUS_LABEL[s.status]}
+                    </Badge>
+                    {role === "buyer" && resubmitSet.has(s.id) && (
+                      <span className="text-[10px] text-amber-400 font-medium">
+                        Rejected — resubmit
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-3 py-2 text-right">
                   {canReviewPayments &&
@@ -159,16 +170,22 @@ export function PaymentScheduleTable({
                       s.status === "scheduled") ? (
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant={resubmitSet.has(s.id) ? "default" : "outline"}
                       className="h-7 text-[11px]"
                       onClick={() => setActive(s)}
                       title={
-                        s.status === "scheduled"
-                          ? "Settle this installment early — milestone not yet triggered"
-                          : undefined
+                        resubmitSet.has(s.id)
+                          ? "Previous payment was rejected — submit again with updated proof"
+                          : s.status === "scheduled"
+                            ? "Settle this installment early — milestone not yet triggered"
+                            : undefined
                       }
                     >
-                      {s.status === "scheduled" ? "Pay Early" : "Submit Payment"}
+                      {resubmitSet.has(s.id)
+                        ? "Resubmit Payment"
+                        : s.status === "scheduled"
+                          ? "Pay Early"
+                          : "Submit Payment"}
                     </Button>
                   ) : null}
                 </td>

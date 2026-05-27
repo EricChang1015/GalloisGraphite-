@@ -28,6 +28,10 @@ import {
   STATUS_LABEL,
   type OrderStatus,
 } from "@/lib/order/stateMachine";
+import {
+  getSchedulesNeedingPaymentResubmit,
+  getSuggestedOrderTab,
+} from "@/lib/order/suggestedTab";
 import type { Incoterm, PaymentScheduleEntry } from "@/lib/validations/payment-schedule";
 import type { DocumentType } from "@/lib/validations/document";
 
@@ -242,6 +246,23 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
   const canReviewPayments = isSeller || isAdmin;
   const awaitingReviewCount = schedules.filter((s) => s.status === "awaiting_review").length;
   const pendingPaymentCount = payments.filter((p) => p.status === "pending").length;
+  const resubmitScheduleIds = getSchedulesNeedingPaymentResubmit(schedules, payments);
+
+  const suggestedTab = getSuggestedOrderTab({
+    status: order.status,
+    role: myRole,
+    contract: contract
+      ? {
+          exists: true,
+          buyer_approved_at: contract.buyer_approved_at,
+          buyer_rejected_at: contract.buyer_rejected_at,
+          buyer_signed_url: contract.buyer_signed_url,
+          seller_signed_url: contract.seller_signed_url,
+        }
+      : null,
+    schedules,
+    payments,
+  });
 
   const milestoneTimestamps = {
     before_production_at: order.before_production_at,
@@ -294,7 +315,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
 
       <OrderProgressBar status={order.status} paymentsSummary={paymentsSummary} />
 
-      <OrderDetailTabs initialTab={tabParam}>
+      <OrderDetailTabs initialTab={tabParam} suggestedTab={suggestedTab}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="quotation">Quotation</TabsTrigger>
@@ -306,7 +327,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         </TabsList>
 
         {/* Overview */}
-        <TabsContent value="overview" className="mt-4 space-y-6">
+        <TabsContent id="order-tab-panel-overview" value="overview" className="mt-4 space-y-6 scroll-mt-24">
           <OrderPartyCards
             buyer={{
               profile: {
@@ -390,6 +411,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                 canReviewPayments={canReviewPayments}
                 reviewerLabel={isAdmin ? "Admin" : "Seller"}
                 pendingPaymentByScheduleId={pendingPaymentByScheduleId}
+                resubmitScheduleIds={resubmitScheduleIds}
               />
             </div>
           )}
@@ -406,7 +428,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         </TabsContent>
 
         {/* Quotation */}
-        <TabsContent value="quotation" className="mt-4 space-y-3">
+        <TabsContent id="order-tab-panel-quotation" value="quotation" className="mt-4 space-y-3 scroll-mt-24">
           {!order.current_quotation ? (
             <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground text-sm">
               This order was created without a quotation reference.
@@ -458,7 +480,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         </TabsContent>
 
         {/* Contract */}
-        <TabsContent value="contract" className="mt-4 space-y-4">
+        <TabsContent id="order-tab-panel-contract" value="contract" className="mt-4 space-y-4 scroll-mt-24">
           {isSeller && !contract && order.status === "contract_pending" && (
             <ContractDraftForm
               orderId={order.id}
@@ -563,7 +585,18 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         </TabsContent>
 
         {/* Payment */}
-        <TabsContent value="payment" className="mt-4 space-y-6">
+        <TabsContent id="order-tab-panel-payment" value="payment" className="mt-4 space-y-6 scroll-mt-24">
+          {isBuyer && resubmitScheduleIds.length > 0 && (
+            <div className="rounded-lg border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-sm">
+              <p className="font-medium text-amber-200">Payment rejected — please resubmit</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                The seller or admin rejected your previous submission. Use{" "}
+                <strong>Resubmit Payment</strong> on the highlighted installment in the
+                schedule below (update your transaction hash or remittance proof).
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <p className="text-sm font-medium">Payment Schedule</p>
             <PaymentScheduleTable
@@ -574,6 +607,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
               canReviewPayments={canReviewPayments}
               reviewerLabel={isAdmin ? "Admin" : "Seller"}
               pendingPaymentByScheduleId={pendingPaymentByScheduleId}
+              resubmitScheduleIds={resubmitScheduleIds}
             />
           </div>
 
@@ -626,7 +660,14 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                     )}
                     {p.admin_note && (
                       <p className="text-xs text-muted-foreground">
-                        Reviewer note: {p.admin_note}
+                        {p.status === "rejected" ? "Rejection reason" : "Reviewer note"}:{" "}
+                        {p.admin_note}
+                      </p>
+                    )}
+                    {p.status === "rejected" && isBuyer && p.schedule_id && (
+                      <p className="text-xs text-amber-400">
+                        This installment was returned to <strong>Due</strong> — use{" "}
+                        <strong>Resubmit Payment</strong> in the schedule above.
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
@@ -649,7 +690,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         </TabsContent>
 
         {/* Shipment */}
-        <TabsContent value="shipment" className="mt-4 space-y-4">
+        <TabsContent id="order-tab-panel-shipment" value="shipment" className="mt-4 space-y-4 scroll-mt-24">
           <div className="rounded-lg border divide-y text-sm">
             {[
               ["B/L No.", order.bl_no ?? "—"],
@@ -712,7 +753,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         </TabsContent>
 
         {/* Documents */}
-        <TabsContent value="documents" className="mt-4">
+        <TabsContent id="order-tab-panel-documents" value="documents" className="mt-4 scroll-mt-24">
           <OrderDocumentsTab
             orderId={order.id}
             documents={documents}
@@ -722,7 +763,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         </TabsContent>
 
         {/* Timeline */}
-        <TabsContent value="timeline" className="mt-4">
+        <TabsContent id="order-tab-panel-timeline" value="timeline" className="mt-4 scroll-mt-24">
           {(!order.timeline || order.timeline.length === 0) ? (
             <p className="text-sm text-muted-foreground">No timeline events yet.</p>
           ) : (
