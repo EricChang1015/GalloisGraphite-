@@ -22,5 +22,48 @@
       "en": "English",
       "zh-CN": "简体中文 (Simplified Chinese)"
     }
+  },
+  "profileForm": {
+    "incompleteTitle": "A few details are still needed before you can transact.",
+    "missingPrefix": "Missing:",
+    "missingFallback": "Please complete your commercial profile.",
+    "missing": {
+      "company_name": "company name",
+      "country": "country"
+    },
+    "emailLabel": "Email",
+    "emailHint": "Email is managed by Supabase Auth.",
+    "changePassword": "Change password",
+    "fields": {
+      "fullName": "Full name",
+      "fullNamePlaceholder": "e.g. Jane Doe",
+      "companyName": "Company name",
+      "companyNamePlaceholder": "e.g. Acme Battery Materials",
+      "country": "Country",
+      "countryPlaceholder": "e.g. Germany",
+      "phone": "Phone (optional)",
+      "phonePlaceholder": "+49 …"
+    },
+    "save": "Save profile",
+    "saving": "Saving…",
+    "toast": {
+      "saved": "Profile saved."
+    }
+  },
+  "avatar": {
+    "changeAria": "Change profile photo",
+    "hint": "Upload a photo (JPEG, PNG, or WebP, max 2 MB). Images larger than 500×500 are resized before saving. Google sign-in uses your Google picture until you replace it.",
+    "upload": "Upload photo",
+    "uploading": "Uploading…",
+    "remove": "Remove",
+    "toast": {
+      "badType": "Please choose a JPEG, PNG, or WebP image.",
+      "tooBig": "Image must be 2 MB or smaller.",
+      "uploadFailed": "Upload failed: {msg}",
+      "storageMissing": "Storage is not configured.",
+      "updated": "Profile photo updated.",
+      "removed": "Profile photo removed.",
+      "uploadError": "Upload error."
+    }
   }
 }

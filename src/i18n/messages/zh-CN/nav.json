@@ -19,5 +19,9 @@
   "badges": {
     "profileIncomplete": "资料未完善",
     "disputedOrders": "存在争议订单待处理"
+  },
+  "search": {
+    "label": "搜索",
+    "aria": "搜索 Mada Graphite"
   }
 }

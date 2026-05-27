@@ -19,5 +19,9 @@
   "badges": {
     "profileIncomplete": "Profile incomplete",
     "disputedOrders": "Disputed orders need attention"
+  },
+  "search": {
+    "label": "Search",
+    "aria": "Search Mada Graphite"
   }
 }

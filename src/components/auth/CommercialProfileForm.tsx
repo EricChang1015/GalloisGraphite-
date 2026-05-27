@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { updateCommercialProfile } from "@/actions/profile";
@@ -38,6 +39,8 @@ export function CommercialProfileForm({
   missingFields,
 }: Props) {
   const router = useRouter();
+  const t = useTranslations("settings.profileForm");
+  const tMissing = useTranslations("settings.profileForm.missing");
   const [isPending, startTransition] = React.useTransition();
 
   const form = useForm<CommercialProfileInput>({
@@ -62,7 +65,7 @@ export function CommercialProfileForm({
         }
         return;
       }
-      toast.success("Profile saved.");
+      toast.success(t("toast.saved"));
       router.refresh();
     });
   }
@@ -72,31 +75,29 @@ export function CommercialProfileForm({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         {prompt === "incomplete" && (
           <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
-            <p className="font-medium">
-              A few details are still needed before you can transact.
-            </p>
+            <p className="font-medium">{t("incompleteTitle")}</p>
             <p className="mt-1 text-xs text-muted-foreground">
               {missingFields && missingFields.length > 0
-                ? `Missing: ${missingFields
-                    .map((f) => (f === "company_name" ? "company name" : "country"))
+                ? `${t("missingPrefix")} ${missingFields
+                    .map((f) => tMissing(f))
                     .join(", ")}.`
-                : "Please complete your commercial profile."}
+                : t("missingFallback")}
             </p>
           </div>
         )}
 
         <div className="space-y-1.5">
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Email
+            {t("emailLabel")}
           </div>
           <p className="text-sm">{email}</p>
           <p className="text-[11px] text-muted-foreground">
-            Email is managed by Supabase Auth.{" "}
+            {t("emailHint")}{" "}
             <Link
               href="/forgot-password"
               className="underline-offset-2 hover:underline"
             >
-              Change password
+              {t("changePassword")}
             </Link>
           </p>
         </div>
@@ -106,11 +107,11 @@ export function CommercialProfileForm({
           name="full_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Full name</FormLabel>
+              <FormLabel>{t("fields.fullName")}</FormLabel>
               <FormControl>
                 <Input
                   autoComplete="name"
-                  placeholder="e.g. Jane Doe"
+                  placeholder={t("fields.fullNamePlaceholder")}
                   {...field}
                 />
               </FormControl>
@@ -124,11 +125,11 @@ export function CommercialProfileForm({
           name="company_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Company name</FormLabel>
+              <FormLabel>{t("fields.companyName")}</FormLabel>
               <FormControl>
                 <Input
                   autoComplete="organization"
-                  placeholder="e.g. Acme Battery Materials"
+                  placeholder={t("fields.companyNamePlaceholder")}
                   {...field}
                 />
               </FormControl>
@@ -142,11 +143,11 @@ export function CommercialProfileForm({
           name="country"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Country</FormLabel>
+              <FormLabel>{t("fields.country")}</FormLabel>
               <FormControl>
                 <Input
                   autoComplete="country-name"
-                  placeholder="e.g. Germany"
+                  placeholder={t("fields.countryPlaceholder")}
                   {...field}
                 />
               </FormControl>
@@ -160,11 +161,11 @@ export function CommercialProfileForm({
           name="phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Phone (optional)</FormLabel>
+              <FormLabel>{t("fields.phone")}</FormLabel>
               <FormControl>
                 <Input
                   autoComplete="tel"
-                  placeholder="+49 …"
+                  placeholder={t("fields.phonePlaceholder")}
                   value={field.value ?? ""}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
@@ -178,7 +179,7 @@ export function CommercialProfileForm({
         />
 
         <Button type="submit" disabled={isPending}>
-          {isPending ? "Saving…" : "Save profile"}
+          {isPending ? t("saving") : t("save")}
         </Button>
       </form>
     </Form>

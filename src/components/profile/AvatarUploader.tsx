@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Camera } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ interface Props {
 
 export function AvatarUploader({ userId, profile }: Props) {
   const router = useRouter();
+  const t = useTranslations("settings.avatar");
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(
     profile.avatar_url ?? null
@@ -36,11 +38,11 @@ export function AvatarUploader({ userId, profile }: Props) {
 
   async function handleFile(file: File) {
     if (!AVATAR_ALLOWED_MIME.includes(file.type as (typeof AVATAR_ALLOWED_MIME)[number])) {
-      toast.error("Please choose a JPEG, PNG, or WebP image.");
+      toast.error(t("toast.badType"));
       return;
     }
     if (file.size > AVATAR_MAX_BYTES) {
-      toast.error("Image must be 2 MB or smaller.");
+      toast.error(t("toast.tooBig"));
       return;
     }
 
@@ -55,13 +57,13 @@ export function AvatarUploader({ userId, profile }: Props) {
         .upload(path, prepared, { cacheControl: "3600", upsert: true });
 
       if (uploadError) {
-        toast.error(`Upload failed: ${uploadError.message}`);
+        toast.error(t("toast.uploadFailed", { msg: uploadError.message }));
         return;
       }
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       if (!supabaseUrl) {
-        toast.error("Storage is not configured.");
+        toast.error(t("toast.storageMissing"));
         return;
       }
 
@@ -73,13 +75,13 @@ export function AvatarUploader({ userId, profile }: Props) {
           toast.error(result.error.message);
         } else {
           setPreviewUrl(publicUrl);
-          toast.success("Profile photo updated.");
+          toast.success(t("toast.updated"));
           router.refresh();
         }
         setIsUploading(false);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Upload error.";
+      const message = err instanceof Error ? err.message : t("toast.uploadError");
       toast.error(message);
       setIsUploading(false);
     }
@@ -92,7 +94,7 @@ export function AvatarUploader({ userId, profile }: Props) {
         toast.error(result.error.message);
       } else {
         setPreviewUrl(null);
-        toast.success("Profile photo removed.");
+        toast.success(t("toast.removed"));
         router.refresh();
       }
     });
@@ -115,7 +117,7 @@ export function AvatarUploader({ userId, profile }: Props) {
         <button
           type="button"
           className="absolute -bottom-1 -right-1 flex size-8 items-center justify-center rounded-full border border-border bg-card shadow-sm hover:bg-muted"
-          aria-label="Change profile photo"
+          aria-label={t("changeAria")}
           disabled={isUploading}
           onClick={() => inputRef.current?.click()}
         >
@@ -123,11 +125,7 @@ export function AvatarUploader({ userId, profile }: Props) {
         </button>
       </div>
       <div className="space-y-2 text-sm">
-        <p className="text-muted-foreground">
-          Upload a photo (JPEG, PNG, or WebP, max 2 MB). Images larger than
-          500×500 are resized before saving. Google sign-in uses your Google
-          picture until you replace it.
-        </p>
+        <p className="text-muted-foreground">{t("hint")}</p>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -136,7 +134,7 @@ export function AvatarUploader({ userId, profile }: Props) {
             disabled={isUploading}
             onClick={() => inputRef.current?.click()}
           >
-            {isUploading ? "Uploading…" : "Upload photo"}
+            {isUploading ? t("uploading") : t("upload")}
           </Button>
           {previewUrl ? (
             <Button
@@ -146,7 +144,7 @@ export function AvatarUploader({ userId, profile }: Props) {
               disabled={isUploading}
               onClick={handleRemove}
             >
-              Remove
+              {t("remove")}
             </Button>
           ) : null}
         </div>
