@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Phone } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { requestPhoneOtp, verifyPhoneOtpCode } from "@/actions/kyc";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ interface Props {
 
 export function PhoneVerifyPanel({ phone, phoneVerifiedAt, kycLevel }: Props) {
   const router = useRouter();
+  const t = useTranslations("kyc.phone");
   const [phoneInput, setPhoneInput] = useState(phone ?? "");
   const [code, setCode] = useState("");
   const [devHint, setDevHint] = useState<string | null>(null);
@@ -33,13 +35,13 @@ export function PhoneVerifyPanel({ phone, phoneVerifiedAt, kycLevel }: Props) {
         return;
       }
       if (result.data?.sentViaSms) {
-        toast.success("Verification code sent by SMS.");
+        toast.success(t("toast.sent"));
         setDevHint(null);
       } else if (result.data?.devCode) {
         setDevHint(result.data.devCode);
-        toast.message("SMS not configured — use the dev code shown below.");
+        toast.message(t("toast.devOnly"));
       } else {
-        toast.success("Code issued.");
+        toast.success(t("toast.issued"));
       }
     });
   }
@@ -51,7 +53,9 @@ export function PhoneVerifyPanel({ phone, phoneVerifiedAt, kycLevel }: Props) {
         toast.error(result.error.message);
         return;
       }
-      toast.success(`Phone verified. KYC level is now ${result.data?.kycLevel ?? 1}.`);
+      toast.success(
+        t("toast.verified", { level: result.data?.kycLevel ?? 1 })
+      );
       setCode("");
       setDevHint(null);
       router.refresh();
@@ -62,11 +66,11 @@ export function PhoneVerifyPanel({ phone, phoneVerifiedAt, kycLevel }: Props) {
     <section className="space-y-3 rounded-lg border p-4">
       <div className="flex items-center gap-2">
         <Phone className="size-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold">Phone verification (Level 1)</h3>
+        <h3 className="text-sm font-semibold">{t("heading")}</h3>
       </div>
       {verified ? (
         <p className="text-sm text-green-400">
-          Phone verified
+          {t("verified")}
           {phoneVerifiedAt
             ? ` · ${new Date(phoneVerifiedAt).toLocaleString()}`
             : ""}
@@ -74,17 +78,13 @@ export function PhoneVerifyPanel({ phone, phoneVerifiedAt, kycLevel }: Props) {
         </p>
       ) : (
         <>
-          <p className="text-xs text-muted-foreground">
-            International format with country code (e.g. +261…). Independent of
-            document review — you can reach Level 2 via admin approval without
-            verifying phone first.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("intro")}</p>
           <div className="space-y-2">
-            <Label htmlFor="kyc-phone">Mobile number</Label>
+            <Label htmlFor="kyc-phone">{t("label")}</Label>
             <Input
               id="kyc-phone"
               type="tel"
-              placeholder="+261341234567"
+              placeholder={t("placeholder")}
               value={phoneInput}
               onChange={(e) => setPhoneInput(e.target.value)}
             />
@@ -97,23 +97,23 @@ export function PhoneVerifyPanel({ phone, phoneVerifiedAt, kycLevel }: Props) {
               disabled={isPending || !phoneInput.trim()}
               onClick={handleSendCode}
             >
-              Send code
+              {t("sendCode")}
             </Button>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="kyc-otp">6-digit code</Label>
+            <Label htmlFor="kyc-otp">{t("codeLabel")}</Label>
             <Input
               id="kyc-otp"
               inputMode="numeric"
               maxLength={6}
-              placeholder="000000"
+              placeholder={t("codePlaceholder")}
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
             />
           </div>
           {devHint ? (
             <p className="text-xs text-amber-400 font-mono">
-              Dev code (SMS off): {devHint}
+              {t("devCode", { code: devHint })}
             </p>
           ) : null}
           <Button
@@ -122,7 +122,7 @@ export function PhoneVerifyPanel({ phone, phoneVerifiedAt, kycLevel }: Props) {
             disabled={isPending || code.length !== 6}
             onClick={handleVerify}
           >
-            Verify phone
+            {t("verifyButton")}
           </Button>
         </>
       )}

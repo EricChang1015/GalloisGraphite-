@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Paperclip, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { sendChatMessage } from "@/actions/chat";
 import { ChatMessageBubble } from "@/components/order/ChatMessageBubble";
@@ -34,6 +35,7 @@ export function PartyChatPanel({
   canPost = true,
   className,
 }: Props) {
+  const t = useTranslations("messages.panel");
   const [draft, setDraft] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -52,13 +54,13 @@ export function PartyChatPanel({
 
   async function uploadAttachment(file: File): Promise<string | null> {
     if (file.size > MAX_ATTACHMENT_BYTES) {
-      toast.error("Attachment must be 5 MB or smaller.");
+      toast.error(t("toast.attachmentTooBig"));
       return null;
     }
     const allowed =
       file.type.startsWith("image/") || file.type === "application/pdf";
     if (!allowed) {
-      toast.error("Only images and PDF files are allowed.");
+      toast.error(t("toast.badAttachmentType"));
       return null;
     }
 
@@ -73,7 +75,7 @@ export function PartyChatPanel({
         .upload(path, file, { cacheControl: "3600", upsert: false });
 
       if (uploadError) {
-        toast.error(`Upload failed: ${uploadError.message}`);
+        toast.error(t("toast.uploadFailed", { message: uploadError.message }));
         return null;
       }
 
@@ -82,7 +84,7 @@ export function PartyChatPanel({
         .createSignedUrl(path, 60 * 60 * 24 * 7);
 
       if (signErr || !signed?.signedUrl) {
-        toast.error("Could not generate attachment URL.");
+        toast.error(t("toast.signFailed"));
         return null;
       }
 
@@ -137,8 +139,7 @@ export function PartyChatPanel({
       <div className="flex-1 min-h-64 max-h-96 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
-            Start a conversation with your trading partner. You can message before
-            placing an inquiry or order.
+            {t("empty")}
           </p>
         ) : (
           messages.map((m) => (
@@ -156,25 +157,25 @@ export function PartyChatPanel({
         <div className="border-t p-3 space-y-2">
           {pendingContext?.label ? (
             <p className="text-xs text-muted-foreground">
-              Replying in context: {pendingContext.label}
+              {t("contextHint", { label: pendingContext.label })}
             </p>
           ) : null}
           {attachmentFile ? (
             <p className="text-xs text-muted-foreground truncate">
-              Attachment: {attachmentFile.name}
+              {t("attachmentLine", { name: attachmentFile.name })}
               <button
                 type="button"
                 className="ml-2 underline"
                 onClick={() => setAttachmentFile(null)}
               >
-                Remove
+                {t("removeAttachment")}
               </button>
             </p>
           ) : null}
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={isSending ? "Sending…" : "Type a message…"}
+            placeholder={isSending ? t("sendingPlaceholder") : t("placeholder")}
             rows={2}
             className="resize-none"
             disabled={inputLocked}
@@ -197,7 +198,7 @@ export function PartyChatPanel({
               type="button"
               variant="outline"
               size="icon"
-              aria-label="Attach file"
+              aria-label={t("attachAria")}
               disabled={inputLocked}
               onClick={() => fileInputRef.current?.click()}
             >
@@ -212,13 +213,13 @@ export function PartyChatPanel({
               onClick={() => void handleSend()}
             >
               <Send className="size-4" />
-              {isSending ? "Sending…" : "Send"}
+              {isSending ? t("sending") : t("send")}
             </Button>
           </div>
         </div>
       ) : (
         <p className="border-t px-3 py-2 text-xs text-muted-foreground">
-          View-only: admins can read messages but cannot post here.
+          {t("viewOnly")}
         </p>
       )}
     </div>

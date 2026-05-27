@@ -1,0 +1,41 @@
+{
+  "metaTitle": "消息",
+  "metaTitleNamed": "与 {name} 对话",
+  "heading": "消息",
+  "intro": "每位贸易伙伴一个对话。前往商品或订单页面以发起新对话。",
+  "threadIntro": "与贸易伙伴的直接沟通",
+  "loadError": "无法打开对话。",
+  "list": {
+    "empty": "暂无对话。",
+    "emptyHint": "在市场页面联系卖家，或从订单页面联系贸易伙伴。",
+    "noMessagesYet": "暂无消息"
+  },
+  "card": {
+    "noCountry": "—"
+  },
+  "counterpartyFallback": "合作方",
+  "button": {
+    "trigger": "发送消息",
+    "sheetTitle": "与 {name} 对话",
+    "loading": "加载对话中…",
+    "openFull": "打开完整对话"
+  },
+  "panel": {
+    "empty": "开始与贸易伙伴的对话。提交询盘或下单前即可沟通。",
+    "contextHint": "上下文：{label}",
+    "attachmentLine": "附件：{name}",
+    "removeAttachment": "移除",
+    "placeholder": "输入消息…",
+    "sendingPlaceholder": "发送中…",
+    "attachAria": "添加附件",
+    "send": "发送",
+    "sending": "发送中…",
+    "viewOnly": "仅可查看：管理员可读取消息但无法在此发言。",
+    "toast": {
+      "attachmentTooBig": "附件大小须在 5 MB 以内。",
+      "badAttachmentType": "仅支持图片或 PDF 文件。",
+      "uploadFailed": "上传失败：{message}",
+      "signFailed": "无法生成附件链接。"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "metaTitle": "Messages",
+  "metaTitleNamed": "Message {name}",
+  "heading": "Messages",
+  "intro": "One conversation per trading partner. Open a listing or order to message someone new.",
+  "threadIntro": "Direct line with your trading partner",
+  "loadError": "Could not open conversation.",
+  "list": {
+    "empty": "No conversations yet.",
+    "emptyHint": "Message a seller from the market or a trading partner from an order.",
+    "noMessagesYet": "No messages yet"
+  },
+  "card": {
+    "noCountry": "—"
+  },
+  "counterpartyFallback": "Partner",
+  "button": {
+    "trigger": "Message",
+    "sheetTitle": "Message {name}",
+    "loading": "Loading conversation…",
+    "openFull": "Open full thread"
+  },
+  "panel": {
+    "empty": "Start a conversation with your trading partner. You can message before placing an inquiry or order.",
+    "contextHint": "Replying in context: {label}",
+    "attachmentLine": "Attachment: {name}",
+    "removeAttachment": "Remove",
+    "placeholder": "Type a message…",
+    "sendingPlaceholder": "Sending…",
+    "attachAria": "Attach file",
+    "send": "Send",
+    "sending": "Sending…",
+    "viewOnly": "View-only: admins can read messages but cannot post here.",
+    "toast": {
+      "attachmentTooBig": "Attachment must be 5 MB or smaller.",
+      "badAttachmentType": "Only images and PDF files are allowed.",
+      "uploadFailed": "Upload failed: {message}",
+      "signFailed": "Could not generate attachment URL."
+    }
+  }
+}

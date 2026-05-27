@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { getPartyChatWithUser } from "@/actions/chat";
 import { CounterpartyCard } from "@/components/messages/CounterpartyCard";
@@ -36,6 +37,7 @@ export function MessageCounterpartyButton({
   variant = "button",
   className,
 }: Props) {
+  const t = useTranslations("messages.button");
   const [open, setOpen] = useState(false);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessageRow[]>([]);
@@ -75,15 +77,17 @@ export function MessageCounterpartyButton({
         }
       >
         <MessageCircle className="size-4" />
-        Message
+        {t("trigger")}
       </SheetTrigger>
       <SheetContent side="right" className="w-full sm:max-w-md flex flex-col gap-4">
         <SheetHeader>
-          <SheetTitle>Message {counterpartyLabel(counterparty)}</SheetTitle>
+          <SheetTitle>
+            {t("sheetTitle", { name: counterpartyLabel(counterparty) })}
+          </SheetTitle>
         </SheetHeader>
         <CounterpartyCard profile={counterparty} />
         {isPending || !roomId ? (
-          <p className="text-sm text-muted-foreground">Loading conversation…</p>
+          <p className="text-sm text-muted-foreground">{t("loading")}</p>
         ) : (
           <PartyChatPanel
             roomId={roomId}
@@ -97,7 +101,7 @@ export function MessageCounterpartyButton({
           href={`/messages/${counterparty.id}`}
           className="text-sm text-primary underline underline-offset-4"
         >
-          Open full thread
+          {t("openFull")}
         </Link>
       </SheetContent>
     </Sheet>

@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { getPartyChatWithUser } from "@/actions/chat";
 import { CounterpartyCard } from "@/components/messages/CounterpartyCard";
@@ -18,8 +19,9 @@ export async function generateMetadata({ params }: PageProps) {
     .select("company_name, full_name")
     .eq("id", userId)
     .maybeSingle<{ company_name: string | null; full_name: string | null }>();
-  const name = data?.company_name || data?.full_name || "Partner";
-  return { title: `Message ${name}` };
+  const t = await getTranslations("messages");
+  const name = data?.company_name || data?.full_name || t("counterpartyFallback");
+  return { title: t("metaTitleNamed", { name }) };
 }
 
 export default async function MessageThreadPage({ params }: PageProps) {
@@ -46,13 +48,14 @@ export default async function MessageThreadPage({ params }: PageProps) {
 
   if (!counterparty) notFound();
 
+  const t = await getTranslations("messages");
   const chat = await getPartyChatWithUser(counterpartyId);
   if (chat.error || !chat.data) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">Messages</h1>
+        <h1 className="text-2xl font-semibold">{t("heading")}</h1>
         <p className="text-sm text-destructive">
-          {chat.error?.message ?? "Could not open conversation."}
+          {chat.error?.message ?? t("loadError")}
         </p>
       </div>
     );
@@ -61,10 +64,8 @@ export default async function MessageThreadPage({ params }: PageProps) {
   return (
     <div className="space-y-4 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-semibold">Messages</h1>
-        <p className="text-sm text-muted-foreground">
-          Direct line with your trading partner
-        </p>
+        <h1 className="text-2xl font-semibold">{t("heading")}</h1>
+        <p className="text-sm text-muted-foreground">{t("threadIntro")}</p>
       </div>
       <CounterpartyCard profile={counterparty} />
       <PartyChatPanel

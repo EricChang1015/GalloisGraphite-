@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { UserAvatar } from "@/components/profile/UserAvatar";
 import type { ConversationSummary } from "@/lib/chat/types";
@@ -7,14 +8,14 @@ interface Props {
   conversations: ConversationSummary[];
 }
 
-export function ConversationList({ conversations }: Props) {
+export async function ConversationList({ conversations }: Props) {
+  const t = await getTranslations("messages.list");
+
   if (conversations.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
-        <p>No conversations yet.</p>
-        <p className="mt-2">
-          Message a seller from the market or a trading partner from an order.
-        </p>
+        <p>{t("empty")}</p>
+        <p className="mt-2">{t("emptyHint")}</p>
       </div>
     );
   }
@@ -49,7 +50,7 @@ export function ConversationList({ conversations }: Props) {
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground italic mt-0.5">
-                  No messages yet
+                  {t("noMessagesYet")}
                 </p>
               )}
             </div>

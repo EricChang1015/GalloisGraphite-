@@ -1,4 +1,50 @@
 {
-  "metaTitle": "KYC verification",
-  "heading": "KYC verification"
+  "metaTitle": "KYC Verification",
+  "heading": "KYC verification",
+  "backToSettings": "← Back to Settings",
+  "intro": "Level 0 is your email login. Verify your phone for Level 1, upload ID or company documents for Level 2 (admin review). Level 3 is assigned by admin for trusted sellers.",
+  "loadError": "Could not load KYC profile.",
+  "phone": {
+    "heading": "Phone verification (Level 1)",
+    "verified": "Phone verified",
+    "intro": "International format with country code (e.g. +261…). Independent of document review — you can reach Level 2 via admin approval without verifying phone first.",
+    "label": "Mobile number",
+    "placeholder": "+261341234567",
+    "sendCode": "Send code",
+    "codeLabel": "6-digit code",
+    "codePlaceholder": "000000",
+    "verifyButton": "Verify phone",
+    "devCode": "Dev code (SMS off): {code}",
+    "toast": {
+      "sent": "Verification code sent by SMS.",
+      "devOnly": "SMS not configured — use the dev code shown below.",
+      "issued": "Code issued.",
+      "verified": "Phone verified. KYC level is now {level}."
+    }
+  },
+  "documents": {
+    "currentStatus": "Current status: {label}",
+    "currentLevelFallback": "Level {level}",
+    "levelsExplainer": "Level 0 — email login. Level 1 — phone verified. Level 2 — ID / documents approved by admin. Level 3 — premium (admin only). Uploads stay pending until an admin approves; phone verification is optional and separate.",
+    "empty": "No documents uploaded yet.",
+    "lineSecondary": "{type} · {status} · {at}",
+    "statusFallback": "pending",
+    "removeAria": "Remove document",
+    "uploadHeading": "Upload a document",
+    "typeLabel": "Document type",
+    "fileLabel": "File (PDF or image, max 5 MB)",
+    "uploadButton": "Upload",
+    "types": {
+      "business_registration": "Business registration",
+      "id_document": "ID / passport (authorized signatory)",
+      "other": "Other supporting document"
+    },
+    "toast": {
+      "chooseFile": "Choose a file to upload.",
+      "tooBig": "File must be 5 MB or smaller.",
+      "badType": "Only images and PDF files are allowed.",
+      "uploaded": "Document uploaded — pending admin review for Level 2.",
+      "removed": "Document removed."
+    }
+  }
 }

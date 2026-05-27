@@ -1,4 +1,50 @@
 {
   "metaTitle": "KYC 认证",
-  "heading": "KYC 认证"
+  "heading": "KYC 认证",
+  "backToSettings": "← 返回设置",
+  "intro": "等级 0 为邮箱登录。手机认证为等级 1，上传证件或公司文件由管理员审核后获得等级 2。等级 3 为可信卖家，仅由管理员授予。",
+  "loadError": "无法加载 KYC 资料。",
+  "phone": {
+    "heading": "手机认证（等级 1）",
+    "verified": "手机已认证",
+    "intro": "请使用国际格式并包含国码（如 +261…）。与证件审核独立——即使未认证手机，您也可通过管理员审核获得等级 2。",
+    "label": "手机号码",
+    "placeholder": "+261341234567",
+    "sendCode": "发送验证码",
+    "codeLabel": "6 位验证码",
+    "codePlaceholder": "000000",
+    "verifyButton": "认证手机",
+    "devCode": "开发模式验证码（SMS 未配置）：{code}",
+    "toast": {
+      "sent": "验证码已通过短信发送。",
+      "devOnly": "SMS 未配置——请使用下方显示的开发模式验证码。",
+      "issued": "验证码已发出。",
+      "verified": "手机认证成功，当前 KYC 等级为 {level}。"
+    }
+  },
+  "documents": {
+    "currentStatus": "当前状态：{label}",
+    "currentLevelFallback": "等级 {level}",
+    "levelsExplainer": "等级 0——邮箱登录。等级 1——手机已认证。等级 2——证件 / 文件由管理员审核通过。等级 3——高级权限（仅管理员授予）。上传文件需待管理员审核；手机认证为可选项目，与证件审核相互独立。",
+    "empty": "尚未上传任何文件。",
+    "lineSecondary": "{type} · {status} · {at}",
+    "statusFallback": "待审核",
+    "removeAria": "移除文件",
+    "uploadHeading": "上传文件",
+    "typeLabel": "文件类型",
+    "fileLabel": "文件（PDF 或图片，最大 5 MB）",
+    "uploadButton": "上传",
+    "types": {
+      "business_registration": "公司营业执照",
+      "id_document": "身份证 / 护照（授权签字人）",
+      "other": "其他补充文件"
+    },
+    "toast": {
+      "chooseFile": "请选择要上传的文件。",
+      "tooBig": "文件大小须在 5 MB 以内。",
+      "badType": "仅支持图片或 PDF 文件。",
+      "uploaded": "文件已上传——等待管理员审核以获得等级 2。",
+      "removed": "文件已移除。"
+    }
+  }
 }

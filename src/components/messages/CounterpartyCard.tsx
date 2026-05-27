@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { UserAvatar } from "@/components/profile/UserAvatar";
 import {
   counterpartyLabel,
@@ -13,6 +15,9 @@ interface Props {
 }
 
 export function CounterpartyCard({ profile, subtitle, className, children }: Props) {
+  // useTranslations runs in both server and client trees thanks to
+  // NextIntlClientProvider at the root layout.
+  const t = useTranslations("messages.card");
   return (
     <div
       className={cn(
@@ -24,7 +29,7 @@ export function CounterpartyCard({ profile, subtitle, className, children }: Pro
       <div className="min-w-0 flex-1">
         <p className="font-medium truncate">{counterpartyLabel(profile)}</p>
         <p className="text-xs text-muted-foreground truncate">
-          {subtitle ?? profile.country ?? "—"}
+          {subtitle ?? profile.country ?? t("noCountry")}
         </p>
       </div>
       {children}

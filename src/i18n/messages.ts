@@ -20,6 +20,7 @@ const NAMESPACES = [
   "dashboard",
   "settings",
   "kyc",
+  "messages",
   "enums",
   "errors",
 ] as const;
