@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { verifyPayment } from "@/actions/payment";
@@ -12,17 +13,20 @@ import { Textarea } from "@/components/ui/textarea";
 interface PaymentVerifyActionsProps {
   paymentId: string;
   /**
-   * Reviewer role label shown in the placeholder + toast. The server
+   * Localized reviewer role label used in the placeholder. The server
    * action enforces real authorization (seller of this order OR admin).
    */
-  reviewerLabel?: "Admin" | "Seller";
+  reviewerLabel?: string;
 }
 
 export function PaymentVerifyActions({
   paymentId,
-  reviewerLabel = "Seller",
+  reviewerLabel,
 }: PaymentVerifyActionsProps) {
   const router = useRouter();
+  const t = useTranslations("orders.paymentVerify");
+  const tFallback = useTranslations("orders.detail.payment.reviewerLabel");
+  const reviewer = reviewerLabel ?? tFallback("seller");
   const [isPending, startTransition] = useTransition();
   const { register, getValues } = useForm({ defaultValues: { note: "" } });
 
@@ -33,7 +37,7 @@ export function PaymentVerifyActions({
         toast.error(result.error.message);
         return;
       }
-      toast.success(`Payment ${decision}.`);
+      toast.success(decision === "verified" ? t("toast.verified") : t("toast.rejected"));
       router.refresh();
     });
   }
@@ -43,12 +47,12 @@ export function PaymentVerifyActions({
       <Textarea
         {...register("note")}
         rows={2}
-        placeholder={`${reviewerLabel} note (optional)`}
+        placeholder={t("reviewerNotePlaceholder", { role: reviewer })}
         className="text-xs"
       />
       <div className="flex gap-2">
         <Button size="sm" onClick={() => handle("verified")} disabled={isPending}>
-          Verify
+          {t("verify")}
         </Button>
         <Button
           size="sm"
@@ -56,7 +60,7 @@ export function PaymentVerifyActions({
           onClick={() => handle("rejected")}
           disabled={isPending}
         >
-          Reject
+          {t("reject")}
         </Button>
       </div>
     </div>

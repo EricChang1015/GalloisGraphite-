@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { z } from "zod";
 
@@ -26,6 +27,7 @@ type Input = z.infer<typeof ShipmentUpdateSchema>;
 
 export function ShipmentForm({ orderId }: { orderId: string }) {
   const router = useRouter();
+  const t = useTranslations("orders.shipmentForm");
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<Input>({
@@ -52,35 +54,30 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
         toast.error(result.error.message);
         return;
       }
-      toast.success("Marked as shipped.");
+      toast.success(t("toast.success"));
       router.refresh();
     });
   }
 
   return (
     <div className="rounded-lg border p-4 space-y-4">
-      <p className="text-sm font-medium">Mark as Shipped</p>
-      <p className="text-xs text-muted-foreground">
-        Provide Bill of Lading & vessel details. The buyer will be notified.
-      </p>
+      <p className="text-sm font-medium">{t("heading")}</p>
+      <p className="text-xs text-muted-foreground">{t("intro")}</p>
 
       <div className="rounded-md border bg-muted/20 p-3 space-y-3">
         <div>
-          <p className="text-xs font-medium">Attach shipping documents</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            Upload the B/L file now. The cargo inspection report (COA / SGS) is
-            optional but strongly recommended for the buyer&apos;s records.
-          </p>
+          <p className="text-xs font-medium">{t("attachHeading")}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{t("attachIntro")}</p>
         </div>
         <div className="space-y-2">
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Bill of Lading (PDF / image) — optional
+            {t("blLabel")}
           </label>
           <DocumentUploader orderId={orderId} type="bill_of_lading" compact />
         </div>
         <div className="space-y-2">
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Inspection Report (COA / SGS) — optional
+            {t("inspectionLabel")}
           </label>
           <DocumentUploader orderId={orderId} type="inspection_report" compact />
         </div>
@@ -94,7 +91,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
               name="bl_no"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>B/L No.</FormLabel>
+                  <FormLabel>{t("fields.blNo")}</FormLabel>
                   <FormControl>
                     <Input placeholder="MAEU123456789" {...field} />
                   </FormControl>
@@ -107,7 +104,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
               name="bl_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>B/L Date</FormLabel>
+                  <FormLabel>{t("fields.blDate")}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -123,7 +120,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
               name="vessel_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Vessel Name</FormLabel>
+                  <FormLabel>{t("fields.vesselName")}</FormLabel>
                   <FormControl>
                     <Input placeholder="MAERSK SOUTH" {...field} />
                   </FormControl>
@@ -136,7 +133,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
               name="vessel_imo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Vessel IMO</FormLabel>
+                  <FormLabel>{t("fields.vesselImo")}</FormLabel>
                   <FormControl>
                     <Input placeholder="9876543" {...field} />
                   </FormControl>
@@ -151,7 +148,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
             name="shipment_from"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Departure Port</FormLabel>
+                <FormLabel>{t("fields.departurePort")}</FormLabel>
                 <FormControl>
                   <Input placeholder="Toamasina, Madagascar" {...field} />
                 </FormControl>
@@ -166,7 +163,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
               name="etd"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>ETD</FormLabel>
+                  <FormLabel>{t("fields.etd")}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -179,7 +176,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
               name="atd"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>ATD</FormLabel>
+                  <FormLabel>{t("fields.atd")}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -192,7 +189,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
               name="shipment_eta"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>ETA</FormLabel>
+                  <FormLabel>{t("fields.eta")}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -207,7 +204,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
             name="container_numbers"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Container Numbers (comma-separated)</FormLabel>
+                <FormLabel>{t("fields.containers")}</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="MSCU1234567, MSCU2345678"
@@ -235,7 +232,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
             name="note"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Note (optional)</FormLabel>
+                <FormLabel>{t("fields.note")}</FormLabel>
                 <FormControl>
                   <Textarea rows={2} {...field} />
                 </FormControl>
@@ -245,7 +242,7 @@ export function ShipmentForm({ orderId }: { orderId: string }) {
           />
 
           <Button type="submit" size="sm" disabled={isPending}>
-            {isPending ? "Saving…" : "Mark as Shipped"}
+            {isPending ? t("submitting") : t("submit")}
           </Button>
         </form>
       </Form>

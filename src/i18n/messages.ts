@@ -24,6 +24,7 @@ const NAMESPACES = [
   "listings",
   "market",
   "inquiries",
+  "orders",
   "enums",
   "errors",
 ] as const;

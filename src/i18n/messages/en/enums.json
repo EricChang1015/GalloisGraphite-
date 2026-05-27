@@ -13,8 +13,11 @@
   "order": {
     "status": {
       "draft": "Draft",
+      "quotation_pending": "Quotation Pending",
+      "quoted": "Quoted",
+      "negotiating": "Negotiating",
       "contract_generated": "Contract generated",
-      "contract_pending": "Contract pending",
+      "contract_pending": "Contract Review",
       "signed": "Signed",
       "contract_signed": "Contract signed",
       "payment_pending": "Payment pending",
@@ -23,7 +26,7 @@
       "ready_to_ship": "Ready to ship",
       "shipped": "Shipped",
       "in_transit": "In transit",
-      "arrived": "Arrived",
+      "arrived": "Arrived at Port",
       "customs_cleared": "Customs cleared",
       "delivered": "Delivered",
       "disputed": "Disputed",

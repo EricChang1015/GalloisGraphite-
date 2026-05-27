@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { uploadSignedScan } from "@/actions/order";
@@ -26,23 +27,20 @@ export function SignedScanUploader({
   blockedNeedApproval,
 }: Props) {
   const router = useRouter();
+  const t = useTranslations("orders.signedScan");
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [, startTransition] = useTransition();
 
   if (alreadyUploaded) {
     return (
-      <p className="text-xs text-emerald-400">
-        Your signed scan has been uploaded.
-      </p>
+      <p className="text-xs text-emerald-400">{t("alreadyUploaded")}</p>
     );
   }
 
   if (blockedNeedApproval) {
     return (
-      <p className="text-xs text-muted-foreground">
-        Waiting for buyer to approve the contract before signature uploads are unlocked.
-      </p>
+      <p className="text-xs text-muted-foreground">{t("blockedNeedApproval")}</p>
     );
   }
 
@@ -59,7 +57,7 @@ export function SignedScanUploader({
         .upload(path, file, { cacheControl: "3600", upsert: false });
 
       if (uploadError) {
-        toast.error(`Upload failed: ${uploadError.message}`);
+        toast.error(t("toast.uploadFailed", { msg: uploadError.message }));
         setIsUploading(false);
         return;
       }
@@ -69,7 +67,7 @@ export function SignedScanUploader({
         .createSignedUrl(path, 60 * 60 * 24 * 365);
 
       if (signErr || !signed?.signedUrl) {
-        toast.error("Could not generate signed URL.");
+        toast.error(t("toast.signFailed"));
         setIsUploading(false);
         return;
       }
@@ -79,14 +77,14 @@ export function SignedScanUploader({
         if (result.error) {
           toast.error(result.error.message);
         } else {
-          toast.success("Signed scan uploaded.");
+          toast.success(t("toast.uploaded"));
           setFile(null);
           router.refresh();
         }
         setIsUploading(false);
       });
     } catch (err) {
-      const m = err instanceof Error ? err.message : "Upload error.";
+      const m = err instanceof Error ? err.message : t("toast.uploadError");
       toast.error(m);
       setIsUploading(false);
     }
@@ -101,7 +99,7 @@ export function SignedScanUploader({
         className="text-xs"
       />
       <Button size="sm" disabled={!file || isUploading} onClick={handleUpload}>
-        {isUploading ? "Uploading…" : "Upload signed scan"}
+        {isUploading ? t("uploadingLabel") : t("uploadLabel")}
       </Button>
     </div>
   );

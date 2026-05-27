@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Factory, Package, Ship, Anchor, ShieldCheck, AlertTriangle, Ban } from "lucide-react";
 
@@ -53,6 +54,7 @@ export function OrderPhaseActions({
   milestoneTimestamps,
 }: Props) {
   const router = useRouter();
+  const t = useTranslations("orders.phaseActions");
   const [isPending, startTransition] = useTransition();
   const [arriveAta, setArriveAta] = useState(ata ?? new Date().toISOString().slice(0, 10));
   const [arriveOpen, setArriveOpen] = useState(false);
@@ -112,26 +114,26 @@ export function OrderPhaseActions({
       )}
       {anyPrimary && (
         <div className="rounded-lg border p-4 space-y-2">
-          <p className="text-sm font-medium">Next step</p>
+          <p className="text-sm font-medium">{t("nextStep")}</p>
           <div className="flex flex-wrap gap-2">
             {showInProduction && (
               <Button
                 size="sm"
                 disabled={isPending}
-                onClick={() => wrap(() => markInProduction(orderId), "Marked as in production.")}
+                onClick={() => wrap(() => markInProduction(orderId), t("toast.inProduction"))}
               >
                 <Factory className="size-3.5 mr-1" />
-                Mark In Production
+                {t("markInProduction")}
               </Button>
             )}
             {showReadyToShip && (
               <Button
                 size="sm"
                 disabled={isPending}
-                onClick={() => wrap(() => markReadyToShip(orderId), "Marked as ready to ship.")}
+                onClick={() => wrap(() => markReadyToShip(orderId), t("toast.readyToShip"))}
               >
                 <Package className="size-3.5 mr-1" />
-                Mark Ready to Ship
+                {t("markReadyToShip")}
               </Button>
             )}
             {showInTransit && (
@@ -142,12 +144,12 @@ export function OrderPhaseActions({
                 onClick={() =>
                   wrap(
                     () => markInTransit({ order_id: orderId }),
-                    "Marked as in transit."
+                    t("toast.inTransit")
                   )
                 }
               >
                 <Ship className="size-3.5 mr-1" />
-                Mark In Transit
+                {t("markInTransit")}
               </Button>
             )}
             {showArrived && (
@@ -156,15 +158,15 @@ export function OrderPhaseActions({
                   render={<Button size="sm" variant="outline" disabled={isPending} />}
                 >
                   <Anchor className="size-3.5 mr-1" />
-                  Mark Arrived
+                  {t("markArrived")}
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Mark vessel arrived</DialogTitle>
+                    <DialogTitle>{t("arriveDialog.title")}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-3">
                     <div>
-                      <Label htmlFor="ata">Actual Time of Arrival (ATA)</Label>
+                      <Label htmlFor="ata">{t("arriveDialog.ataLabel")}</Label>
                       <Input
                         id="ata"
                         type="date"
@@ -172,24 +174,24 @@ export function OrderPhaseActions({
                         onChange={(e) => setArriveAta(e.target.value)}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Any B/L-offset postpayment installments will use this date as their anchor.
+                        {t("arriveDialog.ataHint")}
                       </p>
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button variant="outline" onClick={() => setArriveOpen(false)}>
-                        Cancel
+                        {t("arriveDialog.cancel")}
                       </Button>
                       <Button
                         onClick={() => {
                           wrap(
                             () => markArrived({ order_id: orderId, ata: arriveAta }),
-                            "Marked as arrived."
+                            t("toast.arrived")
                           );
                           setArriveOpen(false);
                         }}
                         disabled={isPending}
                       >
-                        Confirm Arrival
+                        {t("arriveDialog.confirm")}
                       </Button>
                     </div>
                   </div>
@@ -203,12 +205,12 @@ export function OrderPhaseActions({
                 onClick={() =>
                   wrap(
                     () => markCustomsCleared(orderId),
-                    "Customs cleared. Order moves to next phase."
+                    t("toast.customsCleared")
                   )
                 }
               >
                 <ShieldCheck className="size-3.5 mr-1" />
-                Confirm Customs Cleared
+                {t("confirmCustomsCleared")}
               </Button>
             )}
           </div>
@@ -223,39 +225,39 @@ export function OrderPhaseActions({
                 render={<Button size="sm" variant="outline" className="text-red-400 hover:text-red-400" disabled={isPending} />}
               >
                 <AlertTriangle className="size-3.5 mr-1" />
-                Raise Dispute
+                {t("raiseDispute")}
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Raise a dispute</DialogTitle>
+                  <DialogTitle>{t("disputeDialog.title")}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3">
                   <Textarea
                     rows={4}
-                    placeholder="Describe the issue. Admin will be notified to mediate."
+                    placeholder={t("disputeDialog.placeholder")}
                     value={disputeReason}
                     onChange={(e) => setDisputeReason(e.target.value)}
                   />
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setDisputeOpen(false)}>
-                      Cancel
+                      {t("disputeDialog.cancel")}
                     </Button>
                     <Button
                       variant="destructive"
                       onClick={() => {
                         if (disputeReason.trim().length < 10) {
-                          toast.error("Please describe the issue (≥10 chars).");
+                          toast.error(t("disputeDialog.tooShort"));
                           return;
                         }
                         wrap(
                           () => raiseDispute({ order_id: orderId, reason: disputeReason }),
-                          "Dispute raised. Admin notified."
+                          t("toast.dispute")
                         );
                         setDisputeOpen(false);
                       }}
                       disabled={isPending}
                     >
-                      Raise Dispute
+                      {t("disputeDialog.confirm")}
                     </Button>
                   </div>
                 </div>
@@ -268,39 +270,39 @@ export function OrderPhaseActions({
                 render={<Button size="sm" variant="outline" className="text-muted-foreground" disabled={isPending} />}
               >
                 <Ban className="size-3.5 mr-1" />
-                Cancel Order
+                {t("cancelOrder")}
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Cancel this order</DialogTitle>
+                  <DialogTitle>{t("cancelDialog.title")}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3">
                   <Textarea
                     rows={3}
-                    placeholder="Reason for cancellation."
+                    placeholder={t("cancelDialog.placeholder")}
                     value={cancelReason}
                     onChange={(e) => setCancelReason(e.target.value)}
                   />
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setCancelOpen(false)}>
-                      Keep Order
+                      {t("cancelDialog.keep")}
                     </Button>
                     <Button
                       variant="destructive"
                       onClick={() => {
                         if (!cancelReason.trim()) {
-                          toast.error("Please enter a reason.");
+                          toast.error(t("cancelDialog.missing"));
                           return;
                         }
                         wrap(
                           () => cancelOrder({ order_id: orderId, reason: cancelReason }),
-                          "Order cancelled."
+                          t("toast.cancelled")
                         );
                         setCancelOpen(false);
                       }}
                       disabled={isPending}
                     >
-                      Cancel Order
+                      {t("cancelDialog.confirm")}
                     </Button>
                   </div>
                 </div>

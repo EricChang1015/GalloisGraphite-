@@ -1,4 +1,7 @@
+"use client";
+
 import { Check, Circle, AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 import {
@@ -7,6 +10,19 @@ import {
   STATUS_LABEL,
   type OrderStatus,
 } from "@/lib/order/stateMachine";
+
+type StatusKey = keyof typeof STATUS_LABEL;
+const KNOWN_STATUSES: ReadonlySet<string> = new Set(Object.keys(STATUS_LABEL));
+
+function useStatusLabel() {
+  const tEnums = useTranslations("enums");
+  return (status: OrderStatus | StatusKey): string => {
+    if (KNOWN_STATUSES.has(status)) {
+      return tEnums(`order.status.${status}`);
+    }
+    return STATUS_LABEL[status as StatusKey] ?? String(status);
+  };
+}
 
 interface OrderProgressBarProps {
   status: OrderStatus;
@@ -29,6 +45,8 @@ export function OrderProgressBar({
   paymentsSummary,
   className,
 }: OrderProgressBarProps) {
+  const t = useTranslations("orders.progress");
+  const labelFor = useStatusLabel();
   const isOffTrack = status === "disputed" || status === "cancelled";
 
   if (isOffTrack) {
@@ -41,10 +59,8 @@ export function OrderProgressBar({
       >
         <AlertTriangle className="size-5 text-red-400" />
         <div>
-          <p className="font-medium text-red-400">{STATUS_LABEL[status]}</p>
-          <p className="text-xs text-muted-foreground">
-            This order is off the standard tracking path. Contact admin for resolution.
-          </p>
+          <p className="font-medium text-red-400">{labelFor(status)}</p>
+          <p className="text-xs text-muted-foreground">{t("offTrackHint")}</p>
         </div>
       </div>
     );
@@ -64,7 +80,8 @@ export function OrderProgressBar({
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between text-xs text-muted-foreground gap-2 flex-wrap">
         <span>
-          Stage <span className="font-medium text-foreground">{Math.max(0, currentIdx) + 1}</span>{" "}
+          {t("stage")}{" "}
+          <span className="font-medium text-foreground">{Math.max(0, currentIdx) + 1}</span>{" "}
           / {stages.length}
         </span>
         {paymentsSummary && paymentsSummary.total > 0 && (
@@ -76,7 +93,10 @@ export function OrderProgressBar({
                 : "border-amber-400/40 text-amber-400"
             )}
           >
-            Payments: {paymentsSummary.paid} / {paymentsSummary.total} paid
+            {t("paymentsBadge", {
+              paid: paymentsSummary.paid,
+              total: paymentsSummary.total,
+            })}
           </span>
         )}
       </div>
@@ -86,12 +106,10 @@ export function OrderProgressBar({
           <AlertTriangle className="size-4 text-red-400 mt-0.5 shrink-0" />
           <div>
             <p className="font-medium text-red-400">
-              Payments outstanding ({paymentsOutstanding})
+              {t("completedUnpaidTitle", { count: paymentsOutstanding })}
             </p>
             <p className="text-muted-foreground mt-0.5">
-              This order is marked completed but {paymentsOutstanding} payment
-              installment{paymentsOutstanding === 1 ? "" : "s"} are still unpaid.
-              Open the Payment tab to settle them.
+              {t("completedUnpaidBody", { count: paymentsOutstanding })}
             </p>
           </div>
         </div>
@@ -142,9 +160,9 @@ export function OrderProgressBar({
                   state === "current" && "text-foreground font-medium",
                   state === "future" && "text-muted-foreground"
                 )}
-                title={STATUS_LABEL[stage]}
+                title={labelFor(stage)}
               >
-                {STATUS_LABEL[stage]}
+                {labelFor(stage)}
               </p>
             </li>
           );
@@ -187,7 +205,7 @@ export function OrderProgressBar({
                   state === "done" && "text-emerald-400/80"
                 )}
               >
-                {STATUS_LABEL[stage]}
+                {labelFor(stage)}
               </span>
             </li>
           );

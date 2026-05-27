@@ -1,0 +1,267 @@
+{
+  "metaTitle": "Orders — Mada Graphite",
+  "metaTitleDetail": "Order {code} — Mada Graphite",
+  "heading": "Orders",
+  "subheading": "Active orders need your attention. Completed and cancelled orders live under History Orders.",
+  "sessionExpired": "Your session expired. Please sign in again.",
+  "emptyTitle": "No orders yet. Browse the",
+  "emptyCta": "market",
+  "emptyTail": "to get started.",
+  "activeHeading": "Active Orders",
+  "activeEmpty": "No active orders. Expand History Orders below to review past orders.",
+  "historyTitle": "History Orders",
+  "columns": {
+    "orderNo": "Order No",
+    "buyer": "Buyer",
+    "seller": "Seller",
+    "amount": "Amount",
+    "status": "Status",
+    "created": "Created"
+  },
+  "row": {
+    "noValue": "—"
+  },
+  "progress": {
+    "stage": "Stage",
+    "stageOf": "{current} / {total}",
+    "paymentsBadge": "Payments: {paid} / {total} paid",
+    "offTrackHint": "This order is off the standard tracking path. Contact admin for resolution.",
+    "completedUnpaidTitle": "Payments outstanding ({count})",
+    "completedUnpaidBody": "This order is marked completed but {count} payment installment(s) are still unpaid. Open the Payment tab to settle them."
+  },
+  "detail": {
+    "createdOn": "Created {date}",
+    "sourceInquiry": "Source inquiry",
+    "tabs": {
+      "overview": "Overview",
+      "quotation": "Quotation",
+      "contract": "Contract",
+      "payment": "Payment",
+      "shipment": "Shipment",
+      "documents": "Documents",
+      "timeline": "Timeline"
+    },
+    "overview": {
+      "buyerSubtitle": "Buyer · {email}",
+      "sellerSubtitle": "Seller · {email}",
+      "fields": {
+        "product": "Product",
+        "listing": "Listing",
+        "quantity": "Quantity",
+        "unitPrice": "Unit Price",
+        "total": "Total",
+        "incoterm": "Incoterm",
+        "destination": "Destination",
+        "origin": "Origin"
+      },
+      "noValue": "—",
+      "qtyValue": "{value} {unit}",
+      "pendingReviewTitle": "{count} payment awaiting your review",
+      "pendingReviewTitlePlural": "{count} payments awaiting your review",
+      "pendingReviewBody": "Click <strong>Review</strong> in the schedule table below, or open the <0>Payment</0> tab for full payment history. Shipment milestones do not require payment verification first.",
+      "scheduleHeading": "Payment Schedule",
+      "scheduleSummary": "{paid} / {total} paid",
+      "scheduleSummaryAwaiting": "{paid} / {total} paid · {awaiting} awaiting review"
+    },
+    "quotation": {
+      "missing": "This order was created without a quotation reference.",
+      "title": "Accepted Quotation",
+      "fields": {
+        "quantity": "Quantity",
+        "unitPrice": "Unit Price",
+        "incoterm": "Incoterm",
+        "validUntil": "Valid until"
+      },
+      "fullHistory": "View full negotiation history →"
+    },
+    "contract": {
+      "noContract": "No contract drafted yet.",
+      "waitingDraft": "Waiting for the seller to draft the contract.",
+      "buyerRejectedTitle": "Buyer requested revision",
+      "uploadBuyerSignature": "Upload Buyer Signature",
+      "uploadSellerSignature": "Upload Seller Signature",
+      "waitingBuyerScan": "Waiting for the buyer to upload a signed scan.",
+      "waitingSellerScan": "Waiting for the seller to upload a signed scan."
+    },
+    "payment": {
+      "resubmitBanner": "Payment rejected — please resubmit",
+      "resubmitBody": "The seller or admin rejected your previous submission. Use <strong>Resubmit Payment</strong> on the highlighted installment in the schedule below (update your transaction hash or remittance proof).",
+      "scheduleHeading": "Payment Schedule",
+      "historyHeading": "Payment History",
+      "reviewerHintSeller": "Review the buyer's payment(s) below. Admin may intervene if needed.",
+      "reviewerHintAdmin": "Audit view — the seller is the primary reviewer.",
+      "empty": "No payment submitted yet.",
+      "viewProof": "View proof",
+      "rejectionReason": "Rejection reason: {note}",
+      "reviewerNote": "Reviewer note: {note}",
+      "resubmitHint": "This installment was returned to <strong>Due</strong> — use <strong>Resubmit Payment</strong> in the schedule above.",
+      "status": {
+        "verified": "Verified",
+        "rejected": "Rejected",
+        "pending": "Pending"
+      },
+      "reviewerLabel": {
+        "admin": "Admin",
+        "seller": "Seller"
+      }
+    },
+    "shipment": {
+      "fields": {
+        "blNo": "B/L No.",
+        "blDate": "B/L Date",
+        "vessel": "Vessel",
+        "vesselWithImo": "{name} (IMO {imo})",
+        "containers": "Containers",
+        "departurePort": "Departure Port",
+        "destinationPort": "Destination Port",
+        "etd": "ETD",
+        "atd": "ATD",
+        "eta": "ETA",
+        "ata": "ATA",
+        "loadedOnVessel": "Loaded onto Vessel",
+        "blReceived": "B/L Received",
+        "goodsPickedUp": "Goods Picked Up",
+        "acceptedByBuyer": "Accepted by Buyer",
+        "customsCleared": "Customs Cleared"
+      },
+      "noValue": "—"
+    },
+    "timeline": {
+      "empty": "No timeline events yet."
+    }
+  },
+  "phaseActions": {
+    "nextStep": "Next step",
+    "markInProduction": "Mark In Production",
+    "markReadyToShip": "Mark Ready to Ship",
+    "markInTransit": "Mark In Transit",
+    "markArrived": "Mark Arrived",
+    "confirmCustomsCleared": "Confirm Customs Cleared",
+    "raiseDispute": "Raise Dispute",
+    "cancelOrder": "Cancel Order",
+    "arriveDialog": {
+      "title": "Mark vessel arrived",
+      "ataLabel": "Actual Time of Arrival (ATA)",
+      "ataHint": "Any B/L-offset postpayment installments will use this date as their anchor.",
+      "cancel": "Cancel",
+      "confirm": "Confirm Arrival"
+    },
+    "disputeDialog": {
+      "title": "Raise a dispute",
+      "placeholder": "Describe the issue. Admin will be notified to mediate.",
+      "cancel": "Cancel",
+      "confirm": "Raise Dispute",
+      "tooShort": "Please describe the issue (≥10 chars)."
+    },
+    "cancelDialog": {
+      "title": "Cancel this order",
+      "placeholder": "Reason for cancellation.",
+      "keep": "Keep Order",
+      "confirm": "Cancel Order",
+      "missing": "Please enter a reason."
+    },
+    "toast": {
+      "inProduction": "Marked as in production.",
+      "readyToShip": "Marked as ready to ship.",
+      "inTransit": "Marked as in transit.",
+      "arrived": "Marked as arrived.",
+      "customsCleared": "Customs cleared. Order moves to next phase.",
+      "dispute": "Dispute raised. Admin notified.",
+      "cancelled": "Order cancelled."
+    }
+  },
+  "contractActions": {
+    "alreadyApproved": "You have approved this contract.",
+    "reviewTitle": "Review Contract",
+    "reviewIntro": "Read the draft contract carefully. Approve to unlock signature uploads, or send it back to the seller with comments.",
+    "approve": "Approve",
+    "returnForRevision": "Return for revision",
+    "returnDialogTitle": "Return contract for revision",
+    "returnPlaceholder": "What needs to change? Be specific so the seller can revise quickly.",
+    "cancel": "Cancel",
+    "sendBack": "Send back",
+    "toast": {
+      "approved": "Contract approved. You can now upload your signed scan.",
+      "returned": "Contract returned for revision.",
+      "missingReason": "Please enter a reason."
+    }
+  },
+  "signedScan": {
+    "uploadLabel": "Upload signed scan",
+    "uploadingLabel": "Uploading…",
+    "alreadyUploaded": "Your signed scan has been uploaded.",
+    "blockedNeedApproval": "Waiting for buyer to approve the contract before signature uploads are unlocked.",
+    "toast": {
+      "uploadFailed": "Upload failed: {msg}",
+      "signFailed": "Could not generate signed URL.",
+      "uploaded": "Signed scan uploaded.",
+      "uploadError": "Upload error."
+    }
+  },
+  "shipmentForm": {
+    "heading": "Mark as Shipped",
+    "intro": "Provide Bill of Lading & vessel details. The buyer will be notified.",
+    "attachHeading": "Attach shipping documents",
+    "attachIntro": "Upload the B/L file now. The cargo inspection report (COA / SGS) is optional but strongly recommended for the buyer's records.",
+    "blLabel": "Bill of Lading (PDF / image) — optional",
+    "inspectionLabel": "Inspection Report (COA / SGS) — optional",
+    "fields": {
+      "blNo": "B/L No.",
+      "blDate": "B/L Date",
+      "vesselName": "Vessel Name",
+      "vesselImo": "Vessel IMO",
+      "containers": "Container Numbers (comma-separated)",
+      "etd": "ETD",
+      "atd": "ATD",
+      "eta": "ETA",
+      "departurePort": "Departure Port",
+      "note": "Note (optional)"
+    },
+    "submit": "Mark as Shipped",
+    "submitting": "Saving…",
+    "toast": {
+      "success": "Marked as shipped."
+    }
+  },
+  "paymentVerify": {
+    "verify": "Verify",
+    "reject": "Reject",
+    "reviewerNotePlaceholder": "{role} note (optional)",
+    "toast": {
+      "verified": "Payment verified.",
+      "rejected": "Payment rejected."
+    }
+  },
+  "milestones": {
+    "heading": "Milestone Triggers",
+    "intro": "Use these to mark fine-grained events that aren't covered by the main shipment buttons. Each click may release a corresponding payment installment to the buyer.",
+    "label": {
+      "before_production": "Mark Before Production",
+      "before_shipment": "Mark Before Shipment",
+      "before_loading": "Mark Before Loading",
+      "bl_received": "Mark B/L Received",
+      "shipping_docs": "Mark Shipping Docs Received",
+      "bl_plus_insurance": "Mark B/L + Insurance Received",
+      "picked_up": "Mark Goods Picked Up"
+    },
+    "done": {
+      "before_production": "Before Production",
+      "before_shipment": "Before Shipment",
+      "before_loading": "Before Loading",
+      "bl_received": "B/L Received",
+      "shipping_docs": "Shipping Docs Received",
+      "bl_plus_insurance": "B/L + Insurance Received",
+      "picked_up": "Goods Picked Up"
+    },
+    "toast": {
+      "ok": "{label} ✓"
+    }
+  },
+  "chat": {
+    "you": "You",
+    "userFallback": "User",
+    "reContext": "Re: {label}",
+    "viewAttachment": "View attachment",
+    "attachmentAlt": "Attachment"
+  }
+}

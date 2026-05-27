@@ -1,0 +1,267 @@
+{
+  "metaTitle": "订单 — Mada Graphite",
+  "metaTitleDetail": "订单 {code} — Mada Graphite",
+  "heading": "订单",
+  "subheading": "活跃订单需要您的关注。已完成与已取消的订单归档于历史订单。",
+  "sessionExpired": "会话已过期，请重新登录。",
+  "emptyTitle": "尚无订单。请前往",
+  "emptyCta": "市场",
+  "emptyTail": "开始交易。",
+  "activeHeading": "活跃订单",
+  "activeEmpty": "暂无活跃订单。展开下方的历史订单可查看以往订单。",
+  "historyTitle": "历史订单",
+  "columns": {
+    "orderNo": "订单号",
+    "buyer": "买家",
+    "seller": "卖家",
+    "amount": "金额",
+    "status": "状态",
+    "created": "创建时间"
+  },
+  "row": {
+    "noValue": "—"
+  },
+  "progress": {
+    "stage": "阶段",
+    "stageOf": "{current} / {total}",
+    "paymentsBadge": "付款：{paid} / {total} 已付",
+    "offTrackHint": "此订单偏离标准流程。请联系管理员处理。",
+    "completedUnpaidTitle": "尚有 {count} 期款项未结清",
+    "completedUnpaidBody": "此订单已标记为完成，但仍有 {count} 期款项尚未结清。请在付款标签中处理。"
+  },
+  "detail": {
+    "createdOn": "创建于 {date}",
+    "sourceInquiry": "来源询盘",
+    "tabs": {
+      "overview": "概览",
+      "quotation": "报价",
+      "contract": "合同",
+      "payment": "付款",
+      "shipment": "运输",
+      "documents": "文件",
+      "timeline": "时间线"
+    },
+    "overview": {
+      "buyerSubtitle": "买家 · {email}",
+      "sellerSubtitle": "卖家 · {email}",
+      "fields": {
+        "product": "产品",
+        "listing": "商品",
+        "quantity": "数量",
+        "unitPrice": "单价",
+        "total": "总额",
+        "incoterm": "贸易术语",
+        "destination": "目的地",
+        "origin": "产地"
+      },
+      "noValue": "—",
+      "qtyValue": "{value} {unit}",
+      "pendingReviewTitle": "{count} 笔付款待您审核",
+      "pendingReviewTitlePlural": "{count} 笔付款待您审核",
+      "pendingReviewBody": "请在下方付款计划中点击 <strong>审核</strong>，或前往 <0>付款</0> 标签查看完整付款历史。运输里程碑无需先完成付款验证。",
+      "scheduleHeading": "付款计划",
+      "scheduleSummary": "已付 {paid} / {total}",
+      "scheduleSummaryAwaiting": "已付 {paid} / {total} · {awaiting} 笔待审核"
+    },
+    "quotation": {
+      "missing": "此订单创建时未关联报价。",
+      "title": "已接受报价",
+      "fields": {
+        "quantity": "数量",
+        "unitPrice": "单价",
+        "incoterm": "贸易术语",
+        "validUntil": "有效期至"
+      },
+      "fullHistory": "查看完整议价记录 →"
+    },
+    "contract": {
+      "noContract": "尚未起草合同。",
+      "waitingDraft": "等待卖家起草合同。",
+      "buyerRejectedTitle": "买家要求修改",
+      "uploadBuyerSignature": "上传买家签名",
+      "uploadSellerSignature": "上传卖家签名",
+      "waitingBuyerScan": "等待买家上传签字扫描件。",
+      "waitingSellerScan": "等待卖家上传签字扫描件。"
+    },
+    "payment": {
+      "resubmitBanner": "付款被拒——请重新提交",
+      "resubmitBody": "卖家或管理员拒绝了您先前的提交。请在下方付款计划高亮的款项上使用 <strong>重新提交</strong>（更新交易哈希或汇款凭证）。",
+      "scheduleHeading": "付款计划",
+      "historyHeading": "付款历史",
+      "reviewerHintSeller": "请在下方审核买家的付款。如有需要管理员可介入。",
+      "reviewerHintAdmin": "审计视图——卖家为主要审核人。",
+      "empty": "尚未提交任何付款。",
+      "viewProof": "查看凭证",
+      "rejectionReason": "拒绝原因：{note}",
+      "reviewerNote": "审核备注：{note}",
+      "resubmitHint": "此款项已被打回 <strong>待付</strong> 状态——请在上方付款计划使用 <strong>重新提交</strong>。",
+      "status": {
+        "verified": "已核实",
+        "rejected": "已拒绝",
+        "pending": "待审核"
+      },
+      "reviewerLabel": {
+        "admin": "管理员",
+        "seller": "卖家"
+      }
+    },
+    "shipment": {
+      "fields": {
+        "blNo": "提单号",
+        "blDate": "提单日期",
+        "vessel": "船舶",
+        "vesselWithImo": "{name}（IMO {imo}）",
+        "containers": "集装箱",
+        "departurePort": "起运港",
+        "destinationPort": "目的港",
+        "etd": "预计开航",
+        "atd": "实际开航",
+        "eta": "预计到港",
+        "ata": "实际到港",
+        "loadedOnVessel": "上船日期",
+        "blReceived": "提单接收",
+        "goodsPickedUp": "提货日期",
+        "acceptedByBuyer": "买家验收",
+        "customsCleared": "清关日期"
+      },
+      "noValue": "—"
+    },
+    "timeline": {
+      "empty": "暂无时间线事件。"
+    }
+  },
+  "phaseActions": {
+    "nextStep": "下一步",
+    "markInProduction": "标记为生产中",
+    "markReadyToShip": "标记为待发运",
+    "markInTransit": "标记为运输中",
+    "markArrived": "标记为已抵港",
+    "confirmCustomsCleared": "确认已清关",
+    "raiseDispute": "提起争议",
+    "cancelOrder": "取消订单",
+    "arriveDialog": {
+      "title": "标记船舶抵港",
+      "ataLabel": "实际到港时间 (ATA)",
+      "ataHint": "若有按提单偏移的尾款分期，将以此日期为基准。",
+      "cancel": "取消",
+      "confirm": "确认抵港"
+    },
+    "disputeDialog": {
+      "title": "提起争议",
+      "placeholder": "请描述问题。管理员将受通知介入调解。",
+      "cancel": "取消",
+      "confirm": "提起争议",
+      "tooShort": "请描述问题（至少 10 个字符）。"
+    },
+    "cancelDialog": {
+      "title": "取消此订单",
+      "placeholder": "取消原因。",
+      "keep": "保留订单",
+      "confirm": "取消订单",
+      "missing": "请输入取消原因。"
+    },
+    "toast": {
+      "inProduction": "已标记为生产中。",
+      "readyToShip": "已标记为待发运。",
+      "inTransit": "已标记为运输中。",
+      "arrived": "已标记为抵港。",
+      "customsCleared": "已清关，订单进入下一阶段。",
+      "dispute": "争议已提起，已通知管理员。",
+      "cancelled": "订单已取消。"
+    }
+  },
+  "contractActions": {
+    "alreadyApproved": "您已批准此合同。",
+    "reviewTitle": "审核合同",
+    "reviewIntro": "请仔细阅读合同草案。批准后可上传签字扫描件，或将合同退回卖家并附上修改意见。",
+    "approve": "批准",
+    "returnForRevision": "退回修改",
+    "returnDialogTitle": "退回合同修改",
+    "returnPlaceholder": "需要修改哪里？请说明清楚以便卖家快速调整。",
+    "cancel": "取消",
+    "sendBack": "退回",
+    "toast": {
+      "approved": "合同已批准，您现在可以上传签字扫描件。",
+      "returned": "合同已退回修改。",
+      "missingReason": "请输入原因。"
+    }
+  },
+  "signedScan": {
+    "uploadLabel": "上传签字扫描件",
+    "uploadingLabel": "上传中…",
+    "alreadyUploaded": "您的签字扫描件已上传。",
+    "blockedNeedApproval": "等待买家批准合同后方可上传签字。",
+    "toast": {
+      "uploadFailed": "上传失败：{msg}",
+      "signFailed": "无法生成签名链接。",
+      "uploaded": "签字扫描件已上传。",
+      "uploadError": "上传发生错误。"
+    }
+  },
+  "shipmentForm": {
+    "heading": "标记为已发运",
+    "intro": "请提供提单与船舶信息，买家将收到通知。",
+    "attachHeading": "上传运输文件",
+    "attachIntro": "请上传提单文件。检验报告 (COA / SGS) 为选填，但强烈建议上传以便买家留底。",
+    "blLabel": "提单（PDF / 图片）— 选填",
+    "inspectionLabel": "检验报告（COA / SGS）— 选填",
+    "fields": {
+      "blNo": "提单号",
+      "blDate": "提单日期",
+      "vesselName": "船名",
+      "vesselImo": "船舶 IMO",
+      "containers": "集装箱号（以逗号分隔）",
+      "etd": "预计开航 (ETD)",
+      "atd": "实际开航 (ATD)",
+      "eta": "预计到港 (ETA)",
+      "departurePort": "起运港",
+      "note": "备注（选填）"
+    },
+    "submit": "标记为已发运",
+    "submitting": "保存中…",
+    "toast": {
+      "success": "已标记为发运。"
+    }
+  },
+  "paymentVerify": {
+    "verify": "核实",
+    "reject": "拒绝",
+    "reviewerNotePlaceholder": "{role}备注（选填）",
+    "toast": {
+      "verified": "付款已核实。",
+      "rejected": "付款已拒绝。"
+    }
+  },
+  "milestones": {
+    "heading": "里程碑触发",
+    "intro": "用于标记主流程按钮未涵盖的细节事件。每次点击可能会释放对应的分期付款给买家。",
+    "label": {
+      "before_production": "标记生产前",
+      "before_shipment": "标记装运前",
+      "before_loading": "标记装船前",
+      "bl_received": "标记提单已收",
+      "shipping_docs": "标记运输文件已收",
+      "bl_plus_insurance": "标记提单与保险单已收",
+      "picked_up": "标记货物已提取"
+    },
+    "done": {
+      "before_production": "生产前",
+      "before_shipment": "装运前",
+      "before_loading": "装船前",
+      "bl_received": "提单已收",
+      "shipping_docs": "运输文件已收",
+      "bl_plus_insurance": "提单与保险单已收",
+      "picked_up": "货物已提取"
+    },
+    "toast": {
+      "ok": "{label} ✓"
+    }
+  },
+  "chat": {
+    "you": "您",
+    "userFallback": "用户",
+    "reContext": "回复：{label}",
+    "viewAttachment": "查看附件",
+    "attachmentAlt": "附件"
+  }
+}

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { OrderDetailTabs } from "@/components/order/OrderDetailTabs";
 import { OrderPartyCards } from "@/components/order/OrderPartyCards";
@@ -63,7 +64,41 @@ const statusColor: Record<string, string> = {
 
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
-  return { title: `Order ${id.slice(0, 8).toUpperCase()} — Mada Graphite` };
+  const t = await getTranslations("orders");
+  return { title: t("metaTitleDetail", { code: id.slice(0, 8).toUpperCase() }) };
+}
+
+type Translator = Awaited<ReturnType<typeof getTranslations<string>>>;
+
+const KNOWN_ORDER_STATUSES: ReadonlySet<string> = new Set([
+  "quotation_pending", "draft", "quoted", "negotiating",
+  "contract_pending", "contract_generated", "contract_signed",
+  "payment_pending", "paid",
+  "in_production", "ready_to_ship", "shipped", "in_transit",
+  "arrived", "customs_cleared", "completed", "disputed", "cancelled",
+]);
+
+function translateOrderStatus(status: string, tEnums: Translator): string {
+  if (KNOWN_ORDER_STATUSES.has(status)) {
+    return tEnums(`order.status.${status}`);
+  }
+  return STATUS_LABEL[status as keyof typeof STATUS_LABEL] ?? status;
+}
+
+const KNOWN_QUOTATION_STATUSES = new Set([
+  "pending",
+  "accepted",
+  "rejected",
+  "countered",
+  "superseded",
+  "expired",
+]);
+
+function translateQuotationStatus(status: string, tEnums: Translator): string {
+  if (KNOWN_QUOTATION_STATUSES.has(status)) {
+    return tEnums(`quotation.status.${status}`);
+  }
+  return status;
 }
 
 const ORDER_DETAIL_SELECT = `
@@ -286,25 +321,44 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
     OrderDocumentRow & { type: DocumentType }
   >;
 
+  const t = await getTranslations("orders.detail");
+  const tTabs = await getTranslations("orders.detail.tabs");
+  const tOverview = await getTranslations("orders.detail.overview");
+  const tOverviewFields = await getTranslations("orders.detail.overview.fields");
+  const tQuot = await getTranslations("orders.detail.quotation");
+  const tQuotFields = await getTranslations("orders.detail.quotation.fields");
+  const tContract = await getTranslations("orders.detail.contract");
+  const tPayment = await getTranslations("orders.detail.payment");
+  const tPaymentStatus = await getTranslations("orders.detail.payment.status");
+  const tPaymentReviewer = await getTranslations("orders.detail.payment.reviewerLabel");
+  const tShipment = await getTranslations("orders.detail.shipment");
+  const tShipmentFields = await getTranslations("orders.detail.shipment.fields");
+  const tTimeline = await getTranslations("orders.detail.timeline");
+  const tEnums = await getTranslations("enums");
+
+  const reviewerLabelStr = isAdmin
+    ? tPaymentReviewer("admin")
+    : tPaymentReviewer("seller");
+
   return (
     <div className="max-w-5xl space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{order.order_no}</h1>
           <p className="text-sm text-muted-foreground">
-            Created {new Date(order.created_at).toLocaleDateString()}
+            {t("createdOn", { date: new Date(order.created_at).toLocaleDateString() })}
             {order.inquiry_id && (
               <>
                 {" · "}
                 <Link href={`/inquiries/${order.inquiry_id}`} className="hover:text-foreground underline">
-                  Source inquiry
+                  {t("sourceInquiry")}
                 </Link>
               </>
             )}
           </p>
         </div>
         <Badge variant="outline" className={statusColor[order.status] ?? ""}>
-          {STATUS_LABEL[order.status]}
+          {translateOrderStatus(order.status, tEnums)}
         </Badge>
         {order.incoterm && (
           <Badge variant="outline" className="text-xs">
@@ -317,13 +371,13 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
 
       <OrderDetailTabs initialTab={tabParam} suggestedTab={suggestedTab}>
         <TabsList className="flex-wrap">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="quotation">Quotation</TabsTrigger>
-          <TabsTrigger value="contract">Contract</TabsTrigger>
-          <TabsTrigger value="payment">Payment</TabsTrigger>
-          <TabsTrigger value="shipment">Shipment</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="overview">{tTabs("overview")}</TabsTrigger>
+          <TabsTrigger value="quotation">{tTabs("quotation")}</TabsTrigger>
+          <TabsTrigger value="contract">{tTabs("contract")}</TabsTrigger>
+          <TabsTrigger value="payment">{tTabs("payment")}</TabsTrigger>
+          <TabsTrigger value="shipment">{tTabs("shipment")}</TabsTrigger>
+          <TabsTrigger value="documents">{tTabs("documents")}</TabsTrigger>
+          <TabsTrigger value="timeline">{tTabs("timeline")}</TabsTrigger>
         </TabsList>
 
         {/* Overview */}
@@ -336,7 +390,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                 company_name: order.buyer?.company_name ?? null,
                 country: order.buyer?.country ?? null,
               },
-              subtitle: `Buyer · ${order.buyer?.email ?? ""}`,
+              subtitle: tOverview("buyerSubtitle", { email: order.buyer?.email ?? "" }),
             }}
             seller={{
               profile: {
@@ -345,7 +399,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                 company_name: order.seller?.company_name ?? null,
                 country: order.seller?.country ?? null,
               },
-              subtitle: `Seller · ${order.seller?.email ?? ""}`,
+              subtitle: tOverview("sellerSubtitle", { email: order.seller?.email ?? "" }),
             }}
             currentUserId={user.id}
             orderContext={{
@@ -358,14 +412,14 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
 
           <div className="rounded-lg border divide-y text-sm">
             {[
-              ["Product", order.listings?.product_categories?.name ?? "—"],
-              ["Listing", order.listings?.title ?? "—"],
-              ["Quantity", `${order.quantity} ${order.listings?.unit ?? "MT"}`],
-              ["Unit Price", `${order.unit_price} ${order.currency}`],
-              ["Total", `${order.total_amount} ${order.currency}`],
-              ["Incoterm", order.incoterm ?? order.listings?.incoterm ?? "—"],
-              ["Destination", order.destination ?? "—"],
-              ["Origin", order.listings?.origin_location ?? "—"],
+              [tOverviewFields("product"), order.listings?.product_categories?.name ?? tOverview("noValue")],
+              [tOverviewFields("listing"), order.listings?.title ?? tOverview("noValue")],
+              [tOverviewFields("quantity"), tOverview("qtyValue", { value: order.quantity, unit: order.listings?.unit ?? "MT" })],
+              [tOverviewFields("unitPrice"), `${order.unit_price} ${order.currency}`],
+              [tOverviewFields("total"), `${order.total_amount} ${order.currency}`],
+              [tOverviewFields("incoterm"), order.incoterm ?? order.listings?.incoterm ?? tOverview("noValue")],
+              [tOverviewFields("destination"), order.destination ?? tOverview("noValue")],
+              [tOverviewFields("origin"), order.listings?.origin_location ?? tOverview("noValue")],
             ].map(([label, value]) => (
               <div key={label} className="flex items-start px-4 py-2">
                 <span className="w-40 text-muted-foreground shrink-0">{label}</span>
@@ -377,29 +431,37 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
           {canReviewPayments && pendingPaymentCount > 0 && (
             <div className="rounded-lg border border-blue-400/40 bg-blue-400/10 px-4 py-3 text-sm">
               <p className="font-medium text-blue-200">
-                {pendingPaymentCount} payment{pendingPaymentCount > 1 ? "s" : ""} awaiting your
-                review
+                {pendingPaymentCount === 1
+                  ? tOverview("pendingReviewTitle", { count: pendingPaymentCount })
+                  : tOverview("pendingReviewTitlePlural", { count: pendingPaymentCount })}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Click <strong>Review</strong> in the schedule table below, or open the{" "}
-                <Link href={`/orders/${order.id}?tab=payment`} className="underline text-primary">
-                  Payment
-                </Link>{" "}
-                tab for full payment history. Shipment milestones do not require payment
-                verification first.
-              </p>
+              <p
+                className="text-xs text-muted-foreground mt-1"
+                dangerouslySetInnerHTML={{
+                  __html: tOverview("pendingReviewBody").replace(
+                    "<0>Payment</0>",
+                    `<a href="/orders/${order.id}?tab=payment" class="underline text-primary">${tTabs("payment")}</a>`
+                  ),
+                }}
+              />
             </div>
           )}
 
           {schedules.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Payment Schedule</p>
+                <p className="text-sm font-medium">{tOverview("scheduleHeading")}</p>
                 <p className="text-xs text-muted-foreground">
-                  {paidCount} / {schedules.length} paid
                   {awaitingReviewCount > 0 && canReviewPayments
-                    ? ` · ${awaitingReviewCount} awaiting review`
-                    : ""}
+                    ? tOverview("scheduleSummaryAwaiting", {
+                        paid: paidCount,
+                        total: schedules.length,
+                        awaiting: awaitingReviewCount,
+                      })
+                    : tOverview("scheduleSummary", {
+                        paid: paidCount,
+                        total: schedules.length,
+                      })}
                 </p>
               </div>
               <PaymentScheduleTable
@@ -409,7 +471,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                 orderClosed={order.status === "cancelled"}
                 limit={3}
                 canReviewPayments={canReviewPayments}
-                reviewerLabel={isAdmin ? "Admin" : "Seller"}
+                reviewerLabel={reviewerLabelStr}
                 pendingPaymentByScheduleId={pendingPaymentByScheduleId}
                 resubmitScheduleIds={resubmitScheduleIds}
               />
@@ -431,31 +493,31 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         <TabsContent id="order-tab-panel-quotation" value="quotation" className="mt-4 space-y-3 scroll-mt-24">
           {!order.current_quotation ? (
             <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground text-sm">
-              This order was created without a quotation reference.
+              {tQuot("missing")}
             </div>
           ) : (
             <div className="rounded-lg border p-4 space-y-3 text-sm">
               <div className="flex items-center justify-between">
-                <p className="font-medium">Accepted Quotation</p>
+                <p className="font-medium">{tQuot("title")}</p>
                 <Badge variant="outline" className="text-emerald-400 border-emerald-400/40">
-                  {order.current_quotation.status}
+                  {translateQuotationStatus(order.current_quotation.status, tEnums)}
                 </Badge>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                 <div>
-                  <p className="text-muted-foreground">Quantity</p>
+                  <p className="text-muted-foreground">{tQuotFields("quantity")}</p>
                   <p className="font-medium">{order.current_quotation.quantity} {order.current_quotation.unit}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Unit Price</p>
+                  <p className="text-muted-foreground">{tQuotFields("unitPrice")}</p>
                   <p className="font-medium">{order.current_quotation.unit_price} {order.current_quotation.currency}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Incoterm</p>
+                  <p className="text-muted-foreground">{tQuotFields("incoterm")}</p>
                   <p className="font-medium">{order.current_quotation.incoterm}</p>
                 </div>
                 <div className="col-span-3">
-                  <p className="text-muted-foreground">Valid until</p>
+                  <p className="text-muted-foreground">{tQuotFields("validUntil")}</p>
                   <p className="font-medium">{new Date(order.current_quotation.validity_until).toLocaleString()}</p>
                 </div>
               </div>
@@ -472,7 +534,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                   href={`/inquiries/${order.inquiry_id}`}
                   className="text-xs text-primary underline inline-block"
                 >
-                  View full negotiation history →
+                  {tQuot("fullHistory")}
                 </Link>
               )}
             </div>
@@ -497,7 +559,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
           )}
           {isSeller && contract && contract.buyer_rejected_at && (
             <div className="rounded-lg border border-red-400/30 bg-red-500/5 p-3 text-sm">
-              <p className="font-medium text-red-400">Buyer requested revision</p>
+              <p className="font-medium text-red-400">{tContract("buyerRejectedTitle")}</p>
               {contract.buyer_reject_reason && (
                 <p className="text-xs text-muted-foreground mt-1">{contract.buyer_reject_reason}</p>
               )}
@@ -527,9 +589,9 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
 
           {!contract ? (
             <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground text-sm">
-              No contract drafted yet.
+              {tContract("noContract")}
               {isBuyer && order.status === "contract_pending" && (
-                <p className="mt-2 text-xs">Waiting for the seller to draft the contract.</p>
+                <p className="mt-2 text-xs">{tContract("waitingDraft")}</p>
               )}
             </div>
           ) : (
@@ -548,7 +610,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                 <div className="grid sm:grid-cols-2 gap-3 text-sm">
                   {!contract.buyer_signed_url && (
                     <div className="rounded border p-3 space-y-2">
-                      <p className="text-xs text-muted-foreground">Upload Buyer Signature</p>
+                      <p className="text-xs text-muted-foreground">{tContract("uploadBuyerSignature")}</p>
                       {isBuyer ? (
                         <SignedScanUploader
                           orderId={order.id}
@@ -557,14 +619,14 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                         />
                       ) : (
                         <p className="text-muted-foreground text-xs">
-                          Waiting for the buyer to upload a signed scan.
+                          {tContract("waitingBuyerScan")}
                         </p>
                       )}
                     </div>
                   )}
                   {!contract.seller_signed_url && (
                     <div className="rounded border p-3 space-y-2">
-                      <p className="text-xs text-muted-foreground">Upload Seller Signature</p>
+                      <p className="text-xs text-muted-foreground">{tContract("uploadSellerSignature")}</p>
                       {isSeller ? (
                         <SignedScanUploader
                           orderId={order.id}
@@ -573,7 +635,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                         />
                       ) : (
                         <p className="text-muted-foreground text-xs">
-                          Waiting for the seller to upload a signed scan.
+                          {tContract("waitingSellerScan")}
                         </p>
                       )}
                     </div>
@@ -588,41 +650,40 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         <TabsContent id="order-tab-panel-payment" value="payment" className="mt-4 space-y-6 scroll-mt-24">
           {isBuyer && resubmitScheduleIds.length > 0 && (
             <div className="rounded-lg border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-sm">
-              <p className="font-medium text-amber-200">Payment rejected — please resubmit</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                The seller or admin rejected your previous submission. Use{" "}
-                <strong>Resubmit Payment</strong> on the highlighted installment in the
-                schedule below (update your transaction hash or remittance proof).
-              </p>
+              <p className="font-medium text-amber-200">{tPayment("resubmitBanner")}</p>
+              <p
+                className="text-xs text-muted-foreground mt-1"
+                dangerouslySetInnerHTML={{ __html: tPayment("resubmitBody") }}
+              />
             </div>
           )}
 
           <div className="space-y-2">
-            <p className="text-sm font-medium">Payment Schedule</p>
+            <p className="text-sm font-medium">{tPayment("scheduleHeading")}</p>
             <PaymentScheduleTable
               orderId={order.id}
               schedules={schedules}
               role={myRoleForChild}
               orderClosed={order.status === "cancelled"}
               canReviewPayments={canReviewPayments}
-              reviewerLabel={isAdmin ? "Admin" : "Seller"}
+              reviewerLabel={reviewerLabelStr}
               pendingPaymentByScheduleId={pendingPaymentByScheduleId}
               resubmitScheduleIds={resubmitScheduleIds}
             />
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium">Payment History</p>
+            <p className="text-sm font-medium">{tPayment("historyHeading")}</p>
             {(isSeller || isAdmin) && payments.some((p) => p.status === "pending") && (
               <p className="text-xs text-muted-foreground">
                 {isSeller
-                  ? "Review the buyer's payment(s) below. Admin may intervene if needed."
-                  : "Audit view — the seller is the primary reviewer."}
+                  ? tPayment("reviewerHintSeller")
+                  : tPayment("reviewerHintAdmin")}
               </p>
             )}
             {payments.length === 0 ? (
               <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground text-sm">
-                No payment submitted yet.
+                {tPayment("empty")}
               </div>
             ) : (
               <div className="space-y-3">
@@ -642,7 +703,11 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                               : "text-yellow-400 border-yellow-400/40"
                         }
                       >
-                        {p.status}
+                        {p.status === "verified"
+                          ? tPaymentStatus("verified")
+                          : p.status === "rejected"
+                            ? tPaymentStatus("rejected")
+                            : tPaymentStatus("pending")}
                       </Badge>
                     </div>
                     {p.tx_hash && (
@@ -655,20 +720,21 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                         rel="noopener noreferrer"
                         className="text-primary underline text-xs"
                       >
-                        View proof
+                        {tPayment("viewProof")}
                       </a>
                     )}
                     {p.admin_note && (
                       <p className="text-xs text-muted-foreground">
-                        {p.status === "rejected" ? "Rejection reason" : "Reviewer note"}:{" "}
-                        {p.admin_note}
+                        {p.status === "rejected"
+                          ? tPayment("rejectionReason", { note: p.admin_note })
+                          : tPayment("reviewerNote", { note: p.admin_note })}
                       </p>
                     )}
                     {p.status === "rejected" && isBuyer && p.schedule_id && (
-                      <p className="text-xs text-amber-400">
-                        This installment was returned to <strong>Due</strong> — use{" "}
-                        <strong>Resubmit Payment</strong> in the schedule above.
-                      </p>
+                      <p
+                        className="text-xs text-amber-400"
+                        dangerouslySetInnerHTML={{ __html: tPayment("resubmitHint") }}
+                      />
                     )}
                     <p className="text-xs text-muted-foreground">
                       {new Date(p.created_at).toLocaleString()}
@@ -678,7 +744,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                       <div className="border-t pt-2">
                         <PaymentVerifyActions
                           paymentId={p.id}
-                          reviewerLabel={isAdmin ? "Admin" : "Seller"}
+                          reviewerLabel={reviewerLabelStr}
                         />
                       </div>
                     )}
@@ -693,51 +759,56 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         <TabsContent id="order-tab-panel-shipment" value="shipment" className="mt-4 space-y-4 scroll-mt-24">
           <div className="rounded-lg border divide-y text-sm">
             {[
-              ["B/L No.", order.bl_no ?? "—"],
-              ["B/L Date", order.bl_date ?? "—"],
+              [tShipmentFields("blNo"), order.bl_no ?? tShipment("noValue")],
+              [tShipmentFields("blDate"), order.bl_date ?? tShipment("noValue")],
               [
-                "Vessel",
+                tShipmentFields("vessel"),
                 order.vessel_name
-                  ? `${order.vessel_name}${order.vessel_imo ? ` (IMO ${order.vessel_imo})` : ""}`
-                  : "—",
+                  ? order.vessel_imo
+                    ? tShipmentFields("vesselWithImo", {
+                        name: order.vessel_name,
+                        imo: order.vessel_imo,
+                      })
+                    : order.vessel_name
+                  : tShipment("noValue"),
               ],
               [
-                "Containers",
-                order.container_numbers?.length ? order.container_numbers.join(", ") : "—",
+                tShipmentFields("containers"),
+                order.container_numbers?.length ? order.container_numbers.join(", ") : tShipment("noValue"),
               ],
-              ["Departure Port", order.shipment_from ?? "—"],
-              ["Destination Port", order.destination ?? "—"],
-              ["ETD", order.etd ?? "—"],
-              ["ATD", order.atd ?? "—"],
-              ["ETA", order.shipment_eta ?? "—"],
-              ["ATA", order.ata ?? "—"],
+              [tShipmentFields("departurePort"), order.shipment_from ?? tShipment("noValue")],
+              [tShipmentFields("destinationPort"), order.destination ?? tShipment("noValue")],
+              [tShipmentFields("etd"), order.etd ?? tShipment("noValue")],
+              [tShipmentFields("atd"), order.atd ?? tShipment("noValue")],
+              [tShipmentFields("eta"), order.shipment_eta ?? tShipment("noValue")],
+              [tShipmentFields("ata"), order.ata ?? tShipment("noValue")],
               [
-                "Loaded onto Vessel",
-                order.loaded_at ? new Date(order.loaded_at).toLocaleDateString() : "—",
+                tShipmentFields("loadedOnVessel"),
+                order.loaded_at ? new Date(order.loaded_at).toLocaleDateString() : tShipment("noValue"),
               ],
               [
-                "B/L Received",
+                tShipmentFields("blReceived"),
                 order.bl_received_at
                   ? new Date(order.bl_received_at).toLocaleDateString()
-                  : "—",
+                  : tShipment("noValue"),
               ],
               [
-                "Goods Picked Up",
+                tShipmentFields("goodsPickedUp"),
                 order.picked_up_at
                   ? new Date(order.picked_up_at).toLocaleDateString()
-                  : "—",
+                  : tShipment("noValue"),
               ],
               [
-                "Accepted by Buyer",
+                tShipmentFields("acceptedByBuyer"),
                 order.accepted_at
                   ? new Date(order.accepted_at).toLocaleDateString()
-                  : "—",
+                  : tShipment("noValue"),
               ],
               [
-                "Customs Cleared",
+                tShipmentFields("customsCleared"),
                 order.customs_cleared_at
                   ? new Date(order.customs_cleared_at).toLocaleDateString()
-                  : "—",
+                  : tShipment("noValue"),
               ],
             ].map(([label, value]) => (
               <div key={label} className="flex items-start px-4 py-2">
@@ -765,7 +836,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         {/* Timeline */}
         <TabsContent id="order-tab-panel-timeline" value="timeline" className="mt-4 scroll-mt-24">
           {(!order.timeline || order.timeline.length === 0) ? (
-            <p className="text-sm text-muted-foreground">No timeline events yet.</p>
+            <p className="text-sm text-muted-foreground">{tTimeline("empty")}</p>
           ) : (
             <ol className="relative border-l border-border ml-3 space-y-4">
               {[...order.timeline].reverse().map((item, idx) => (

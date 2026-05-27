@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
 
@@ -23,6 +24,7 @@ interface Props {
 
 export function ContractApproveReject({ orderId, alreadyApproved }: Props) {
   const router = useRouter();
+  const t = useTranslations("orders.contractActions");
   const [isPending, startTransition] = useTransition();
   const [reason, setReason] = useState("");
   const [open, setOpen] = useState(false);
@@ -34,14 +36,14 @@ export function ContractApproveReject({ orderId, alreadyApproved }: Props) {
         toast.error(result.error.message);
         return;
       }
-      toast.success("Contract approved. You can now upload your signed scan.");
+      toast.success(t("toast.approved"));
       router.refresh();
     });
   }
 
   function handleReject() {
     if (!reason.trim()) {
-      toast.error("Please enter a reason.");
+      toast.error(t("toast.missingReason"));
       return;
     }
     startTransition(async () => {
@@ -50,7 +52,7 @@ export function ContractApproveReject({ orderId, alreadyApproved }: Props) {
         toast.error(result.error.message);
         return;
       }
-      toast.success("Contract returned for revision.");
+      toast.success(t("toast.returned"));
       setOpen(false);
       router.refresh();
     });
@@ -60,7 +62,7 @@ export function ContractApproveReject({ orderId, alreadyApproved }: Props) {
     return (
       <div className="rounded-lg border border-emerald-400/30 bg-emerald-500/5 p-3 text-sm text-emerald-400 flex items-center gap-2">
         <Check className="size-4" />
-        You have approved this contract.
+        {t("alreadyApproved")}
       </div>
     );
   }
@@ -68,41 +70,38 @@ export function ContractApproveReject({ orderId, alreadyApproved }: Props) {
   return (
     <div className="rounded-lg border p-4 space-y-3">
       <div>
-        <p className="text-sm font-medium">Review Contract</p>
-        <p className="text-xs text-muted-foreground">
-          Read the draft contract carefully. Approve to unlock signature uploads, or
-          send it back to the seller with comments.
-        </p>
+        <p className="text-sm font-medium">{t("reviewTitle")}</p>
+        <p className="text-xs text-muted-foreground">{t("reviewIntro")}</p>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={handleApprove} disabled={isPending}>
           <Check className="size-3.5 mr-1" />
-          Approve
+          {t("approve")}
         </Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger
             render={<Button size="sm" variant="destructive" disabled={isPending} />}
           >
             <X className="size-3.5 mr-1" />
-            Return for revision
+            {t("returnForRevision")}
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Return contract for revision</DialogTitle>
+              <DialogTitle>{t("returnDialogTitle")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
               <Textarea
                 rows={4}
-                placeholder="What needs to change? Be specific so the seller can revise quickly."
+                placeholder={t("returnPlaceholder")}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
               />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button variant="destructive" onClick={handleReject} disabled={isPending}>
-                  Send back
+                  {t("sendBack")}
                 </Button>
               </div>
             </div>

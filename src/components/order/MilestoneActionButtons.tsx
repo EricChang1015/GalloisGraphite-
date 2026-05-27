@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import {
@@ -17,9 +18,17 @@ import { Button } from "@/components/ui/button";
 
 type ActionFn = (orderId: string) => Promise<{ data: unknown; error: { message: string } | null }>;
 
+type MilestoneKey =
+  | "before_production"
+  | "before_shipment"
+  | "before_loading"
+  | "bl_received"
+  | "shipping_docs"
+  | "bl_plus_insurance"
+  | "picked_up";
+
 interface Milestone {
-  key: string;
-  label: string;
+  key: MilestoneKey;
   role: "buyer" | "seller";
   action: ActionFn;
   /** Order status range when this milestone makes sense. */
@@ -46,12 +55,14 @@ interface Props {
 
 export function MilestoneActionButtons({ orderId, status, role, timestamps }: Props) {
   const router = useRouter();
+  const t = useTranslations("orders.milestones");
+  const tLabel = useTranslations("orders.milestones.label");
+  const tDone = useTranslations("orders.milestones.done");
   const [isPending, startTransition] = useTransition();
 
   const milestones: Milestone[] = [
     {
       key: "before_production",
-      label: "Mark Before Production",
       role: "seller",
       action: markBeforeProduction,
       visibleWhen: (s) => s === "contract_signed" || s === "in_production",
@@ -59,7 +70,6 @@ export function MilestoneActionButtons({ orderId, status, role, timestamps }: Pr
     },
     {
       key: "before_shipment",
-      label: "Mark Before Shipment",
       role: "seller",
       action: markBeforeShipment,
       visibleWhen: (s) => s === "in_production" || s === "ready_to_ship",
@@ -67,7 +77,6 @@ export function MilestoneActionButtons({ orderId, status, role, timestamps }: Pr
     },
     {
       key: "before_loading",
-      label: "Mark Before Loading",
       role: "seller",
       action: markBeforeLoading,
       visibleWhen: (s) => s === "ready_to_ship",
@@ -75,7 +84,6 @@ export function MilestoneActionButtons({ orderId, status, role, timestamps }: Pr
     },
     {
       key: "bl_received",
-      label: "Mark B/L Received",
       role: "buyer",
       action: markBlReceived,
       visibleWhen: (s) => s === "shipped" || s === "in_transit" || s === "arrived",
@@ -83,7 +91,6 @@ export function MilestoneActionButtons({ orderId, status, role, timestamps }: Pr
     },
     {
       key: "shipping_docs",
-      label: "Mark Shipping Docs Received",
       role: "buyer",
       action: markShippingDocsReceived,
       visibleWhen: (s) => s === "shipped" || s === "in_transit" || s === "arrived",
@@ -91,7 +98,6 @@ export function MilestoneActionButtons({ orderId, status, role, timestamps }: Pr
     },
     {
       key: "bl_plus_insurance",
-      label: "Mark B/L + Insurance Received",
       role: "buyer",
       action: markBlPlusInsuranceReceived,
       visibleWhen: (s) => s === "shipped" || s === "in_transit" || s === "arrived",
@@ -99,7 +105,6 @@ export function MilestoneActionButtons({ orderId, status, role, timestamps }: Pr
     },
     {
       key: "picked_up",
-      label: "Mark Goods Picked Up",
       role: "buyer",
       action: markGoodsPickedUp,
       visibleWhen: (s) => s === "arrived" || s === "customs_cleared",
@@ -120,7 +125,7 @@ export function MilestoneActionButtons({ orderId, status, role, timestamps }: Pr
         toast.error(result.error.message);
         return;
       }
-      toast.success(`${m.label.replace(/^Mark /, "")} ✓`);
+      toast.success(t("toast.ok", { label: tDone(m.key) }));
       router.refresh();
     });
   }
@@ -128,12 +133,8 @@ export function MilestoneActionButtons({ orderId, status, role, timestamps }: Pr
   return (
     <div className="rounded-lg border p-4 space-y-3">
       <div>
-        <p className="text-sm font-medium">Milestone Triggers</p>
-        <p className="text-xs text-muted-foreground">
-          Use these to mark fine-grained events that aren&apos;t covered by the
-          main shipment buttons. Each click may release a corresponding payment
-          installment to the buyer.
-        </p>
+        <p className="text-sm font-medium">{t("heading")}</p>
+        <p className="text-xs text-muted-foreground">{t("intro")}</p>
       </div>
       <div className="flex flex-wrap gap-2">
         {visible.map((m) => (
@@ -146,7 +147,7 @@ export function MilestoneActionButtons({ orderId, status, role, timestamps }: Pr
             onClick={() => run(m)}
             className="h-7 text-[11px]"
           >
-            {m.done ? `✓ ${m.label.replace(/^Mark /, "")}` : m.label}
+            {m.done ? `✓ ${tDone(m.key)}` : tLabel(m.key)}
           </Button>
         ))}
       </div>

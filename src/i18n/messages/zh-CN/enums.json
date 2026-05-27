@@ -13,8 +13,11 @@
   "order": {
     "status": {
       "draft": "草稿",
+      "quotation_pending": "报价待回应",
+      "quoted": "已报价",
+      "negotiating": "议价中",
       "contract_generated": "合同已生成",
-      "contract_pending": "合同待审核",
+      "contract_pending": "合同审核中",
       "signed": "已签署",
       "contract_signed": "合同已签署",
       "payment_pending": "待付款",
@@ -23,7 +26,7 @@
       "ready_to_ship": "待发运",
       "shipped": "已发运",
       "in_transit": "运输中",
-      "arrived": "已抵达",
+      "arrived": "已抵港",
       "customs_cleared": "已清关",
       "delivered": "已送达",
       "disputed": "争议中",

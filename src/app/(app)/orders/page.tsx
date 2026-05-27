@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
+
 import { createServerClient } from "@/lib/supabase/server";
 import { CollapsibleHistorySection } from "@/components/layout/CollapsibleHistorySection";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +18,13 @@ import {
   STATUS_LABEL,
 } from "@/lib/order/stateMachine";
 
-export const metadata = { title: "Orders — Mada Graphite" };
+export async function generateMetadata() {
+  const t = await getTranslations("orders");
+  return { title: t("metaTitle") };
+}
 export const dynamic = "force-dynamic";
+
+type Translator = Awaited<ReturnType<typeof getTranslations<string>>>;
 
 const statusColor: Record<string, string> = {
   draft: "text-muted-foreground",
@@ -51,18 +58,55 @@ type OrderRow = {
   seller: { company_name: string } | null;
 };
 
-function OrdersTable({ rows }: { rows: OrderRow[] }) {
+function translateOrderStatus(status: string, tEnums: Translator): string {
+  const known: ReadonlyArray<keyof typeof STATUS_LABEL> = [
+    "quotation_pending",
+    "draft",
+    "quoted",
+    "negotiating",
+    "contract_pending",
+    "contract_generated",
+    "contract_signed",
+    "payment_pending",
+    "paid",
+    "in_production",
+    "ready_to_ship",
+    "shipped",
+    "in_transit",
+    "arrived",
+    "customs_cleared",
+    "completed",
+    "disputed",
+    "cancelled",
+  ];
+  if ((known as readonly string[]).includes(status)) {
+    return tEnums(`order.status.${status}`);
+  }
+  return status.replace(/_/g, " ");
+}
+
+function OrdersTable({
+  rows,
+  tCols,
+  tRow,
+  tEnums,
+}: {
+  rows: OrderRow[];
+  tCols: Translator;
+  tRow: Translator;
+  tEnums: Translator;
+}) {
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Order No</TableHead>
-            <TableHead>Buyer</TableHead>
-            <TableHead>Seller</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Created</TableHead>
+            <TableHead>{tCols("orderNo")}</TableHead>
+            <TableHead>{tCols("buyer")}</TableHead>
+            <TableHead>{tCols("seller")}</TableHead>
+            <TableHead className="text-right">{tCols("amount")}</TableHead>
+            <TableHead>{tCols("status")}</TableHead>
+            <TableHead>{tCols("created")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -77,18 +121,17 @@ function OrdersTable({ rows }: { rows: OrderRow[] }) {
                 </Link>
               </TableCell>
               <TableCell className="text-sm">
-                {o.buyer?.company_name ?? "—"}
+                {o.buyer?.company_name ?? tRow("noValue")}
               </TableCell>
               <TableCell className="text-sm">
-                {o.seller?.company_name ?? "—"}
+                {o.seller?.company_name ?? tRow("noValue")}
               </TableCell>
               <TableCell className="text-right font-semibold">
                 {o.total_amount} {o.currency}
               </TableCell>
               <TableCell>
                 <Badge variant="outline" className={statusColor[o.status] ?? ""}>
-                  {STATUS_LABEL[o.status as keyof typeof STATUS_LABEL] ??
-                    o.status.replace(/_/g, " ")}
+                  {translateOrderStatus(o.status, tEnums)}
                 </Badge>
               </TableCell>
               <TableCell className="text-xs text-muted-foreground">
@@ -119,10 +162,15 @@ export default async function OrdersPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const t = await getTranslations("orders");
+  const tCols = await getTranslations("orders.columns");
+  const tRow = await getTranslations("orders.row");
+  const tEnums = await getTranslations("enums");
+
   if (!user) {
     return (
       <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-        Your session expired. Please sign in again.
+        {t("sessionExpired")}
       </div>
     );
   }
@@ -143,26 +191,23 @@ export default async function OrdersPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Active orders need your attention. Completed and cancelled orders live
-          under History Orders.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("heading")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("subheading")}</p>
       </div>
 
       {!allOrders.length ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-          No orders yet. Browse the{" "}
+          {t("emptyTitle")}{" "}
           <Link href="/market" className="underline text-primary">
-            market
+            {t("emptyCta")}
           </Link>{" "}
-          to get started.
+          {t("emptyTail")}
         </div>
       ) : (
         <>
           <section>
             <h2 className="text-base font-semibold mb-3">
-              Active Orders
+              {t("activeHeading")}
               {activeOrders.length > 0 ? (
                 <Badge variant="secondary" className="ml-2">
                   {activeOrders.length}
@@ -171,21 +216,20 @@ export default async function OrdersPage({
             </h2>
             {activeOrders.length === 0 ? (
               <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                No active orders. Expand History Orders below to review past
-                orders.
+                {t("activeEmpty")}
               </div>
             ) : (
-              <OrdersTable rows={activeOrders} />
+              <OrdersTable rows={activeOrders} tCols={tCols} tRow={tRow} tEnums={tEnums} />
             )}
           </section>
 
           <Suspense fallback={null}>
             <CollapsibleHistorySection
-              title="History Orders"
+              title={t("historyTitle")}
               count={historyOrders.length}
               defaultOpen={historyOpen}
             >
-              <OrdersTable rows={historyOrders} />
+              <OrdersTable rows={historyOrders} tCols={tCols} tRow={tRow} tEnums={tEnums} />
             </CollapsibleHistorySection>
           </Suspense>
         </>

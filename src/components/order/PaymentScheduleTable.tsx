@@ -62,7 +62,7 @@ interface Props {
   limit?: number;
   /** Seller or admin can verify pending payments tied to schedule rows. */
   canReviewPayments?: boolean;
-  reviewerLabel?: "Admin" | "Seller";
+  reviewerLabel?: string;
   /** schedule_id → pending payment id (from order.payments). */
   pendingPaymentByScheduleId?: Record<string, string>;
   /** Installments rejected by reviewer — buyer should resubmit on `due` rows. */
@@ -85,7 +85,7 @@ export function PaymentScheduleTable({
   orderClosed = false,
   limit,
   canReviewPayments = false,
-  reviewerLabel = "Seller",
+  reviewerLabel,
   pendingPaymentByScheduleId = {},
   resubmitScheduleIds = [],
 }: Props) {
@@ -216,7 +216,7 @@ function SchedulePaymentReviewDialog({
   installmentLabel,
 }: {
   paymentId: string;
-  reviewerLabel: "Admin" | "Seller";
+  reviewerLabel?: string;
   installmentLabel: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -235,7 +235,7 @@ function SchedulePaymentReviewDialog({
           <DialogHeader>
             <DialogTitle>Review payment</DialogTitle>
             <DialogDescription>
-              Installment {installmentLabel}. As {reviewerLabel.toLowerCase()}, verify
+              Installment {installmentLabel}. As {(reviewerLabel ?? "reviewer").toLowerCase()}, verify
               the buyer&apos;s proof or on-chain transfer, then approve or reject.
             </DialogDescription>
           </DialogHeader>

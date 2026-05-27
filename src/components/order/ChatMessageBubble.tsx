@@ -1,5 +1,8 @@
+"use client";
+
 import { FileText } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import { formatContextLabel } from "@/lib/chat/context-label";
 import { cn } from "@/lib/utils";
@@ -15,10 +18,11 @@ function isImageUrl(url: string): boolean {
 }
 
 export function ChatMessageBubble({ message, isOwn }: Props) {
+  const t = useTranslations("orders.chat");
   const label =
     message.sender?.company_name?.trim() ||
     message.sender?.full_name?.trim() ||
-    "User";
+    t("userFallback");
 
   return (
     <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
@@ -31,11 +35,11 @@ export function ChatMessageBubble({ message, isOwn }: Props) {
         )}
       >
         <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-          {isOwn ? "You" : label}
+          {isOwn ? t("you") : label}
         </p>
         {message.context_type && message.context_id ? (
           <p className="text-[10px] text-primary/80">
-            Re: {formatContextLabel(message.context_type)}
+            {t("reContext", { label: formatContextLabel(message.context_type) })}
           </p>
         ) : null}
         {message.content ? (
@@ -46,7 +50,7 @@ export function ChatMessageBubble({ message, isOwn }: Props) {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={message.attachment_url}
-              alt="Attachment"
+              alt={t("attachmentAlt")}
               className="max-h-48 rounded border object-contain"
             />
           ) : (
@@ -57,7 +61,7 @@ export function ChatMessageBubble({ message, isOwn }: Props) {
               className="inline-flex items-center gap-1 text-xs text-primary underline"
             >
               <FileText className="size-3" />
-              View attachment
+              {t("viewAttachment")}
             </Link>
           )
         ) : null}
