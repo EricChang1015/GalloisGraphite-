@@ -1,7 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Printer, Download } from "lucide-react";
+import {
+  CONTRACT_PREVIEW_ROOT_CLASS,
+  prepareContractHtmlForPreview,
+} from "@/lib/contract/embed";
+import { cn } from "@/lib/utils";
 
 interface Props {
   contractNo: string;
@@ -48,13 +54,13 @@ function SignaturePane({
       <div className="flex items-center justify-between text-xs">
         <span className="font-semibold uppercase tracking-wider">{label}</span>
         {signedAt && (
-          <span className="text-gray-500">
+          <span className="text-muted-foreground">
             Signed {new Date(signedAt).toLocaleDateString()}
           </span>
         )}
       </div>
       {!url ? (
-        <p className="text-xs text-gray-500 italic">Pending upload.</p>
+        <p className="text-xs text-muted-foreground italic">Pending upload.</p>
       ) : isImageUrl(url) ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -74,7 +80,7 @@ function SignaturePane({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 underline"
+            className="text-primary underline"
           >
             Open signed scan
           </a>
@@ -85,7 +91,7 @@ function SignaturePane({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[10px] uppercase tracking-wider text-blue-600 underline"
+          className="text-[10px] uppercase tracking-wider text-primary underline"
         >
           Download original
         </a>
@@ -104,6 +110,10 @@ export function ContractPreview({
   sellerSignedAt,
 }: Props) {
   const bothSigned = !!buyerSignedUrl && !!sellerSignedUrl;
+  const preparedPreview = useMemo(
+    () => (contentHtml ? prepareContractHtmlForPreview(contentHtml) : null),
+    [contentHtml]
+  );
 
   function buildPrintableDoc(): string {
     // Append the signature scans into a self-contained HTML document so the
@@ -188,11 +198,18 @@ export function ContractPreview({
           </Button>
         )}
       </div>
-      {contentHtml && (
+      {preparedPreview && (
         <div
-          className="rounded border bg-white text-black p-4 text-xs max-h-96 overflow-y-auto"
-          dangerouslySetInnerHTML={{ __html: contentHtml }}
-        />
+          className={cn(
+            CONTRACT_PREVIEW_ROOT_CLASS,
+            "rounded border bg-white text-black p-4 text-xs max-h-96 overflow-y-auto"
+          )}
+        >
+          {preparedPreview.scopedStyles ? (
+            <style dangerouslySetInnerHTML={{ __html: preparedPreview.scopedStyles }} />
+          ) : null}
+          <div dangerouslySetInnerHTML={{ __html: preparedPreview.markup }} />
+        </div>
       )}
       {(buyerSignedUrl || sellerSignedUrl) && (
         <div className="grid sm:grid-cols-2 gap-3">

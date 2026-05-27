@@ -103,8 +103,8 @@ export function renderContractHtml(ctx: ContractContext): string {
   <meta charset="utf-8" />
   <title>Contract ${escapeHtml(ctx.contract.contract_no)}</title>
   <style>
-    body { font-family: "Times New Roman", serif; max-width: 820px;
-           margin: 40px auto; color: #111; line-height: 1.6; padding: 0 24px; }
+    .contract-document { font-family: "Times New Roman", serif; max-width: 820px;
+           margin: 0 auto; color: #111; line-height: 1.6; padding: 0 24px; }
     h1 { text-align: center; letter-spacing: 0.05em; }
     h2 { border-bottom: 1px solid #999; padding-bottom: 4px; margin-top: 28px; }
     table { width: 100%; border-collapse: collapse; margin: 12px 0; }
@@ -116,6 +116,7 @@ export function renderContractHtml(ctx: ContractContext): string {
   </style>
 </head>
 <body>
+  <div class="contract-document">
   <h1>SALES CONTRACT</h1>
   <p><strong>Contract No.</strong>: ${escapeHtml(ctx.contract.contract_no)}<br />
      <strong>Date</strong>: ${date}</p>
@@ -211,6 +212,7 @@ export function renderContractHtml(ctx: ContractContext): string {
       Title: ${escapeHtml(ctx.buyer.title ?? "Authorized Signatory")}<br />
       Date: ${escapeHtml(ctx.contract.buyer_signed_at ?? "______________")}
     </div>
+  </div>
   </div>
 </body>
 </html>`;

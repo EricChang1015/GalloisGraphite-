@@ -99,7 +99,7 @@ export function PaymentScheduleTable({ orderId, schedules, role, orderClosed = f
               <th className="text-right px-3 py-2">Action</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="text-foreground">
             {visible.map((s) => (
               <tr key={s.id} className="border-t border-border/50">
                 <td className="px-3 py-2 text-muted-foreground">{s.sequence + 1}</td>
