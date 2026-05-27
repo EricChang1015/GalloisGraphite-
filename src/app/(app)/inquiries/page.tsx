@@ -5,6 +5,11 @@ import { createServerClient } from "@/lib/supabase/server";
 import { CollapsibleHistorySection } from "@/components/layout/CollapsibleHistorySection";
 import { InquiryActions } from "@/components/listing/InquiryActions";
 import { isInquiryHistoryStatus } from "@/lib/inquiry/buckets";
+import {
+  classifyInquiryTurn,
+  getLiveQuotationsByInquiry,
+  type InquiryTurn,
+} from "@/lib/inquiry/actor";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -32,6 +37,8 @@ const statusColor: Record<string, string> = {
 type BuyerInquiryRow = {
   id: string;
   status: string;
+  buyer_id: string;
+  seller_id: string;
   requested_qty: number;
   target_price: number | null;
   destination: string | null;
@@ -45,6 +52,8 @@ type SellerInquiryRow = BuyerInquiryRow & {
   profiles: { company_name: string; country: string } | null;
 };
 
+type RowWithTurn<T> = T & { turn: InquiryTurn; liveUnitPrice: number | null; liveCurrency: string | null };
+
 function parseHistoryOpen(value: string | undefined): boolean {
   return value === "1" || value === "true" || value === "open";
 }
@@ -55,7 +64,7 @@ function splitInquiries<T extends { status: string }>(rows: T[]) {
   return { active, history };
 }
 
-function BuyerInquiriesTable({ rows }: { rows: BuyerInquiryRow[] }) {
+function BuyerInquiriesTable({ rows }: { rows: RowWithTurn<BuyerInquiryRow>[] }) {
   return (
     <div className="rounded-md border">
       <Table>
@@ -64,55 +73,8 @@ function BuyerInquiriesTable({ rows }: { rows: BuyerInquiryRow[] }) {
             <TableHead>Product</TableHead>
             <TableHead>Seller</TableHead>
             <TableHead className="text-right">Qty</TableHead>
-            <TableHead className="text-right">Target Price</TableHead>
+            <TableHead className="text-right">Live Price</TableHead>
             <TableHead>Destination</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Date</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((inq) => (
-            <TableRow key={inq.id} className="hover:bg-muted/30">
-              <TableCell className="font-medium">
-                <Link href={`/inquiries/${inq.id}`} className="hover:underline">
-                  {inq.product_categories?.name ?? "—"}
-                </Link>
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {inq.profiles?.company_name ?? "—"}
-              </TableCell>
-              <TableCell className="text-right">{inq.requested_qty}</TableCell>
-              <TableCell className="text-right">{inq.target_price ?? "—"}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {inq.destination ?? "—"}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className={statusColor[inq.status] ?? ""}>
-                  {inq.status}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-xs text-muted-foreground">
-                {new Date(inq.created_at).toLocaleDateString()}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-function SellerInquiriesTable({ rows }: { rows: SellerInquiryRow[] }) {
-  return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Product</TableHead>
-            <TableHead>Buyer</TableHead>
-            <TableHead className="text-right">Qty</TableHead>
-            <TableHead>Destination</TableHead>
-            <TableHead>Message</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -129,11 +91,15 @@ function SellerInquiriesTable({ rows }: { rows: SellerInquiryRow[] }) {
                 {inq.profiles?.company_name ?? "—"}
               </TableCell>
               <TableCell className="text-right">{inq.requested_qty}</TableCell>
+              <TableCell className="text-right">
+                {inq.liveUnitPrice != null
+                  ? `${inq.liveUnitPrice} ${inq.liveCurrency ?? ""}`.trim()
+                  : inq.target_price != null
+                    ? `${inq.target_price} (target)`
+                    : "—"}
+              </TableCell>
               <TableCell className="text-muted-foreground">
                 {inq.destination ?? "—"}
-              </TableCell>
-              <TableCell className="text-muted-foreground max-w-xs truncate text-xs">
-                {inq.message ?? "—"}
               </TableCell>
               <TableCell>
                 <Badge variant="outline" className={statusColor[inq.status] ?? ""}>
@@ -141,17 +107,7 @@ function SellerInquiriesTable({ rows }: { rows: SellerInquiryRow[] }) {
                 </Badge>
               </TableCell>
               <TableCell>
-                {(inq.status === "pending" || inq.status === "negotiating") && (
-                  <InquiryActions inquiryId={inq.id} />
-                )}
-                {(inq.status === "quoted" || inq.status === "negotiating") && (
-                  <Link
-                    href={`/inquiries/${inq.id}`}
-                    className="text-xs text-primary underline ml-2"
-                  >
-                    Review
-                  </Link>
-                )}
+                <BuyerRowActions inquiryId={inq.id} turn={inq.turn} />
               </TableCell>
             </TableRow>
           ))}
@@ -159,6 +115,106 @@ function SellerInquiriesTable({ rows }: { rows: SellerInquiryRow[] }) {
       </Table>
     </div>
   );
+}
+
+function BuyerRowActions({ inquiryId, turn }: { inquiryId: string; turn: InquiryTurn }) {
+  if (turn === "my-review") {
+    return (
+      <Link
+        href={`/inquiries/${inquiryId}`}
+        className="text-xs text-primary underline"
+      >
+        Review →
+      </Link>
+    );
+  }
+  if (turn === "their-review" || turn === "seller-quote") {
+    return (
+      <span className="text-xs text-muted-foreground">Awaiting seller</span>
+    );
+  }
+  return <span className="text-xs text-muted-foreground">—</span>;
+}
+
+function SellerInquiriesTable({ rows }: { rows: RowWithTurn<SellerInquiryRow>[] }) {
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Product</TableHead>
+            <TableHead>Buyer</TableHead>
+            <TableHead className="text-right">Qty</TableHead>
+            <TableHead className="text-right">Live Price</TableHead>
+            <TableHead>Destination</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((inq) => (
+            <TableRow key={inq.id} className="hover:bg-muted/30">
+              <TableCell className="font-medium">
+                <Link href={`/inquiries/${inq.id}`} className="hover:underline">
+                  {inq.product_categories?.name ?? "—"}
+                </Link>
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {inq.profiles?.company_name ?? "—"}
+              </TableCell>
+              <TableCell className="text-right">{inq.requested_qty}</TableCell>
+              <TableCell className="text-right">
+                {inq.liveUnitPrice != null
+                  ? `${inq.liveUnitPrice} ${inq.liveCurrency ?? ""}`.trim()
+                  : inq.target_price != null
+                    ? `${inq.target_price} (target)`
+                    : "—"}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {inq.destination ?? "—"}
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline" className={statusColor[inq.status] ?? ""}>
+                  {inq.status}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <SellerRowActions inquiryId={inq.id} turn={inq.turn} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function SellerRowActions({ inquiryId, turn }: { inquiryId: string; turn: InquiryTurn }) {
+  // status='pending' (no quotation yet): legacy fast Accept (sends a default
+  // quotation derived from the listing) + Reject. Both are safe here because
+  // there's no live counter-offer to overwrite.
+  if (turn === "seller-quote") {
+    return <InquiryActions inquiryId={inquiryId} />;
+  }
+  // A live quotation exists, my counterparty made it — go review on the
+  // detail page (Accept / Counter / Decline).
+  if (turn === "my-review") {
+    return (
+      <Link
+        href={`/inquiries/${inquiryId}`}
+        className="text-xs text-primary underline"
+      >
+        Review →
+      </Link>
+    );
+  }
+  // I sent the live offer; awaiting buyer.
+  if (turn === "their-review") {
+    return (
+      <span className="text-xs text-muted-foreground">Awaiting buyer</span>
+    );
+  }
+  return <span className="text-xs text-muted-foreground">—</span>;
 }
 
 function InquiryListSection<T extends { status: string }>({
@@ -241,7 +297,7 @@ export default async function InquiriesPage({
     supabase
       .from("inquiries")
       .select(
-        "id, status, requested_qty, target_price, destination, message, created_at, product_categories(name), profiles!inquiries_seller_id_fkey(company_name)"
+        "id, status, buyer_id, seller_id, requested_qty, target_price, destination, message, created_at, product_categories(name), profiles!inquiries_seller_id_fkey(company_name)"
       )
       .eq("buyer_id", user.id)
       .order("created_at", { ascending: false })
@@ -250,7 +306,7 @@ export default async function InquiriesPage({
       ? supabase
           .from("inquiries")
           .select(
-            "id, status, requested_qty, target_price, destination, message, created_at, product_categories(name), profiles!inquiries_buyer_id_fkey(company_name, country)"
+            "id, status, buyer_id, seller_id, requested_qty, target_price, destination, message, created_at, product_categories(name), profiles!inquiries_buyer_id_fkey(company_name, country)"
           )
           .eq("seller_id", user.id)
           .order("created_at", { ascending: false })
@@ -260,8 +316,32 @@ export default async function InquiriesPage({
 
   const buyerRows = asBuyer ?? [];
   const sellerRows = asSeller ?? [];
-  const buyerSplit = splitInquiries(buyerRows);
-  const sellerSplit = splitInquiries(sellerRows);
+
+  // Per-inquiry live quotation snapshot. Drives the "whose turn" badge in
+  // the Actions column and prevents the legacy Accept/Reject buttons from
+  // surfacing while a counter-offer is in flight.
+  const allInquiryIds = [
+    ...buyerRows.map((r) => r.id),
+    ...sellerRows.map((r) => r.id),
+  ];
+  const liveQuotations = await getLiveQuotationsByInquiry(supabase, allInquiryIds);
+  // Bind to a local so the TS closure doesn't lose the early-return narrowing.
+  const userId = user.id;
+
+  function decorate<T extends BuyerInquiryRow>(rows: T[]): RowWithTurn<T>[] {
+    return rows.map((r) => {
+      const live = liveQuotations.get(r.id);
+      return {
+        ...r,
+        turn: classifyInquiryTurn(r, live, userId),
+        liveUnitPrice: live?.unit_price ?? null,
+        liveCurrency: live?.currency ?? null,
+      };
+    });
+  }
+
+  const buyerSplit = splitInquiries(decorate(buyerRows));
+  const sellerSplit = splitInquiries(decorate(sellerRows));
 
   return (
     <div className="space-y-6">

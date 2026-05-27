@@ -173,6 +173,14 @@ export async function createInquiry(
  * inquiry. Buyer must still accept the quotation before an order is
  * created (handled by `acceptQuotation`).
  *
+ * STRICTLY for the initial `pending` state (no quotation yet). Once a
+ * quotation exists (status=`quoted`/`negotiating`), the seller MUST act
+ * on the live quotation through the inquiry detail page's
+ * `<QuotationActions />` (Accept / Counter / Decline) — otherwise this
+ * shortcut would silently mark the buyer's live counter-offer as
+ * `superseded` and replace it with a default seller offer, erasing the
+ * negotiation history.
+ *
  * For richer offers (custom price / different incoterm / specific
  * shipping window), seller should call `submitQuotation` directly via
  * the inquiry detail UI.
@@ -210,8 +218,15 @@ export async function acceptInquiry(
     }>();
 
   if (!inquiry) return { data: null, error: { message: "Inquiry not found." } };
-  if (inquiry.status !== "pending" && inquiry.status !== "negotiating") {
-    return { data: null, error: { message: `Inquiry is ${inquiry.status}.` } };
+  if (inquiry.status !== "pending") {
+    return {
+      data: null,
+      error: {
+        message:
+          "A quotation already exists on this inquiry. Open the inquiry to Accept / Counter / Decline the live offer instead of sending a default.",
+        code: "QUOTATION_ALREADY_EXISTS",
+      },
+    };
   }
   if (!inquiry.listing_id || !inquiry.listings) {
     return { data: null, error: { message: "Inquiry must reference a listing to send a quotation." } };
@@ -284,19 +299,81 @@ export async function acceptInquiry(
   return { data: { inquiryId: id, quotationId: quotation.id }, error: null };
 }
 
+/**
+ * Seller declines an inquiry. Allowed when:
+ *   - `status='pending'` (no quotation yet) — seller walks away outright.
+ *   - `status='quoted'/'negotiating'` AND the live quotation is NOT one
+ *     the seller proposed (i.e. it's the buyer's counter that the seller
+ *     could otherwise Accept / Counter; declining the inquiry as a whole
+ *     is the third valid response).
+ *
+ * Refuses to act when the seller is the proposer of the live quotation —
+ * declining "your own offer" makes no sense; the seller can simply send
+ * a counter or let the quotation expire.
+ *
+ * On success the live quotation (if any) is also marked `rejected`, so
+ * the historical view stays consistent and `acceptQuotation` cannot be
+ * raced against this call.
+ */
 export async function rejectInquiry(id: string): Promise<ActionResult<true>> {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { data: null, error: { message: "Not authenticated." } };
 
-  const { error } = await supabase
+  const { data: inquiry } = await supabase
+    .from("inquiries")
+    .select("id, seller_id, status")
+    .eq("id", id)
+    .eq("seller_id", user.id)
+    .single<{ id: string; seller_id: string; status: string }>();
+  if (!inquiry) return { data: null, error: { message: "Inquiry not found." } };
+  if (
+    inquiry.status === "rejected" ||
+    inquiry.status === "converted" ||
+    inquiry.status === "expired"
+  ) {
+    return { data: null, error: { message: `Inquiry is ${inquiry.status}.` } };
+  }
+
+  const { data: live } = await supabase
+    .from("quotations")
+    .select("id, created_by")
+    .eq("inquiry_id", id)
+    .eq("status", "sent")
+    .maybeSingle<{ id: string; created_by: string }>();
+
+  if (live && live.created_by === user.id) {
+    return {
+      data: null,
+      error: {
+        message:
+          "You cannot decline an inquiry while your own counter-offer is live. Wait for the buyer to respond, or let the quotation expire.",
+        code: "OWN_LIVE_OFFER",
+      },
+    };
+  }
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+
+  if (live) {
+    await admin
+      .from("quotations")
+      .update({
+        status: "rejected",
+        countered_by: user.id,
+        responded_at: new Date().toISOString(),
+      })
+      .eq("id", live.id);
+  }
+
+  const { error } = await admin
     .from("inquiries")
     .update({ status: "rejected" })
-    .eq("id", id)
-    .eq("seller_id", user.id);
-
+    .eq("id", id);
   if (error) return { data: null, error: { message: error.message } };
 
+  revalidatePath(`/inquiries/${id}`);
   revalidatePath("/inquiries");
 
   return { data: true, error: null };

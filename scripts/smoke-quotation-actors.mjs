@@ -210,6 +210,45 @@ async function main() {
   check(buyerTurn2.has(inquiryId), "buyer needing response after seller counter");
   check(!sellerTurn2.has(inquiryId), "seller NOT needing response (they proposed round 3)");
 
+  // -----------------------------------------------------------------
+  // Schema-level invariants for the new acceptInquiry / rejectInquiry
+  // tightening. The server actions guard at the application layer; here
+  // we just assert the state we'd expect them to see when called.
+  // -----------------------------------------------------------------
+
+  const inq = await q(`
+    select status from public.inquiries where id = ${esc(inquiryId)};
+  `);
+  check(
+    inq[0].status === "negotiating",
+    "inquiry status='negotiating' while a live quotation exists"
+  );
+
+  const liveAfterR3 = await q(`
+    select id, created_by from public.quotations
+     where inquiry_id = ${esc(inquiryId)} and status = 'sent';
+  `);
+  check(liveAfterR3.length === 1, "exactly one live quotation");
+  check(
+    liveAfterR3[0].created_by === seller.id,
+    "live quotation's proposer = seller (round 3)"
+  );
+
+  // Seller calling acceptInquiry now would hit our 'pending'-only guard
+  // (status='negotiating' → QUOTATION_ALREADY_EXISTS). Seller calling
+  // rejectInquiry now would hit our OWN_LIVE_OFFER guard (their own
+  // round 3 is the live quotation). Both are application-layer guards
+  // — see src/actions/inquiry.ts. We document the invariant the guards
+  // depend on:
+  check(
+    inq[0].status !== "pending",
+    "acceptInquiry guard precondition: status !== 'pending' once any quotation exists"
+  );
+  check(
+    liveAfterR3[0].created_by === seller.id,
+    "rejectInquiry guard precondition: live quotation.created_by = seller (caller)"
+  );
+
   if (CLEANUP) {
     await q(`delete from public.inquiries where id = ${esc(inquiryId)};`);
     console.log("\nCleanup: temp inquiry deleted (quotations cascade).");
