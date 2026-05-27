@@ -8,6 +8,7 @@
  */
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function ListingGallery({ images, alt }: Props) {
+  const t = useTranslations("listings.gallery");
   const [activeIdx, setActiveIdx] = useState(0);
   if (!images.length) return null;
   const active = images[Math.min(activeIdx, images.length - 1)];
@@ -41,7 +43,7 @@ export function ListingGallery({ images, alt }: Props) {
                   ? "border-primary ring-2 ring-primary"
                   : "border-border hover:border-primary/60"
               )}
-              aria-label={`Show image ${idx + 1} of ${images.length}`}
+              aria-label={t("showImage", { idx: idx + 1, total: images.length })}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img

@@ -55,6 +55,27 @@
       "converted": "已成单"
     }
   },
+  "listing": {
+    "status": {
+      "active": "在售",
+      "paused": "已暂停",
+      "sold_out": "已售罄"
+    }
+  },
+  "quotation": {
+    "status": {
+      "pending": "待回应",
+      "accepted": "已接受",
+      "rejected": "已拒绝",
+      "countered": "已还价",
+      "superseded": "已被替代",
+      "expired": "已过期"
+    }
+  },
+  "unit": {
+    "MT": "MT（公吨）",
+    "KG": "KG（千克）"
+  },
   "kyc": {
     "level": {
       "0": "未认证",

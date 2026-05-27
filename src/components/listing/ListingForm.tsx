@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { createListing, updateListing } from "@/actions/listing";
 import {
@@ -80,6 +81,8 @@ interface ListingFormProps {
 
 export function ListingForm({ categories, existing }: ListingFormProps) {
   const router = useRouter();
+  const t = useTranslations("listings.form");
+  const tEnums = useTranslations("enums");
   const [isPending, startTransition] = useTransition();
   const isEdit = !!existing;
   /** Track whether the seller has manually edited the title so we don't
@@ -190,7 +193,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
         (typeof ms === "string" && ms.length > 0);
       if (!hasMesh) {
         form.setError("specs.mesh_size", {
-          message: "Pick at least one mesh size for custom grade.",
+          message: t("fields.meshRequired"),
         });
         return;
       }
@@ -216,7 +219,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
           toast.error(result.error.message, {
             duration: 8000,
             action: {
-              label: "Open Settings",
+              label: t("toast.openSettings"),
               onClick: () => router.push("/settings?prompt=incomplete"),
             },
           });
@@ -224,7 +227,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
           toast.error(result.error.message, {
             duration: 8000,
             action: {
-              label: "KYC page",
+              label: t("toast.kycPage"),
               onClick: () => router.push("/settings/kyc"),
             },
           });
@@ -233,9 +236,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
         }
         return;
       }
-      toast.success(
-        isEdit ? "Listing updated." : "Listing created successfully."
-      );
+      toast.success(isEdit ? t("toast.updated") : t("toast.created"));
       router.push("/listings");
       router.refresh();
     });
@@ -252,7 +253,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
           name="category_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Category</FormLabel>
+              <FormLabel>{t("fields.category")}</FormLabel>
               <Select
                 onValueChange={(v) => {
                   field.onChange(v);
@@ -271,14 +272,14 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                       provided, which is why the trigger previously showed
                       a UUID. Passing a render function fixes it.
                     */}
-                    <SelectValue placeholder="Select a product category">
+                    <SelectValue placeholder={t("fields.categoryPlaceholder")}>
                       {(value: unknown) => {
                         const id =
                           typeof value === "string" ? value : "";
                         const match = categories.find((c) => c.id === id);
                         return match
                           ? match.name
-                          : "Select a product category";
+                          : t("fields.categoryPlaceholder");
                       }}
                     </SelectValue>
                   </SelectTrigger>
@@ -300,21 +301,25 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
               {selectedSpec && (
                 <div className="mt-2 rounded-md border bg-card/40 p-3 text-xs space-y-1">
                   <p>
-                    <span className="text-muted-foreground">Product type:</span>{" "}
+                    <span className="text-muted-foreground">
+                      {t("categoryCard.productType")}
+                    </span>{" "}
                     <span className="font-medium">
                       {PRODUCT_TYPE_LABEL[selectedSpec.product_type]}
                     </span>
                   </p>
                   <p>
-                    <span className="text-muted-foreground">Default spec:</span>{" "}
+                    <span className="text-muted-foreground">
+                      {t("categoryCard.defaultSpec")}
+                    </span>{" "}
                     <span className="font-medium">
                       {describeCategorySpec(selectedSpec)}
                     </span>
                   </p>
                   <p className="text-muted-foreground">
-                    ≥ {selectedSpec.size_distribution_min_pct}% of particles
-                    match the mesh. Override any field below if your batch
-                    differs.
+                    {t("categoryCard.rangeNote", {
+                      pct: selectedSpec.size_distribution_min_pct,
+                    })}
                   </p>
                 </div>
               )}
@@ -329,7 +334,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
           render={({ field }) => (
             <FormItem>
               <div className="flex items-center justify-between">
-                <FormLabel>Listing Title</FormLabel>
+                <FormLabel>{t("fields.title")}</FormLabel>
                 {selectedSpec && suggestedTitle && (
                   <Button
                     type="button"
@@ -338,24 +343,19 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                     className="h-7 text-xs"
                     onClick={applySuggestedTitle}
                   >
-                    Generate title
+                    {t("fields.generateTitle")}
                   </Button>
                 )}
               </div>
               <FormControl>
                 <Input
-                  placeholder={
-                    suggestedTitle ||
-                    "e.g. Natural Flake Graphite 95% C — 50 MT"
-                  }
+                  placeholder={suggestedTitle || t("fields.titlePlaceholder")}
                   {...field}
                   onChange={(e) => {
                     setTitleEdited(true);
                     field.onChange(e);
                   }}
                   onBlur={(e) => {
-                    // If the seller never edited the title and the field
-                    // is still empty, fill in the suggestion on blur.
                     if (!titleEdited && !e.target.value && suggestedTitle) {
                       form.setValue("title", suggestedTitle, {
                         shouldValidate: true,
@@ -367,7 +367,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
               </FormControl>
               {selectedSpec && suggestedTitle && !field.value && (
                 <p className="text-xs text-muted-foreground">
-                  Suggested:{" "}
+                  {t("fields.suggested")}
                   <span className="text-foreground">{suggestedTitle}</span>
                 </p>
               )}
@@ -379,11 +379,13 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
         {selectedSpec && (
           <div className="rounded-md border bg-card/30 p-4 space-y-4">
             <div>
-              <h3 className="text-sm font-semibold">Product Specifications</h3>
+              <h3 className="text-sm font-semibold">
+                {t("fields.specsHeading")}
+              </h3>
               <p className="text-xs text-muted-foreground">
                 {selectedSpec.is_custom
-                  ? "Custom grade — pick every mesh size that applies and fill in any spec ranges (e.g. 90–95% fixed carbon)."
-                  : "Inherited from category. Leave a field empty to use the category default, or override it to match your batch."}
+                  ? t("fields.specsHintCustom")
+                  : t("fields.specsHintInherited")}
               </p>
             </div>
 
@@ -395,7 +397,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                 render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel>
-                      Mesh Size(s)
+                      {t("fields.meshSizesLabel")}
                       <span className="text-destructive ml-1">*</span>
                     </FormLabel>
                     <div className="grid grid-cols-3 gap-2">
@@ -420,16 +422,18 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                                 const arr = Array.from(next);
                                 field.onChange(arr.length > 0 ? arr : undefined);
                               }}
-                              aria-label={`${m} mesh`}
+                              aria-label={t("fields.meshAria", { value: m })}
                             />
-                            <span>{m} Mesh</span>
+                            <span>{t("fields.meshSuffix", { value: m })}</span>
                           </label>
                         );
                       })}
                     </div>
                     {customMeshValue.length > 0 && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Selection: {formatMeshSelection(customMeshValue)}
+                        {t("fields.meshSelection", {
+                          value: formatMeshSelection(customMeshValue),
+                        })}
                       </p>
                     )}
                     {fieldState.error?.message && (
@@ -446,7 +450,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                 name="specs.mesh_size"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mesh Size</FormLabel>
+                    <FormLabel>{t("fields.meshSizeLabel")}</FormLabel>
                     <Select
                       onValueChange={(v) => field.onChange(v)}
                       value={
@@ -458,16 +462,20 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                           <SelectValue
                             placeholder={
                               selectedSpec.mesh_size
-                                ? `Default: ${selectedSpec.mesh_size} Mesh`
-                                : "Pick mesh size"
+                                ? t("fields.meshDefault", {
+                                    value: selectedSpec.mesh_size,
+                                  })
+                                : t("fields.meshPick")
                             }
                           >
                             {(value: unknown) =>
                               typeof value === "string" && value
-                                ? `${value} Mesh`
+                                ? t("fields.meshSuffix", { value })
                                 : selectedSpec.mesh_size
-                                  ? `Default: ${selectedSpec.mesh_size} Mesh`
-                                  : "Pick mesh size"
+                                  ? t("fields.meshDefault", {
+                                      value: selectedSpec.mesh_size,
+                                    })
+                                  : t("fields.meshPick")
                             }
                           </SelectValue>
                         </SelectTrigger>
@@ -475,7 +483,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                       <SelectContent>
                         {MESH_SIZES.map((m) => (
                           <SelectItem key={m} value={m}>
-                            {m} Mesh
+                            {t("fields.meshSuffix", { value: m })}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -492,20 +500,27 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                 name="specs.fixed_carbon"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fixed Carbon (%)</FormLabel>
+                    <FormLabel>{t("fields.fixedCarbon")}</FormLabel>
                     <FormControl>
                       <Input
                         placeholder={
                           selectedSpec.is_custom
-                            ? "e.g. 95 or 90-95"
-                            : `Default: ${selectedSpec.fixed_carbon_min}–${selectedSpec.fixed_carbon_max}`
+                            ? t("fields.fixedCarbonPlaceholderCustom")
+                            : t("fields.fixedCarbonPlaceholderInherit", {
+                                min: selectedSpec.fixed_carbon_min,
+                                max: selectedSpec.fixed_carbon_max,
+                              })
                         }
                         {...field}
                         value={field.value ?? ""}
                       />
                     </FormControl>
                     <p className="text-xs text-muted-foreground">
-                      Accepts a single number or range — e.g. <span className="text-foreground">94</span>, <span className="text-foreground">90-95</span>, <span className="text-foreground">≥95</span>.
+                      {t.rich("fields.fixedCarbonHelp", {
+                        0: (chunks) => (
+                          <span className="text-foreground">{chunks}</span>
+                        ),
+                      })}
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -517,10 +532,12 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                 name="specs.moisture"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Moisture (%)</FormLabel>
+                    <FormLabel>{t("fields.moisture")}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder={`Default: ${selectedSpec.moisture_max}% max`}
+                        placeholder={t("fields.moisturePlaceholder", {
+                          max: selectedSpec.moisture_max,
+                        })}
                         {...field}
                         value={field.value ?? ""}
                       />
@@ -536,10 +553,12 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
               name="specs.size_distribution"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Size Distribution</FormLabel>
+                  <FormLabel>{t("fields.sizeDistribution")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder={`Default: ${selectedSpec.size_distribution_min_pct}% min`}
+                      placeholder={t("fields.sizeDistributionPlaceholder", {
+                        value: selectedSpec.size_distribution_min_pct,
+                      })}
                       {...field}
                       value={field.value ?? ""}
                     />
@@ -554,18 +573,17 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
               name="specs.additional_notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Additional Spec Notes (optional)</FormLabel>
+                  <FormLabel>{t("fields.additionalNotes")}</FormLabel>
                   <FormControl>
                     <Textarea
                       rows={2}
-                      placeholder="Spec-related context: ash content, sulphur, packing, COA references…"
+                      placeholder={t("fields.additionalNotesPlaceholder")}
                       {...field}
                       value={field.value ?? ""}
                     />
                   </FormControl>
                   <p className="text-xs text-muted-foreground">
-                    Shown in the buyer's spec sheet. For batch logistics
-                    or commercial terms, use the Description field below.
+                    {t("fields.additionalNotesHelp")}
                   </p>
                   <FormMessage />
                 </FormItem>
@@ -580,13 +598,13 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
             name="quantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Available Quantity *</FormLabel>
+                <FormLabel>{t("fields.quantity")}</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     min={0.001}
                     step={0.001}
-                    placeholder="e.g. 50"
+                    placeholder={t("fields.quantityPlaceholder")}
                     {...field}
                     value={field.value ?? ""}
                     onChange={(e) => {
@@ -596,7 +614,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                   />
                 </FormControl>
                 <p className="text-xs text-muted-foreground">
-                  Total amount you can ship from this lot.
+                  {t("fields.quantityHelp")}
                 </p>
                 <FormMessage />
               </FormItem>
@@ -607,22 +625,22 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
             name="unit"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Unit</FormLabel>
+                <FormLabel>{t("fields.unit")}</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue>
                         {(value: unknown) =>
                           value === "KG"
-                            ? "KG (Kilogram)"
-                            : "MT (Metric Ton)"
+                            ? tEnums("unit.KG")
+                            : tEnums("unit.MT")
                         }
                       </SelectValue>
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="MT">MT (Metric Ton)</SelectItem>
-                    <SelectItem value="KG">KG (Kilogram)</SelectItem>
+                    <SelectItem value="MT">{tEnums("unit.MT")}</SelectItem>
+                    <SelectItem value="KG">{tEnums("unit.KG")}</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -636,13 +654,13 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
           name="min_order_quantity"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Minimum Order Quantity (optional)</FormLabel>
+              <FormLabel>{t("fields.minOrder")}</FormLabel>
               <FormControl>
                 <Input
                   type="number"
                   min={0.001}
                   step={0.001}
-                  placeholder="e.g. 5 — leave blank for no minimum"
+                  placeholder={t("fields.minOrderPlaceholder")}
                   {...field}
                   value={field.value ?? ""}
                   onChange={(e) => {
@@ -652,8 +670,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                 />
               </FormControl>
               <p className="text-xs text-muted-foreground">
-                The smallest order a buyer can submit through inquiry.
-                Empty = any quantity is OK. Cannot exceed available quantity.
+                {t("fields.minOrderHelp")}
               </p>
               <FormMessage />
             </FormItem>
@@ -666,13 +683,13 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
             name="unit_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Unit Price</FormLabel>
+                <FormLabel>{t("fields.unitPrice")}</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     min={0}
                     step={0.01}
-                    placeholder="e.g. 850.00"
+                    placeholder={t("fields.unitPricePlaceholder")}
                     {...field}
                     value={field.value ?? ""}
                     onChange={(e) => {
@@ -690,7 +707,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
             name="currency"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Currency</FormLabel>
+                <FormLabel>{t("fields.currency")}</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
@@ -717,7 +734,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
             name="incoterm"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Incoterm</FormLabel>
+                <FormLabel>{t("fields.incoterm")}</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
@@ -725,9 +742,9 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {["CFR", "CIF", "FOB"].map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
+                    {["CFR", "CIF", "FOB"].map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -741,9 +758,12 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
             name="origin_location"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Origin</FormLabel>
+                <FormLabel>{t("fields.origin")}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Madagascar" {...field} />
+                  <Input
+                    placeholder={t("fields.originPlaceholder")}
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -757,7 +777,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
             name="available_from"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Available From (optional)</FormLabel>
+                <FormLabel>{t("fields.availableFrom")}</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} value={field.value ?? ""} />
                 </FormControl>
@@ -770,7 +790,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
             name="available_to"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Available To (optional)</FormLabel>
+                <FormLabel>{t("fields.availableTo")}</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} value={field.value ?? ""} />
                 </FormControl>
@@ -785,7 +805,7 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
           name="images"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Images (optional)</FormLabel>
+              <FormLabel>{t("fields.images")}</FormLabel>
               <FormControl>
                 <ListingImageUploader
                   value={field.value ?? []}
@@ -802,17 +822,16 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description (optional)</FormLabel>
+              <FormLabel>{t("fields.description")}</FormLabel>
               <FormControl>
                 <Textarea
                   rows={4}
-                  placeholder="Commercial / logistics context: packaging, certificates, delivery options, payment preferences…"
+                  placeholder={t("fields.descriptionPlaceholder")}
                   {...field}
                 />
               </FormControl>
               <p className="text-xs text-muted-foreground">
-                Free-form pitch shown beneath the spec sheet on the
-                listing page.
+                {t("fields.descriptionHelp")}
               </p>
               <FormMessage />
             </FormItem>
@@ -823,18 +842,18 @@ export function ListingForm({ categories, existing }: ListingFormProps) {
           <Button type="submit" disabled={isPending}>
             {isPending
               ? isEdit
-                ? "Saving…"
-                : "Creating…"
+                ? t("actions.saving")
+                : t("actions.creating")
               : isEdit
-                ? "Save changes"
-                : "Create Listing"}
+                ? t("actions.save")
+                : t("actions.create")}
           </Button>
           <Button
             type="button"
             variant="outline"
             onClick={() => router.back()}
           >
-            Cancel
+            {t("actions.cancel")}
           </Button>
         </div>
       </form>

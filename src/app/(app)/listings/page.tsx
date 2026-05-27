@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,11 +19,16 @@ import {
 } from "@/lib/categories/spec";
 import { ListingRowActions } from "@/components/listing/ListingRowActions";
 
-export const metadata = { title: "My Listings — Mada Graphite" };
+export async function generateMetadata() {
+  const t = await getTranslations("listings");
+  return { title: t("metaTitle") };
+}
 
 export default async function ListingsPage() {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const t = await getTranslations("listings");
+  const tEnums = await getTranslations("enums");
   // Middleware (`src/proxy.ts`) should have redirected unauthenticated
   // visitors before they ever hit this page. Belt-and-braces: bail out
   // cleanly if a stale session cookie sneaks through during a session
@@ -30,7 +36,7 @@ export default async function ListingsPage() {
   if (!user) {
     return (
       <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-        Your session expired. Please sign in again.
+        {t("sessionExpired")}
       </div>
     );
   }
@@ -70,22 +76,22 @@ export default async function ListingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My Listings</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("heading")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your active product listings.
+            {t("subheading")}
           </p>
         </div>
         <Button render={<Link href="/listings/new" />}>
           <PlusIcon className="w-4 h-4 mr-2" />
-          New Listing
+          {t("newButton")}
         </Button>
       </div>
 
       {!listings?.length ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-          You have no listings yet.{" "}
+          {t("emptyTitle")}{" "}
           <Link href="/listings/new" className="underline text-primary">
-            Create your first listing
+            {t("emptyCta")}
           </Link>
           .
         </div>
@@ -94,13 +100,13 @@ export default async function ListingsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("columns.title")}</TableHead>
+                <TableHead>{t("columns.category")}</TableHead>
+                <TableHead className="text-right">{t("columns.qty")}</TableHead>
+                <TableHead className="text-right">{t("columns.price")}</TableHead>
+                <TableHead>{t("columns.status")}</TableHead>
+                <TableHead>{t("columns.created")}</TableHead>
+                <TableHead className="text-right">{t("columns.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -109,6 +115,11 @@ export default async function ListingsPage() {
                 const overrides = parseListingSpecs(l.specs);
                 const resolved = resolveListingSpecs(spec, overrides);
                 const cover = (l.images ?? [])[0] ?? null;
+                const statusKey = (l.status === "active" ||
+                  l.status === "paused" ||
+                  l.status === "sold_out")
+                  ? l.status
+                  : null;
                 return (
                   <TableRow key={l.id}>
                     <TableCell>
@@ -140,15 +151,16 @@ export default async function ListingsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {l.product_categories?.name ?? "—"}
+                      {l.product_categories?.name ?? t("row.noCategory")}
                     </TableCell>
                     <TableCell className="text-right">
                       {l.quantity.toLocaleString()} {l.unit}
                       {l.min_order_quantity != null &&
                         l.min_order_quantity > 0 && (
                           <p className="text-[10px] text-muted-foreground">
-                            Min order:{" "}
-                            {l.min_order_quantity.toLocaleString()} {l.unit}
+                            {t("row.minOrder", {
+                              qty: `${l.min_order_quantity.toLocaleString()} ${l.unit}`,
+                            })}
                           </p>
                         )}
                     </TableCell>
@@ -160,7 +172,9 @@ export default async function ListingsPage() {
                         variant="outline"
                         className={statusColor[l.status] ?? ""}
                       >
-                        {l.status}
+                        {statusKey
+                          ? tEnums(`listing.status.${statusKey}`)
+                          : l.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">

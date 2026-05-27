@@ -1,0 +1,237 @@
+{
+  "metaTitle": "My Listings — Mada Graphite",
+  "metaTitleNew": "New Listing — Mada Graphite",
+  "metaTitleEdit": "Edit Listing",
+  "heading": "My Listings",
+  "subheading": "Manage your active product listings.",
+  "newButton": "New Listing",
+  "emptyTitle": "You have no listings yet.",
+  "emptyCta": "Create your first listing",
+  "sessionExpired": "Your session expired. Please sign in again.",
+  "columns": {
+    "title": "Title",
+    "category": "Category",
+    "qty": "Qty",
+    "price": "Price",
+    "status": "Status",
+    "created": "Created",
+    "actions": "Actions"
+  },
+  "row": {
+    "minOrder": "Min order: {qty}",
+    "noCategory": "—"
+  },
+  "new": {
+    "heading": "New Listing",
+    "subheading": "Create a new product listing visible to all buyers on the market."
+  },
+  "edit": {
+    "heading": "Edit Listing",
+    "statusLine": "Status: ",
+    "statusInstruction": "Update any field below and click <em>Save changes</em>."
+  },
+  "rowActions": {
+    "edit": "Edit",
+    "editAria": "Edit listing",
+    "pause": "Pause",
+    "resume": "Resume",
+    "soldOut": "Sold out",
+    "soldOutTooltip": "Mark this listing as sold out",
+    "delete": "Delete",
+    "deleteAria": "Delete listing {title}",
+    "deleteTitle": "Delete this listing?",
+    "deleteConfirm": "Permanently remove <strong>{title}</strong>?",
+    "deleteNote": "If any orders reference this listing the delete will be refused — pause or mark it sold-out instead. Inquiries and quotations keep their history but lose the listing link.",
+    "cancel": "Cancel",
+    "deleting": "Deleting…",
+    "deleteButton": "Delete listing",
+    "toast": {
+      "paused": "Listing paused.",
+      "resumed": "Listing reactivated.",
+      "soldOut": "Marked as sold out.",
+      "deleted": "Listing deleted."
+    }
+  },
+  "form": {
+    "fields": {
+      "category": "Category",
+      "categoryPlaceholder": "Select a product category",
+      "title": "Listing Title",
+      "titlePlaceholder": "e.g. Natural Flake Graphite 95% C — 50 MT",
+      "generateTitle": "Generate title",
+      "suggested": "Suggested: ",
+      "specsHeading": "Product Specifications",
+      "specsHintCustom": "Custom grade — pick every mesh size that applies and fill in any spec ranges (e.g. 90–95% fixed carbon).",
+      "specsHintInherited": "Inherited from category. Leave a field empty to use the category default, or override it to match your batch.",
+      "meshSizesLabel": "Mesh Size(s)",
+      "meshSizeLabel": "Mesh Size",
+      "meshDefault": "Default: {value} Mesh",
+      "meshPick": "Pick mesh size",
+      "meshSuffix": "{value} Mesh",
+      "meshAria": "{value} mesh",
+      "meshSelection": "Selection: {value}",
+      "meshRequired": "Pick at least one mesh size for custom grade.",
+      "fixedCarbon": "Fixed Carbon (%)",
+      "fixedCarbonPlaceholderCustom": "e.g. 95 or 90-95",
+      "fixedCarbonPlaceholderInherit": "Default: {min}–{max}",
+      "fixedCarbonHelp": "Accepts a single number or range — e.g. <0>94</0>, <0>90-95</0>, <0>≥95</0>.",
+      "moisture": "Moisture (%)",
+      "moisturePlaceholder": "Default: {max}% max",
+      "sizeDistribution": "Size Distribution",
+      "sizeDistributionPlaceholder": "Default: {value}% min",
+      "additionalNotes": "Additional Spec Notes (optional)",
+      "additionalNotesPlaceholder": "Spec-related context: ash content, sulphur, packing, COA references…",
+      "additionalNotesHelp": "Shown in the buyer's spec sheet. For batch logistics or commercial terms, use the Description field below.",
+      "quantity": "Available Quantity *",
+      "quantityPlaceholder": "e.g. 50",
+      "quantityHelp": "Total amount you can ship from this lot.",
+      "unit": "Unit",
+      "minOrder": "Minimum Order Quantity (optional)",
+      "minOrderPlaceholder": "e.g. 5 — leave blank for no minimum",
+      "minOrderHelp": "The smallest order a buyer can submit through inquiry. Empty = any quantity is OK. Cannot exceed available quantity.",
+      "unitPrice": "Unit Price",
+      "unitPricePlaceholder": "e.g. 850.00",
+      "currency": "Currency",
+      "incoterm": "Incoterm",
+      "origin": "Origin",
+      "originPlaceholder": "Madagascar",
+      "availableFrom": "Available From (optional)",
+      "availableTo": "Available To (optional)",
+      "images": "Images (optional)",
+      "description": "Description (optional)",
+      "descriptionPlaceholder": "Commercial / logistics context: packaging, certificates, delivery options, payment preferences…",
+      "descriptionHelp": "Free-form pitch shown beneath the spec sheet on the listing page."
+    },
+    "categoryCard": {
+      "productType": "Product type:",
+      "defaultSpec": "Default spec:",
+      "rangeNote": "≥ {pct}% of particles match the mesh. Override any field below if your batch differs."
+    },
+    "actions": {
+      "create": "Create Listing",
+      "creating": "Creating…",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "created": "Listing created successfully.",
+      "updated": "Listing updated.",
+      "openSettings": "Open Settings",
+      "kycPage": "KYC page"
+    }
+  },
+  "inquiry": {
+    "button": "Submit Inquiry",
+    "title": "Submit an Inquiry",
+    "available": "Available:",
+    "minOrder": "Min order:",
+    "asking": "Asking:",
+    "quantityLabel": "Quantity ({unit})",
+    "moqHint": "Minimum: {qty}.",
+    "moqError": "Minimum order is {qty} for this listing.",
+    "targetPriceLabel": "Target Price ({currency}/{unit}) — optional",
+    "targetPricePlaceholder": "Listing asking {price}",
+    "targetPriceHelp": "Leave blank to let the seller quote first.",
+    "destinationLabel": "Destination Port / Country",
+    "destinationPlaceholder": "e.g. Rotterdam, Netherlands",
+    "messageLabel": "Message to Seller",
+    "messagePlaceholder": "Any special requirements, packaging preferences, certifications needed...",
+    "cancel": "Cancel",
+    "submit": "Submit Inquiry",
+    "submitting": "Submitting…",
+    "toast": {
+      "ok": "Inquiry submitted! The seller will respond shortly.",
+      "openSettings": "Open Settings",
+      "kycPage": "KYC page"
+    }
+  },
+  "inquiryActions": {
+    "accept": "Accept",
+    "reject": "Reject",
+    "toast": {
+      "accepted": "Default quotation sent. Buyer can accept, counter or decline.",
+      "rejected": "Inquiry rejected."
+    }
+  },
+  "quotation": {
+    "form": {
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "unitPrice": "Unit Price",
+      "currency": "Currency",
+      "incoterm": "Incoterm",
+      "originPort": "Origin Port",
+      "originPortPlaceholder": "Toamasina, Madagascar",
+      "destinationPort": "Destination Port",
+      "destinationPortPlaceholder": "e.g. Shanghai",
+      "shipWindowFrom": "Ship Window From",
+      "shipWindowTo": "Ship Window To",
+      "validity": "Quotation Valid Until",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Specs notes, packaging, payment expectations…",
+      "send": "Send Quotation",
+      "sendCounter": "Send Counter-offer",
+      "sending": "Sending…",
+      "toast": {
+        "counter": "Counter-offer sent.",
+        "sent": "Quotation sent."
+      }
+    },
+    "actions": {
+      "accept": "Accept",
+      "counter": "Counter",
+      "decline": "Decline",
+      "counterTitle": "Send Counter-offer",
+      "declineTitle": "Decline Quotation",
+      "declineReasonPlaceholder": "Optional reason for declining…",
+      "cancel": "Cancel",
+      "confirmDecline": "Confirm Decline",
+      "toast": {
+        "accepted": "Quotation accepted. Order created.",
+        "rejected": "Quotation rejected."
+      }
+    }
+  },
+  "gallery": {
+    "showImage": "Show image {idx} of {total}"
+  },
+  "imageUploader": {
+    "tabs": {
+      "upload": "Upload new",
+      "library": "From your library",
+      "libraryCount": "From your library ({count})"
+    },
+    "selectedCount": "{count}/{max} selected",
+    "atCap": "Reached the {max}-image limit. Remove one from the selection below to add more.",
+    "dragHint": "Drag & drop images, or",
+    "chooseFiles": "Choose files",
+    "compressNote": "Images are resized to 720 px WebP in your browser before upload — typically < 200 KB. Up to {limit} per source file.",
+    "loadingLibrary": "Loading your previously uploaded images…",
+    "emptyLibrary": "You haven't uploaded any images yet. New uploads from the other tab will show up here automatically.",
+    "libraryHint": "Click a thumbnail to toggle it on/off this listing.",
+    "refresh": "Refresh",
+    "removeFromLibrary": "Remove from library",
+    "emptyHint": "Images are optional — but a clear batch photo helps buyers trust the listing.",
+    "selectedHeading": "Selected (first image is the cover):",
+    "imageAlt": "Listing image {idx}",
+    "moveLeft": "Move left",
+    "moveRight": "Move right",
+    "removeFromListing": "Remove from listing",
+    "publicNotice": "Images attached to active listings are publicly visible to all buyers.",
+    "status": {
+      "compressing": "compressing…",
+      "uploadingPlain": "uploading…",
+      "uploadingSize": "uploading ({before} → {after})…",
+      "failed": "failed"
+    },
+    "toast": {
+      "limit": "You can attach at most {max} images per listing.",
+      "extras": "You can attach {remaining} more images — extras were ignored.",
+      "extrasSingular": "You can attach {remaining} more image — extras were ignored.",
+      "unsupported": "{name}: unsupported file type \"{type}\"",
+      "tooLarge": "{name}: too large ({size}). Limit {limit}.",
+      "removed": "Image removed from your library."
+    }
+  }
+}

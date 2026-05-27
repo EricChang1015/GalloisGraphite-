@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { z } from "zod";
 
 import { submitQuotation, counterQuotation } from "@/actions/quotation";
@@ -45,6 +46,7 @@ export function QuotationForm({
   onDone,
 }: QuotationFormProps) {
   const router = useRouter();
+  const t = useTranslations("listings.quotation.form");
   const [isPending, startTransition] = useTransition();
 
   // Default validity: 14 days from now (datetime-local format)
@@ -83,7 +85,7 @@ export function QuotationForm({
         toast.error(result.error.message);
         return;
       }
-      toast.success(parentQuotationId ? "Counter-offer sent." : "Quotation sent.");
+      toast.success(parentQuotationId ? t("toast.counter") : t("toast.sent"));
       onDone?.();
       router.refresh();
     });
@@ -98,7 +100,7 @@ export function QuotationForm({
             name="quantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Quantity</FormLabel>
+                <FormLabel>{t("quantity")}</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -116,7 +118,7 @@ export function QuotationForm({
             name="unit"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Unit</FormLabel>
+                <FormLabel>{t("unit")}</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
@@ -140,7 +142,7 @@ export function QuotationForm({
             name="unit_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Unit Price</FormLabel>
+                <FormLabel>{t("unitPrice")}</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -158,7 +160,7 @@ export function QuotationForm({
             name="currency"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Currency</FormLabel>
+                <FormLabel>{t("currency")}</FormLabel>
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
@@ -173,7 +175,7 @@ export function QuotationForm({
           name="incoterm"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Incoterm</FormLabel>
+              <FormLabel>{t("incoterm")}</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
@@ -197,9 +199,9 @@ export function QuotationForm({
             name="origin_port"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Origin Port</FormLabel>
+                <FormLabel>{t("originPort")}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Toamasina, Madagascar" {...field} />
+                  <Input placeholder={t("originPortPlaceholder")} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -210,9 +212,9 @@ export function QuotationForm({
             name="destination_port"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Destination Port</FormLabel>
+                <FormLabel>{t("destinationPort")}</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Shanghai" {...field} />
+                  <Input placeholder={t("destinationPortPlaceholder")} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -226,7 +228,7 @@ export function QuotationForm({
             name="shipping_window_from"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Ship Window From</FormLabel>
+                <FormLabel>{t("shipWindowFrom")}</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} />
                 </FormControl>
@@ -239,7 +241,7 @@ export function QuotationForm({
             name="shipping_window_to"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Ship Window To</FormLabel>
+                <FormLabel>{t("shipWindowTo")}</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} />
                 </FormControl>
@@ -254,7 +256,7 @@ export function QuotationForm({
           name="validity_until"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Quotation Valid Until</FormLabel>
+              <FormLabel>{t("validity")}</FormLabel>
               <FormControl>
                 <Input type="datetime-local" {...field} />
               </FormControl>
@@ -268,9 +270,13 @@ export function QuotationForm({
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Notes (optional)</FormLabel>
+              <FormLabel>{t("notes")}</FormLabel>
               <FormControl>
-                <Textarea rows={3} placeholder="Specs notes, packaging, payment expectations…" {...field} />
+                <Textarea
+                  rows={3}
+                  placeholder={t("notesPlaceholder")}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -279,10 +285,10 @@ export function QuotationForm({
 
         <Button type="submit" size="sm" disabled={isPending}>
           {isPending
-            ? "Sending…"
+            ? t("sending")
             : parentQuotationId
-            ? "Send Counter-offer"
-            : "Send Quotation"}
+            ? t("sendCounter")
+            : t("send")}
         </Button>
       </form>
     </Form>

@@ -1,0 +1,237 @@
+{
+  "metaTitle": "我的商品 — Mada Graphite",
+  "metaTitleNew": "新增商品 — Mada Graphite",
+  "metaTitleEdit": "编辑商品",
+  "heading": "我的商品",
+  "subheading": "管理您在售的商品列表。",
+  "newButton": "新增商品",
+  "emptyTitle": "您还没有任何商品。",
+  "emptyCta": "创建首个商品",
+  "sessionExpired": "会话已过期，请重新登录。",
+  "columns": {
+    "title": "标题",
+    "category": "品类",
+    "qty": "数量",
+    "price": "单价",
+    "status": "状态",
+    "created": "创建时间",
+    "actions": "操作"
+  },
+  "row": {
+    "minOrder": "起订量：{qty}",
+    "noCategory": "—"
+  },
+  "new": {
+    "heading": "新增商品",
+    "subheading": "创建一个对所有买家公开的商品。"
+  },
+  "edit": {
+    "heading": "编辑商品",
+    "statusLine": "状态：",
+    "statusInstruction": "修改下方任何字段后点击 <em>保存更改</em>。"
+  },
+  "rowActions": {
+    "edit": "编辑",
+    "editAria": "编辑商品",
+    "pause": "暂停",
+    "resume": "恢复",
+    "soldOut": "标记售罄",
+    "soldOutTooltip": "将此商品标记为已售罄",
+    "delete": "删除",
+    "deleteAria": "删除商品 {title}",
+    "deleteTitle": "确认删除此商品？",
+    "deleteConfirm": "确认永久删除 <strong>{title}</strong>？",
+    "deleteNote": "如果已有订单关联此商品，将无法删除——请改为暂停或标记售罄。询盘和报价记录将保留，但失去商品链接。",
+    "cancel": "取消",
+    "deleting": "删除中…",
+    "deleteButton": "删除商品",
+    "toast": {
+      "paused": "商品已暂停。",
+      "resumed": "商品已恢复在售。",
+      "soldOut": "已标记为售罄。",
+      "deleted": "商品已删除。"
+    }
+  },
+  "form": {
+    "fields": {
+      "category": "品类",
+      "categoryPlaceholder": "请选择品类",
+      "title": "商品标题",
+      "titlePlaceholder": "如：天然鳞片石墨 95% C — 50 MT",
+      "generateTitle": "自动生成标题",
+      "suggested": "建议标题：",
+      "specsHeading": "产品规格",
+      "specsHintCustom": "自定义等级——勾选所有适用的目数，并填写规格范围（如：90–95% 固定碳）。",
+      "specsHintInherited": "继承自品类。留空使用品类默认值，或覆盖以匹配您的批次。",
+      "meshSizesLabel": "目数（可多选）",
+      "meshSizeLabel": "目数",
+      "meshDefault": "默认：{value} 目",
+      "meshPick": "请选择目数",
+      "meshSuffix": "{value} 目",
+      "meshAria": "{value} 目",
+      "meshSelection": "已选：{value}",
+      "meshRequired": "自定义等级请至少选择一个目数。",
+      "fixedCarbon": "固定碳含量 (%)",
+      "fixedCarbonPlaceholderCustom": "如：95 或 90-95",
+      "fixedCarbonPlaceholderInherit": "默认：{min}–{max}",
+      "fixedCarbonHelp": "可填写单个数值或范围，如 <0>94</0>、<0>90-95</0>、<0>≥95</0>。",
+      "moisture": "水分含量 (%)",
+      "moisturePlaceholder": "默认：最大 {max}%",
+      "sizeDistribution": "粒度分布",
+      "sizeDistributionPlaceholder": "默认：至少 {value}%",
+      "additionalNotes": "其他规格说明（可选）",
+      "additionalNotesPlaceholder": "规格相关补充：灰分、硫含量、包装方式、COA 文件等…",
+      "additionalNotesHelp": "买家可在规格表中查看。批次物流或商务条款请填写下方“描述”字段。",
+      "quantity": "可售数量 *",
+      "quantityPlaceholder": "如：50",
+      "quantityHelp": "您可发运的本批次总数量。",
+      "unit": "单位",
+      "minOrder": "起订量（可选）",
+      "minOrderPlaceholder": "如：5 — 留空表示无限制",
+      "minOrderHelp": "买家通过询盘下单的最小数量。留空表示任意数量。不可超过可售数量。",
+      "unitPrice": "单价",
+      "unitPricePlaceholder": "如：850.00",
+      "currency": "币种",
+      "incoterm": "贸易术语",
+      "origin": "产地",
+      "originPlaceholder": "马达加斯加",
+      "availableFrom": "可发运起始日（可选）",
+      "availableTo": "可发运截止日（可选）",
+      "images": "图片（可选）",
+      "description": "描述（可选）",
+      "descriptionPlaceholder": "商务/物流补充：包装、证书、交付选项、付款偏好…",
+      "descriptionHelp": "商品页规格表下方展示的自由说明。"
+    },
+    "categoryCard": {
+      "productType": "产品类型：",
+      "defaultSpec": "默认规格：",
+      "rangeNote": "≥ {pct}% 颗粒符合目数要求。如批次有差异，请在下方覆盖任意字段。"
+    },
+    "actions": {
+      "create": "创建商品",
+      "creating": "创建中…",
+      "save": "保存更改",
+      "saving": "保存中…",
+      "cancel": "取消"
+    },
+    "toast": {
+      "created": "商品创建成功。",
+      "updated": "商品已更新。",
+      "openSettings": "前往设置",
+      "kycPage": "前往 KYC"
+    }
+  },
+  "inquiry": {
+    "button": "提交询盘",
+    "title": "提交询盘",
+    "available": "可售：",
+    "minOrder": "起订量：",
+    "asking": "标价：",
+    "quantityLabel": "数量（{unit}）",
+    "moqHint": "最少：{qty}。",
+    "moqError": "本商品最少起订量为 {qty}。",
+    "targetPriceLabel": "目标单价（{currency}/{unit}）—可选",
+    "targetPricePlaceholder": "卖家标价 {price}",
+    "targetPriceHelp": "留空让卖家先行报价。",
+    "destinationLabel": "目的港 / 目的国",
+    "destinationPlaceholder": "如：荷兰鹿特丹",
+    "messageLabel": "给卖家的留言",
+    "messagePlaceholder": "任何特殊要求、包装偏好或所需证书…",
+    "cancel": "取消",
+    "submit": "提交询盘",
+    "submitting": "提交中…",
+    "toast": {
+      "ok": "询盘已提交，卖家将尽快回复。",
+      "openSettings": "前往设置",
+      "kycPage": "前往 KYC"
+    }
+  },
+  "inquiryActions": {
+    "accept": "接受",
+    "reject": "拒绝",
+    "toast": {
+      "accepted": "默认报价已发送，买家可接受、还价或拒绝。",
+      "rejected": "询盘已拒绝。"
+    }
+  },
+  "quotation": {
+    "form": {
+      "quantity": "数量",
+      "unit": "单位",
+      "unitPrice": "单价",
+      "currency": "币种",
+      "incoterm": "贸易术语",
+      "originPort": "起运港",
+      "originPortPlaceholder": "马达加斯加 图阿马西纳",
+      "destinationPort": "目的港",
+      "destinationPortPlaceholder": "如：上海",
+      "shipWindowFrom": "发运起始日",
+      "shipWindowTo": "发运截止日",
+      "validity": "报价有效期至",
+      "notes": "备注（可选）",
+      "notesPlaceholder": "规格说明、包装方式、付款期望…",
+      "send": "发送报价",
+      "sendCounter": "发送还价",
+      "sending": "发送中…",
+      "toast": {
+        "counter": "还价已发送。",
+        "sent": "报价已发送。"
+      }
+    },
+    "actions": {
+      "accept": "接受",
+      "counter": "还价",
+      "decline": "拒绝",
+      "counterTitle": "发送还价",
+      "declineTitle": "拒绝报价",
+      "declineReasonPlaceholder": "拒绝原因（可选）…",
+      "cancel": "取消",
+      "confirmDecline": "确认拒绝",
+      "toast": {
+        "accepted": "报价已接受，已创建订单。",
+        "rejected": "报价已拒绝。"
+      }
+    }
+  },
+  "gallery": {
+    "showImage": "查看第 {idx} / {total} 张图片"
+  },
+  "imageUploader": {
+    "tabs": {
+      "upload": "上传新图",
+      "library": "从图库选择",
+      "libraryCount": "从图库选择（{count}）"
+    },
+    "selectedCount": "已选 {count}/{max}",
+    "atCap": "已达 {max} 张图片上限。请从下方选择中移除一张后再添加。",
+    "dragHint": "拖拽图片到此处，或",
+    "chooseFiles": "选择文件",
+    "compressNote": "图片会在浏览器中压缩为 720 像素 WebP（通常 < 200 KB）。每个原图最大 {limit}。",
+    "loadingLibrary": "正在加载历史上传的图片…",
+    "emptyLibrary": "您尚未上传过图片。在另一个标签新上传的图片会自动出现在此处。",
+    "libraryHint": "点击缩略图可切换此商品是否使用该图。",
+    "refresh": "刷新",
+    "removeFromLibrary": "从图库中移除",
+    "emptyHint": "图片为可选——但清晰的批次照片能提升买家信任度。",
+    "selectedHeading": "已选（首图为封面）：",
+    "imageAlt": "商品图片 {idx}",
+    "moveLeft": "前移",
+    "moveRight": "后移",
+    "removeFromListing": "从本商品移除",
+    "publicNotice": "在售商品所附图片对所有买家公开可见。",
+    "status": {
+      "compressing": "压缩中…",
+      "uploadingPlain": "上传中…",
+      "uploadingSize": "上传中（{before} → {after}）…",
+      "failed": "失败"
+    },
+    "toast": {
+      "limit": "每个商品最多 {max} 张图片。",
+      "extras": "还可附加 {remaining} 张图片——超出部分已忽略。",
+      "extrasSingular": "还可附加 {remaining} 张图片——超出部分已忽略。",
+      "unsupported": "{name}：不支持的文件类型 \"{type}\"",
+      "tooLarge": "{name}：文件过大（{size}），上限 {limit}。",
+      "removed": "已从图库移除。"
+    }
+  }
+}

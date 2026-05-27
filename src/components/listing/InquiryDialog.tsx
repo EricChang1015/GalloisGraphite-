@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { createInquiry } from "@/actions/inquiry";
 import {
@@ -55,6 +56,7 @@ function formatQty(n: number, unit: string): string {
 
 export function InquiryDialog({ listing }: InquiryDialogProps) {
   const router = useRouter();
+  const t = useTranslations("listings.inquiry");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -84,7 +86,7 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
     // Client-side MOQ guard (the server enforces the same rule).
     if (moq != null && values.requested_qty < moq) {
       form.setError("requested_qty", {
-        message: `Minimum order is ${formatQty(moq, listing.unit)} for this listing.`,
+        message: t("moqError", { qty: formatQty(moq, listing.unit) }),
       });
       return;
     }
@@ -106,7 +108,7 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
           toast.error(result.error.message, {
             duration: 8000,
             action: {
-              label: "Open Settings",
+              label: t("toast.openSettings"),
               onClick: () => router.push("/settings?prompt=incomplete"),
             },
           });
@@ -114,18 +116,16 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
           toast.error(result.error.message, {
             duration: 8000,
             action: {
-              label: "KYC page",
+              label: t("toast.kycPage"),
               onClick: () => router.push("/settings/kyc"),
             },
           });
-        } else if (result.error.code === "BELOW_MOQ") {
-          toast.error(result.error.message);
         } else {
           toast.error(result.error.message);
         }
         return;
       }
-      toast.success("Inquiry submitted! The seller will respond shortly.");
+      toast.success(t("toast.ok"));
       setOpen(false);
       router.push("/inquiries");
     });
@@ -141,11 +141,11 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
           />
         }
       >
-        Submit Inquiry
+        {t("button")}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Submit an Inquiry</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
 
         {/* Listing summary — gives the buyer the spec / commercial
@@ -171,7 +171,7 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-muted-foreground">
             {typeof listing.quantity === "number" && (
               <span>
-                Available:{" "}
+                {t("available")}{" "}
                 <span className="text-foreground">
                   {formatQty(listing.quantity, listing.unit)}
                 </span>
@@ -179,14 +179,14 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
             )}
             {moq != null && (
               <span>
-                Min order:{" "}
+                {t("minOrder")}{" "}
                 <span className="text-foreground">
                   {formatQty(moq, listing.unit)}
                 </span>
               </span>
             )}
             <span>
-              Asking:{" "}
+              {t("asking")}{" "}
               <span className="text-amber-400">
                 {listing.unit_price} {listing.currency}/{listing.unit}
               </span>
@@ -204,7 +204,9 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
               name="requested_qty"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantity ({listing.unit})</FormLabel>
+                  <FormLabel>
+                    {t("quantityLabel", { unit: listing.unit })}
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -218,7 +220,7 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
                   </FormControl>
                   {moq != null && (
                     <p className="text-xs text-muted-foreground">
-                      Minimum: {formatQty(moq, listing.unit)}.
+                      {t("moqHint", { qty: formatQty(moq, listing.unit) })}
                     </p>
                   )}
                   <FormMessage />
@@ -231,14 +233,19 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Target Price ({listing.currency}/{listing.unit}) — optional
+                    {t("targetPriceLabel", {
+                      currency: listing.currency,
+                      unit: listing.unit,
+                    })}
                   </FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       min={0}
                       step={0.01}
-                      placeholder={`Listing asking ${listing.unit_price}`}
+                      placeholder={t("targetPricePlaceholder", {
+                        price: listing.unit_price,
+                      })}
                       {...field}
                       value={field.value ?? ""}
                       onChange={(e) => {
@@ -248,7 +255,7 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
                     />
                   </FormControl>
                   <p className="text-xs text-muted-foreground">
-                    Leave blank to let the seller quote first.
+                    {t("targetPriceHelp")}
                   </p>
                   <FormMessage />
                 </FormItem>
@@ -259,10 +266,10 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
               name="destination"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Destination Port / Country</FormLabel>
+                  <FormLabel>{t("destinationLabel")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="e.g. Rotterdam, Netherlands"
+                      placeholder={t("destinationPlaceholder")}
                       {...field}
                     />
                   </FormControl>
@@ -275,11 +282,11 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
               name="message"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Message to Seller</FormLabel>
+                  <FormLabel>{t("messageLabel")}</FormLabel>
                   <FormControl>
                     <Textarea
                       rows={3}
-                      placeholder="Any special requirements, packaging preferences, certifications needed..."
+                      placeholder={t("messagePlaceholder")}
                       {...field}
                     />
                   </FormControl>
@@ -293,10 +300,10 @@ export function InquiryDialog({ listing }: InquiryDialogProps) {
                 variant="outline"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Submitting…" : "Submit Inquiry"}
+                {isPending ? t("submitting") : t("submit")}
               </Button>
             </div>
           </form>

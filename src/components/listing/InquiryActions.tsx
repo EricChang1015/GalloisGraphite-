@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { CheckIcon, XIcon } from "lucide-react";
 
 import { acceptInquiry, rejectInquiry } from "@/actions/inquiry";
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 
 export function InquiryActions({ inquiryId }: { inquiryId: string }) {
   const router = useRouter();
+  const t = useTranslations("listings.inquiryActions");
   const [isPending, startTransition] = useTransition();
 
   function handleAccept() {
@@ -19,7 +21,7 @@ export function InquiryActions({ inquiryId }: { inquiryId: string }) {
         toast.error(result.error.message);
         return;
       }
-      toast.success("Default quotation sent. Buyer can accept, counter or decline.");
+      toast.success(t("toast.accepted"));
       router.push(`/inquiries/${inquiryId}`);
     });
   }
@@ -31,7 +33,7 @@ export function InquiryActions({ inquiryId }: { inquiryId: string }) {
         toast.error(result.error.message);
         return;
       }
-      toast.success("Inquiry rejected.");
+      toast.success(t("toast.rejected"));
       router.refresh();
     });
   }
@@ -40,11 +42,11 @@ export function InquiryActions({ inquiryId }: { inquiryId: string }) {
     <div className="flex gap-2">
       <Button size="sm" onClick={handleAccept} disabled={isPending}>
         <CheckIcon className="w-3 h-3 mr-1" />
-        Accept
+        {t("accept")}
       </Button>
       <Button size="sm" variant="destructive" onClick={handleReject} disabled={isPending}>
         <XIcon className="w-3 h-3 mr-1" />
-        Reject
+        {t("reject")}
       </Button>
     </div>
   );

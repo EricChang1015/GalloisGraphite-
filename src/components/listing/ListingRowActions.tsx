@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   PencilIcon,
   PauseIcon,
@@ -38,6 +39,7 @@ export interface ListingRowActionsProps {
 
 export function ListingRowActions({ listing }: ListingRowActionsProps) {
   const router = useRouter();
+  const t = useTranslations("listings.rowActions");
   const [isPending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -62,11 +64,11 @@ export function ListingRowActions({ listing }: ListingRowActionsProps) {
         render={
           <Link
             href={`/listings/${listing.id}/edit`}
-            aria-label="Edit listing"
+            aria-label={t("editAria")}
           />
         }
       >
-        <PencilIcon className="size-3 mr-1" /> Edit
+        <PencilIcon className="size-3 mr-1" /> {t("edit")}
       </Button>
 
       {listing.status === "active" ? (
@@ -76,10 +78,10 @@ export function ListingRowActions({ listing }: ListingRowActionsProps) {
           className="h-7 text-xs"
           disabled={isPending}
           onClick={() =>
-            run(() => pauseListing(listing.id), "Listing paused.")
+            run(() => pauseListing(listing.id), t("toast.paused"))
           }
         >
-          <PauseIcon className="size-3 mr-1" /> Pause
+          <PauseIcon className="size-3 mr-1" /> {t("pause")}
         </Button>
       ) : listing.status === "paused" ? (
         <Button
@@ -88,10 +90,10 @@ export function ListingRowActions({ listing }: ListingRowActionsProps) {
           className="h-7 text-xs text-green-400"
           disabled={isPending}
           onClick={() =>
-            run(() => resumeListing(listing.id), "Listing reactivated.")
+            run(() => resumeListing(listing.id), t("toast.resumed"))
           }
         >
-          <PlayIcon className="size-3 mr-1" /> Resume
+          <PlayIcon className="size-3 mr-1" /> {t("resume")}
         </Button>
       ) : null}
 
@@ -104,12 +106,12 @@ export function ListingRowActions({ listing }: ListingRowActionsProps) {
           onClick={() =>
             run(
               () => markListingSoldOut(listing.id),
-              "Marked as sold out."
+              t("toast.soldOut")
             )
           }
-          title="Mark this listing as sold out"
+          title={t("soldOutTooltip")}
         >
-          <PackageXIcon className="size-3 mr-1" /> Sold out
+          <PackageXIcon className="size-3 mr-1" /> {t("soldOut")}
         </Button>
       )}
 
@@ -120,7 +122,7 @@ export function ListingRowActions({ listing }: ListingRowActionsProps) {
               size="sm"
               variant="ghost"
               className="h-7 text-xs text-destructive hover:text-destructive"
-              aria-label={`Delete listing ${listing.title}`}
+              aria-label={t("deleteAria", { title: listing.title })}
             />
           }
         >
@@ -128,23 +130,21 @@ export function ListingRowActions({ listing }: ListingRowActionsProps) {
             <Loader2Icon className="size-3 animate-spin" />
           ) : (
             <>
-              <TrashIcon className="size-3 mr-1" /> Delete
+              <TrashIcon className="size-3 mr-1" /> {t("delete")}
             </>
           )}
         </DialogTrigger>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete this listing?</DialogTitle>
+            <DialogTitle>{t("deleteTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-sm">
-            <p>
-              Permanently remove <strong>{listing.title}</strong>?
-            </p>
-            <p className="text-muted-foreground">
-              If any orders reference this listing the delete will be refused
-              — pause or mark it sold-out instead. Inquiries and quotations
-              keep their history but lose the listing link.
-            </p>
+            <p
+              dangerouslySetInnerHTML={{
+                __html: t("deleteConfirm", { title: listing.title }),
+              }}
+            />
+            <p className="text-muted-foreground">{t("deleteNote")}</p>
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
@@ -152,7 +152,7 @@ export function ListingRowActions({ listing }: ListingRowActionsProps) {
                 onClick={() => setConfirmOpen(false)}
                 disabled={isPending}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
                 type="button"
@@ -165,13 +165,13 @@ export function ListingRowActions({ listing }: ListingRowActionsProps) {
                       toast.error(result.error.message);
                       return;
                     }
-                    toast.success("Listing deleted.");
+                    toast.success(t("toast.deleted"));
                     setConfirmOpen(false);
                     router.refresh();
                   });
                 }}
               >
-                {isPending ? "Deleting…" : "Delete listing"}
+                {isPending ? t("deleting") : t("deleteButton")}
               </Button>
             </div>
           </div>

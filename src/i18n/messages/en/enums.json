@@ -55,6 +55,27 @@
       "converted": "Converted"
     }
   },
+  "listing": {
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "sold_out": "Sold out"
+    }
+  },
+  "quotation": {
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "countered": "Countered",
+      "superseded": "Superseded",
+      "expired": "Expired"
+    }
+  },
+  "unit": {
+    "MT": "MT (Metric Ton)",
+    "KG": "KG (Kilogram)"
+  },
   "kyc": {
     "level": {
       "0": "Unverified",

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Check, X, RefreshCw } from "lucide-react";
 
 import { acceptQuotation, rejectQuotation } from "@/actions/quotation";
@@ -31,6 +32,7 @@ export function QuotationActions({
   defaults,
 }: QuotationActionsProps) {
   const router = useRouter();
+  const t = useTranslations("listings.quotation.actions");
   const [isPending, startTransition] = useTransition();
   const [reason, setReason] = useState("");
   const [counterOpen, setCounterOpen] = useState(false);
@@ -43,7 +45,7 @@ export function QuotationActions({
         toast.error(result.error.message);
         return;
       }
-      toast.success("Quotation accepted. Order created.");
+      toast.success(t("toast.accepted"));
       router.push(`/orders/${result.data.orderId}`);
     });
   }
@@ -55,7 +57,7 @@ export function QuotationActions({
         toast.error(result.error.message);
         return;
       }
-      toast.success("Quotation rejected.");
+      toast.success(t("toast.rejected"));
       setRejectOpen(false);
       router.refresh();
     });
@@ -68,7 +70,7 @@ export function QuotationActions({
           for the proposer of the live offer. */}
       <Button size="sm" onClick={handleAccept} disabled={isPending}>
         <Check className="size-3.5 mr-1" />
-        Accept
+        {t("accept")}
       </Button>
 
       {/* Either party can counter */}
@@ -77,11 +79,11 @@ export function QuotationActions({
           render={<Button size="sm" variant="outline" disabled={isPending} />}
         >
           <RefreshCw className="size-3.5 mr-1" />
-          Counter
+          {t("counter")}
         </DialogTrigger>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Send Counter-offer</DialogTitle>
+            <DialogTitle>{t("counterTitle")}</DialogTitle>
           </DialogHeader>
           <QuotationForm
             inquiryId={inquiryId}
@@ -98,25 +100,25 @@ export function QuotationActions({
           render={<Button size="sm" variant="destructive" disabled={isPending} />}
         >
           <X className="size-3.5 mr-1" />
-          Decline
+          {t("decline")}
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Decline Quotation</DialogTitle>
+            <DialogTitle>{t("declineTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <Textarea
               rows={3}
-              placeholder="Optional reason for declining…"
+              placeholder={t("declineReasonPlaceholder")}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setRejectOpen(false)}>
-                Cancel
+                {t("cancel")}
               </Button>
               <Button variant="destructive" onClick={handleReject} disabled={isPending}>
-                Confirm Decline
+                {t("confirmDecline")}
               </Button>
             </div>
           </div>

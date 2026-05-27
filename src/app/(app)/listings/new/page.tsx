@@ -1,10 +1,16 @@
+import { getTranslations } from "next-intl/server";
+
 import { createServerClient } from "@/lib/supabase/server";
 import { ListingForm } from "@/components/listing/ListingForm";
 
-export const metadata = { title: "New Listing — Mada Graphite" };
+export async function generateMetadata() {
+  const t = await getTranslations("listings");
+  return { title: t("metaTitleNew") };
+}
 
 export default async function NewListingPage() {
   const supabase = await createServerClient();
+  const t = await getTranslations("listings.new");
 
   const { data: categories } = await supabase
     .from("product_categories")
@@ -21,10 +27,8 @@ export default async function NewListingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">New Listing</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Create a new product listing visible to all buyers on the market.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("heading")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("subheading")}</p>
       </div>
       <ListingForm categories={categories ?? []} />
     </div>

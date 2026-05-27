@@ -26,6 +26,7 @@ import {
   LibraryIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import {
   deleteListingImage,
@@ -49,7 +50,8 @@ export interface ListingImageUploaderProps {
   value: string[];
   onChange: (urls: string[]) => void;
   maxImages?: number;
-  /** Optional label override, e.g. "Profile photos" — used by other surfaces in future. */
+  /** Optional label override, e.g. "Profile photos" — used by other surfaces in future.
+   *  When omitted, falls back to the translated default copy from listings.imageUploader. */
   emptyHint?: string;
 }
 
@@ -73,8 +75,10 @@ export function ListingImageUploader({
   value,
   onChange,
   maxImages = LISTING_IMAGES_PER_LISTING,
-  emptyHint = "Images are optional — but a clear batch photo helps buyers trust the listing.",
+  emptyHint,
 }: ListingImageUploaderProps) {
+  const t = useTranslations("listings.imageUploader");
+  const resolvedEmptyHint = emptyHint ?? t("emptyHint");
   const [tab, setTab] = useState<"upload" | "library">("upload");
   const [library, setLibrary] = useState<LibraryImage[]>([]);
   const [libraryLoaded, setLibraryLoaded] = useState(false);
@@ -113,12 +117,12 @@ export function ListingImageUploader({
     (url: string) => {
       if (value.includes(url)) return; // already selected
       if (value.length >= maxImages) {
-        toast.error(`You can attach at most ${maxImages} images per listing.`);
+        toast.error(t("toast.limit", { max: maxImages }));
         return;
       }
       onChange([...value, url]);
     },
-    [value, onChange, maxImages]
+    [value, onChange, maxImages, t]
   );
 
   const removeAt = useCallback(
@@ -154,10 +158,10 @@ export function ListingImageUploader({
         if (value.includes(img.url)) {
           onChange(value.filter((u) => u !== img.url));
         }
-        toast.success("Image removed from your library.");
+        toast.success(t("toast.removed"));
       });
     },
-    [value, onChange]
+    [value, onChange, t]
   );
 
   const handleFiles = useCallback(
@@ -167,7 +171,9 @@ export function ListingImageUploader({
       const accepted = files.slice(0, remaining);
       if (files.length > accepted.length) {
         toast.error(
-          `You can attach ${remaining} more image${remaining === 1 ? "" : "s"} — extras were ignored.`
+          t(remaining === 1 ? "toast.extrasSingular" : "toast.extras", {
+            remaining,
+          })
         );
       }
       for (const raw of accepted) {
@@ -177,12 +183,16 @@ export function ListingImageUploader({
             (m) => raw.type.toLowerCase() === m
           )
         ) {
-          toast.error(`${raw.name}: unsupported file type "${raw.type}"`);
+          toast.error(t("toast.unsupported", { name: raw.name, type: raw.type }));
           continue;
         }
         if (raw.size > LISTING_IMAGE_RAW_MAX_BYTES) {
           toast.error(
-            `${raw.name}: too large (${formatBytes(raw.size)}). Limit ${formatBytes(LISTING_IMAGE_RAW_MAX_BYTES)}.`
+            t("toast.tooLarge", {
+              name: raw.name,
+              size: formatBytes(raw.size),
+              limit: formatBytes(LISTING_IMAGE_RAW_MAX_BYTES),
+            })
           );
           continue;
         }
@@ -256,7 +266,7 @@ export function ListingImageUploader({
         ]);
       }
     },
-    [remaining, addUrl]
+    [remaining, addUrl, t]
   );
 
   return (
@@ -266,7 +276,7 @@ export function ListingImageUploader({
           active={tab === "upload"}
           onClick={() => setTab("upload")}
           icon={<UploadIcon className="size-3.5" />}
-          label="Upload new"
+          label={t("tabs.upload")}
         />
         <TabButton
           active={tab === "library"}
@@ -274,12 +284,12 @@ export function ListingImageUploader({
           icon={<LibraryIcon className="size-3.5" />}
           label={
             libraryLoaded
-              ? `From your library (${library.length})`
-              : "From your library"
+              ? t("tabs.libraryCount", { count: library.length })
+              : t("tabs.library")
           }
         />
         <span className="ml-auto text-muted-foreground">
-          {value.length}/{maxImages} selected
+          {t("selectedCount", { count: value.length, max: maxImages })}
         </span>
       </div>
 
@@ -320,15 +330,10 @@ export function ListingImageUploader({
             }}
           />
           {atCap ? (
-            <p>
-              Reached the {maxImages}-image limit. Remove one from the
-              selection below to add more.
-            </p>
+            <p>{t("atCap", { max: maxImages })}</p>
           ) : (
             <>
-              <p className="text-muted-foreground">
-                Drag &amp; drop images, or
-              </p>
+              <p className="text-muted-foreground">{t("dragHint")}</p>
               <Button
                 type="button"
                 size="sm"
@@ -336,12 +341,12 @@ export function ListingImageUploader({
                 className="mt-2"
                 onClick={() => inputRef.current?.click()}
               >
-                Choose files
+                {t("chooseFiles")}
               </Button>
               <p className="text-xs text-muted-foreground mt-3">
-                Images are resized to 720 px WebP in your browser before
-                upload — typically &lt; 200 KB. Up to{" "}
-                {formatBytes(LISTING_IMAGE_RAW_MAX_BYTES)} per source file.
+                {t("compressNote", {
+                  limit: formatBytes(LISTING_IMAGE_RAW_MAX_BYTES),
+                })}
               </p>
             </>
           )}
@@ -350,14 +355,10 @@ export function ListingImageUploader({
         <div className="rounded-md border p-3 text-sm">
           {libraryPending && !libraryLoaded ? (
             <p className="flex items-center gap-2 text-muted-foreground">
-              <Loader2Icon className="size-4 animate-spin" /> Loading your
-              previously uploaded images…
+              <Loader2Icon className="size-4 animate-spin" /> {t("loadingLibrary")}
             </p>
           ) : library.length === 0 ? (
-            <p className="text-muted-foreground">
-              You haven&apos;t uploaded any images yet. New uploads from the
-              other tab will show up here automatically.
-            </p>
+            <p className="text-muted-foreground">{t("emptyLibrary")}</p>
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {library.map((img) => {
@@ -391,7 +392,7 @@ export function ListingImageUploader({
                     <button
                       type="button"
                       className="absolute top-1 right-1 rounded bg-background/80 p-1 opacity-0 group-hover:opacity-100 hover:text-destructive"
-                      title="Remove from library"
+                      title={t("removeFromLibrary")}
                       onClick={() => removeFromLibrary(img)}
                     >
                       <TrashIcon className="size-3" />
@@ -403,7 +404,7 @@ export function ListingImageUploader({
           )}
           {libraryLoaded && library.length > 0 && (
             <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-              <span>Click a thumbnail to toggle it on/off this listing.</span>
+              <span>{t("libraryHint")}</span>
               <Button
                 type="button"
                 variant="ghost"
@@ -411,7 +412,7 @@ export function ListingImageUploader({
                 className="h-7 text-xs"
                 onClick={refreshLibrary}
               >
-                Refresh
+                {t("refresh")}
               </Button>
             </div>
           )}
@@ -432,14 +433,15 @@ export function ListingImageUploader({
                 )}
                 <span className="truncate">{u.name}</span>
                 <span>
-                  {u.status === "compressing" && "compressing…"}
+                  {u.status === "compressing" && t("status.compressing")}
                   {u.status === "uploading" &&
-                    `uploading${
-                      u.before && u.after
-                        ? ` (${formatBytes(u.before)} → ${formatBytes(u.after)})`
-                        : ""
-                    }…`}
-                  {u.status === "error" && (u.message ?? "failed")}
+                    (u.before && u.after
+                      ? t("status.uploadingSize", {
+                          before: formatBytes(u.before),
+                          after: formatBytes(u.after),
+                        })
+                      : t("status.uploadingPlain"))}
+                  {u.status === "error" && (u.message ?? t("status.failed"))}
                 </span>
               </li>
             ))}
@@ -448,11 +450,11 @@ export function ListingImageUploader({
 
       {/* Selected images (ordered) */}
       {value.length === 0 ? (
-        <p className="text-xs text-muted-foreground">{emptyHint}</p>
+        <p className="text-xs text-muted-foreground">{resolvedEmptyHint}</p>
       ) : (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
-            Selected (first image is the cover):
+            {t("selectedHeading")}
           </p>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {value.map((url, idx) => (
@@ -463,7 +465,7 @@ export function ListingImageUploader({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={url}
-                  alt={`Listing image ${idx + 1}`}
+                  alt={t("imageAlt", { idx: idx + 1 })}
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />
@@ -475,7 +477,7 @@ export function ListingImageUploader({
                       className="rounded p-0.5 hover:bg-muted disabled:opacity-30"
                       disabled={idx === 0}
                       onClick={() => move(idx, -1)}
-                      title="Move left"
+                      title={t("moveLeft")}
                     >
                       <ArrowLeftIcon className="size-3" />
                     </button>
@@ -484,7 +486,7 @@ export function ListingImageUploader({
                       className="rounded p-0.5 hover:bg-muted disabled:opacity-30"
                       disabled={idx === value.length - 1}
                       onClick={() => move(idx, 1)}
-                      title="Move right"
+                      title={t("moveRight")}
                     >
                       <ArrowRightIcon className="size-3" />
                     </button>
@@ -492,7 +494,7 @@ export function ListingImageUploader({
                       type="button"
                       className="rounded p-0.5 hover:bg-destructive/20 text-destructive"
                       onClick={() => removeAt(idx)}
-                      title="Remove from listing"
+                      title={t("removeFromListing")}
                     >
                       <TrashIcon className="size-3" />
                     </button>
@@ -506,8 +508,7 @@ export function ListingImageUploader({
 
       <p className="text-[11px] text-muted-foreground flex items-center gap-1">
         <ImageIcon className="size-3" />
-        Images attached to active listings are publicly visible to all
-        buyers.
+        {t("publicNotice")}
       </p>
     </div>
   );
