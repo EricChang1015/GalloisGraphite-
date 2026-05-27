@@ -85,7 +85,7 @@
     },
     "payment": {
       "resubmitBanner": "Payment rejected — please resubmit",
-      "resubmitBody": "The seller or admin rejected your previous submission. Use <strong>Resubmit Payment</strong> on the highlighted installment in the schedule below (update your transaction hash or remittance proof).",
+      "resubmitBody": "The seller or admin rejected your previous submission. Use Resubmit Payment on the highlighted installment in the schedule below (update your transaction hash or remittance proof).",
       "scheduleHeading": "Payment Schedule",
       "historyHeading": "Payment History",
       "reviewerHintSeller": "Review the buyer's payment(s) below. Admin may intervene if needed.",
@@ -94,7 +94,7 @@
       "viewProof": "View proof",
       "rejectionReason": "Rejection reason: {note}",
       "reviewerNote": "Reviewer note: {note}",
-      "resubmitHint": "This installment was returned to <strong>Due</strong> — use <strong>Resubmit Payment</strong> in the schedule above.",
+      "resubmitHint": "This installment was returned to Due — use Resubmit Payment in the schedule above.",
       "status": {
         "verified": "Verified",
         "rejected": "Rejected",

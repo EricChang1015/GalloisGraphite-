@@ -69,7 +69,7 @@
 - DocuSign / 電子簽名服務（平台自證即可）
 - 即時石墨價格與歷史走勢圖（規格分散、單一報價偏差大,延後到 Phase 2）
 - 自動爬取石墨新聞（改為 admin 手動發布）
-- 多語系（架構預留,但 MVP 僅英文 + 預留中繁/法文 i18n key）
+- 多語系（Phase 2 已完成儀表板 `en` + `zh-CN`；公開行銷頁、admin、合約 PDF 仍英文）
 - 自動化爭議仲裁（僅 admin 介入,合約 + 平台方為準）
 - 賣家自動結算 / payouts（confirmReceipt 後僅寄信通知 admin 平台外操作）
 
@@ -201,7 +201,7 @@ quotation_pending → quoted ↔ negotiating
 | 效能 | 公開頁 SSG/ISR；市場頁 SSR + RSC；首屏 LCP < 2.5s（WiFi） | ✅ 公開頁 ISR、SSR 已實作 |
 | 安全 | 全表 RLS、service_role key 永不入 client、輸入用 zod | ✅ |
 | 可觀測性 | `audit_logs` + `ai_chat_logs` 記錄；Vercel Logs；後續可接 Sentry | ✅ audit/AI logs；Sentry 為 Phase 2 |
-| 國際化 | i18n 結構預留（next-intl key），MVP 僅 en；合約必須英文版 | ⚠️ key 未抽，僅英文寫死 |
+| 國際化 | next-intl（cookie `mg-locale` → `profiles.locale` → Accept-Language）；已上線 `en` + `zh-CN` 儀表板 UI；合約 / 郵件 / 公開行銷頁仍英文 | ✅ 儀表板 Phase 2 完成；詳見 [`I18N_PLAN.md`](./I18N_PLAN.md) |
 | Migration 自動化 | 所有 schema 變更可由 AI agent 透過 Supabase Management API 直接套用，不需 DB password | ✅ `npm run db:migrate` 走 Personal Access Token；追蹤表 `_agent_migrations` |
 
 ## 6. 內容資產

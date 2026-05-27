@@ -40,7 +40,7 @@
     "delete": "Delete",
     "deleteAria": "Delete listing {title}",
     "deleteTitle": "Delete this listing?",
-    "deleteConfirm": "Permanently remove <strong>{title}</strong>?",
+    "deleteConfirm": "Permanently remove {title}?",
     "deleteNote": "If any orders reference this listing the delete will be refused — pause or mark it sold-out instead. Inquiries and quotations keep their history but lose the listing link.",
     "cancel": "Cancel",
     "deleting": "Deleting…",

@@ -40,7 +40,7 @@
     "delete": "删除",
     "deleteAria": "删除商品 {title}",
     "deleteTitle": "确认删除此商品？",
-    "deleteConfirm": "确认永久删除 <strong>{title}</strong>？",
+    "deleteConfirm": "确认永久删除 {title}？",
     "deleteNote": "如果已有订单关联此商品，将无法删除——请改为暂停或标记售罄。询盘和报价记录将保留，但失去商品链接。",
     "cancel": "取消",
     "deleting": "删除中…",

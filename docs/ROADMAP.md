@@ -319,8 +319,10 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - 重新評估：以 listings 內部成交價聚合 + Benchmark Mineral Intelligence 公開指數
 
 ### B3. 多語系
-- next-intl，預留 en / zh-Hant / fr key
-- 合約強制英文版
+- ✅ **Phase 2 已完成**（branch `feature/dashboard-i18n`）：next-intl + cookie `mg-locale`；`(app)/**` 儀表板 + Navbar/MobileNav 已翻譯 `en` / `zh-CN`
+- 合約 HTML / PDF 強制英文版（業務決策）
+- 待補：公開行銷頁 `(public)/**`、`/admin/**`、zh-TW / ja / fr / de 字典
+- 詳見 [`I18N_PLAN.md`](./I18N_PLAN.md) 與 [`.cursor/rules/i18n.mdc`](../.cursor/rules/i18n.mdc)
 
 ### B4. PDF 真渲染（取代 `window.print()`）
 - 評估 `@react-pdf/renderer` 或 `puppeteer-core` + `chrome-aws-lambda`

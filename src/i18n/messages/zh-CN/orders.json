@@ -85,7 +85,7 @@
     },
     "payment": {
       "resubmitBanner": "付款被拒——请重新提交",
-      "resubmitBody": "卖家或管理员拒绝了您先前的提交。请在下方付款计划高亮的款项上使用 <strong>重新提交</strong>（更新交易哈希或汇款凭证）。",
+      "resubmitBody": "卖家或管理员拒绝了您先前的提交。请在下方付款计划高亮的款项上使用「重新提交」（更新交易哈希或汇款凭证）。",
       "scheduleHeading": "付款计划",
       "historyHeading": "付款历史",
       "reviewerHintSeller": "请在下方审核买家的付款。如有需要管理员可介入。",
@@ -94,7 +94,7 @@
       "viewProof": "查看凭证",
       "rejectionReason": "拒绝原因：{note}",
       "reviewerNote": "审核备注：{note}",
-      "resubmitHint": "此款项已被打回 <strong>待付</strong> 状态——请在上方付款计划使用 <strong>重新提交</strong>。",
+      "resubmitHint": "此款项已被打回「待付」状态——请在上方付款计划使用「重新提交」。",
       "status": {
         "verified": "已核实",
         "rejected": "已拒绝",
