@@ -25,7 +25,25 @@ Quick reference:
 - `docs/COPY_DRAFTS.md` — marketing copy drafts
 - `supabase/migrations/` — SQL migrations (currently 001 → 028)
 - `.cursor/rules/migrations.mdc` — **migration authoring rules** (read before writing SQL)
+- `.cursor/skills/` — **agent workflow skills** (see `.cursor/skills/README.md` for the catalog)
 - `.env.example` — required environment variables
+
+## Agent skills (workflows for specific tasks)
+
+Once you've internalised the rules above, pick the matching skill before starting work. See `.cursor/skills/README.md` for the full catalog. Quick router:
+
+| Task | Skill |
+|---|---|
+| Verifying / pre-commit | `.cursor/skills/graphite-qa/SKILL.md` |
+| Multi-file feature | `.cursor/skills/incremental-implementation/SKILL.md` |
+| Next.js 16 / Tailwind v4 patterns | `.cursor/skills/source-driven-development/SKILL.md` |
+| UI change in browser | `.cursor/skills/browser-testing-with-devtools/SKILL.md` |
+| Bug fix / Prove-It | `.cursor/skills/test-driven-development/SKILL.md` |
+| Build / hydration / RLS errors | `.cursor/skills/debugging-and-error-recovery/SKILL.md` |
+| Pre-merge review | `.cursor/skills/code-review-and-quality/SKILL.md` |
+| Auth / RLS / payments / uploads | `.cursor/skills/security-and-hardening/SKILL.md` |
+
+Skills cite the matching `npm run qa:*` commands; do not invent new test commands.
 
 ## Top rules (TL;DR)
 

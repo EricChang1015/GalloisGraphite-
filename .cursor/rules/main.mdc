@@ -46,3 +46,20 @@ Full checklist: [`.cursor/rules/verify-before-commit.mdc`](mdc:.cursor/rules/ver
 3. Return `{ data, error }` from server actions; never throw to the UI.
 4. Append timeline events for every order state transition.
 5. Append an `audit_logs` row for every admin action.
+
+## Agent skills (workflows in `.cursor/skills/`)
+
+This repo ships curated skill workflows under `.cursor/skills/`. Pick one when the task matches:
+
+| Task | Skill |
+|---|---|
+| Verifying / pre-commit | [graphite-qa](mdc:.cursor/skills/graphite-qa/SKILL.md) |
+| Multi-file feature | [incremental-implementation](mdc:.cursor/skills/incremental-implementation/SKILL.md) |
+| Next.js 16 / Tailwind v4 / shadcn base-nova patterns | [source-driven-development](mdc:.cursor/skills/source-driven-development/SKILL.md) |
+| UI change verified in browser | [browser-testing-with-devtools](mdc:.cursor/skills/browser-testing-with-devtools/SKILL.md) |
+| Bug fix / Prove-It assertion | [test-driven-development](mdc:.cursor/skills/test-driven-development/SKILL.md) |
+| Build / hydration / RLS / migration errors | [debugging-and-error-recovery](mdc:.cursor/skills/debugging-and-error-recovery/SKILL.md) |
+| Pre-merge review | [code-review-and-quality](mdc:.cursor/skills/code-review-and-quality/SKILL.md) |
+| Auth / RLS / payments / uploads / KYC | [security-and-hardening](mdc:.cursor/skills/security-and-hardening/SKILL.md) |
+
+Full catalog: [.cursor/skills/README.md](mdc:.cursor/skills/README.md). Skills always reference real `npm run qa:*` commands — never invent new test commands.
