@@ -37,28 +37,35 @@ type ArticleRow = {
  * Resolve a slug to an article. The slug might be either the English (master)
  * slug stored on `news.slug`, or a translated slug from
  * `news_translations.slug` (any locale).
+ *
+ * Returns the matched article together with the locale that the URL slug
+ * implied (null when the URL pointed at the English master slug). This lets
+ * the caller pin the rendered locale to the URL — so clicking the "zh-CN"
+ * switcher actually shows Chinese regardless of the user's cookie preference.
  */
-async function findArticleBySlug(slug: string): Promise<ArticleRow | null> {
+async function findArticleBySlug(
+  slug: string
+): Promise<{ article: ArticleRow; urlLocale: string | null } | null> {
   const supabase = await createServerClient();
   const baseSelect = `id, title, slug, summary, content_html, cover_image_url, source_url, source_name, published_at, created_at,
     translations:news_translations(locale, slug, title, summary, content_html)`;
 
-  // Try master slug first
+  // Try master slug first (English source-of-truth)
   const { data: byMaster } = await supabase
     .from("news")
     .select(baseSelect)
     .eq("status", "published")
     .eq("slug", slug)
     .maybeSingle<ArticleRow>();
-  if (byMaster) return byMaster;
+  if (byMaster) return { article: byMaster, urlLocale: null };
 
   // Fall back to translation slug lookup
   const { data: tr } = await supabase
     .from("news_translations")
-    .select("news_id")
+    .select("news_id, locale")
     .eq("slug", slug)
     .limit(1)
-    .maybeSingle<{ news_id: string }>();
+    .maybeSingle<{ news_id: string; locale: string }>();
   if (!tr) return null;
 
   const { data: byId } = await supabase
@@ -67,16 +74,20 @@ async function findArticleBySlug(slug: string): Promise<ArticleRow | null> {
     .eq("status", "published")
     .eq("id", tr.news_id)
     .maybeSingle<ArticleRow>();
-  return byId;
+  if (!byId) return null;
+  return { article: byId, urlLocale: tr.locale };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const article = await findArticleBySlug(slug);
-  if (!article) return { title: "Article not found" };
+  const match = await findArticleBySlug(slug);
+  if (!match) return { title: "Article not found" };
 
-  const locale = await getLocale();
-  const translation = article.translations?.find((t) => t.locale === locale);
+  const { article, urlLocale } = match;
+  const cookieLocale = await getLocale();
+  // URL slug pins the locale; cookie only kicks in when URL is the master slug.
+  const effectiveLocale = urlLocale ?? cookieLocale;
+  const translation = article.translations?.find((t) => t.locale === effectiveLocale);
   const title = translation?.title ?? article.title;
   const summary = translation?.summary ?? article.summary;
   return {
@@ -87,11 +98,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function NewsArticlePage({ params }: PageProps) {
   const { slug } = await params;
-  const article = await findArticleBySlug(slug);
-  if (!article) notFound();
+  const match = await findArticleBySlug(slug);
+  if (!match) notFound();
 
-  const locale = await getLocale();
-  const translation = article.translations?.find((t) => t.locale === locale);
+  const { article, urlLocale } = match;
+  const cookieLocale = await getLocale();
+  const effectiveLocale = urlLocale ?? cookieLocale;
+  const translation = article.translations?.find((t) => t.locale === effectiveLocale);
 
   const display = {
     title: translation?.title ?? article.title,
@@ -99,11 +112,19 @@ export default async function NewsArticlePage({ params }: PageProps) {
     content_html: translation?.content_html ?? article.content_html,
   };
 
-  const otherLocales = (article.translations ?? [])
-    .filter((t) => t.locale !== locale && isSupportedLocale(t.locale))
-    .map((t) => ({ locale: t.locale, slug: t.slug }));
+  // "Also available" includes every other locale we have, plus the English
+  // master if we're not already on it.
+  const otherLocales: { locale: string; slug: string }[] = [];
+  if (effectiveLocale !== "en") {
+    otherLocales.push({ locale: "en", slug: article.slug });
+  }
+  for (const t of article.translations ?? []) {
+    if (t.locale !== effectiveLocale && isSupportedLocale(t.locale)) {
+      otherLocales.push({ locale: t.locale, slug: t.slug });
+    }
+  }
 
-  const dateLocale = locale === "zh-CN" ? "zh-CN" : "en-US";
+  const dateLocale = effectiveLocale === "zh-CN" ? "zh-CN" : "en-US";
   const publishDate = new Date(
     article.published_at ?? article.created_at
   ).toLocaleDateString(dateLocale, {
@@ -112,7 +133,10 @@ export default async function NewsArticlePage({ params }: PageProps) {
     day: "numeric",
   });
 
-  const isFallback = !translation && locale !== "en";
+  // Only show the fallback notice when the user's UI locale (cookie) couldn't
+  // be satisfied and we silently fell back to English. When the URL itself is
+  // an English master slug for a zh-CN user there is nothing to fall back to.
+  const isFallback = !translation && effectiveLocale !== "en";
 
   return (
     <div className="bg-background text-foreground min-h-screen">
@@ -135,7 +159,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
             {publishDate}
             {isFallback && (
               <span className="ml-2 italic">
-                · English (no {locale} translation yet)
+                · English (no {effectiveLocale} translation yet)
               </span>
             )}
           </p>
