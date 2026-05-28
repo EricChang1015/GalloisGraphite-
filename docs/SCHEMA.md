@@ -420,12 +420,12 @@ verify 後變 `paid`。
 | room_id | FK chat_rooms ON DELETE CASCADE |
 | sender_id | FK profiles |
 | content | text(可空,純圖片訊息) |
-| attachment_url | text(`chat` bucket Storage URL) |
+| attachment_url | text | 保留欄位；MVP 不支援附件，始終 null |
 | created_at | timestamptz |
 
 索引：`messages(room_id, created_at desc)`
 
-> Party DM（`chat_rooms.type='party'`）已實作：`ensurePartyChat`、`/messages`、`PartyChatPanel`（migration 018）。`chat` Storage bucket 與訂單 Tab 內嵌仍待（ROADMAP §A2）。
+> Party DM（`chat_rooms.type='party'`）已實作：`ensurePartyChat`、`/messages`、`PartyChatPanel`（migration 018）。MVP 不建 `chat` bucket、不支援訊息附件。
 
 ## 7. 內容
 
@@ -536,7 +536,7 @@ AI 助手每個 Q&A turn 的 server-side audit trail。append-only。
 | `avatars` | public read, self write | 使用者頭像 | ✅ `021_avatars.sql` |
 | `kyc` | private（owner + admin） | KYC 證件 | ✅ `019_kyc_storage_and_settings.sql` |
 | `listings` | public read, seller write | 商品圖（720p WebP，2 MiB cap） | ✅ `024_listings_bucket.sql` |
-| `chat` | private（chat members） | 聊天室附件 | ⚠️ 待建立（與 ROADMAP §A2 一起） |
+| ~~`chat`~~ | — | （未規劃）聊天室附件 | ❌ MVP 不做 — 站內信僅文字 |
 | ~~`contracts`~~ | — | （legacy 規劃）合約簽名掃描 | ❌ 不再建立，`order-documents` 已涵蓋 |
 | ~~`payments`~~ | — | （legacy 規劃）付款憑證 | ❌ 不再建立，`order-documents` `payment_proof` 子路徑已涵蓋 |
 

@@ -46,7 +46,7 @@ export default async function Page() {
   - `avatars` — profile photos (public read, self write) — `021_avatars.sql`
   - `kyc` — KYC documents (private, signed URL only) — `019_kyc_storage_and_settings.sql`
   - `listings` — listing images (public read, seller write) — `024_listings_bucket.sql`
-  - `chat` — chat attachments (**not yet created**; see ROADMAP §A2/A4)
+  - ~~`chat`~~ — **not planned** for MVP (party DM is text-only; no attachments)
 - Legacy `contracts` / `payments` buckets are **not used** — everything goes to `order-documents`.
 - Always set bucket access (public/private) explicitly when creating.
 - Upload via Server Action so we can append audit/timeline entries.

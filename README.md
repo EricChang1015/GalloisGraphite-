@@ -155,5 +155,5 @@ Implemented (high level):
 
 **Remaining for full MVP** — see [`docs/ROADMAP.md`](./docs/ROADMAP.md) §A Definition of Done:
 
-- [ ] A2 — Order-detail embedded chat (optional); **`chat` Storage bucket** + message attachments
-- [ ] (Phase 2+) Public/admin i18n, PDF renderer, Sentry, etc.
+- [x] A2 — Party DM text chat (`/messages`, `qa:chat`); no message attachments / `chat` bucket (product decision 2026-05-28)
+- [ ] (Phase 2+) Order-detail embedded chat (optional), public/admin i18n, PDF renderer, Sentry, etc.

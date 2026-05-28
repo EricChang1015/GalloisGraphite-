@@ -32,7 +32,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/listings") ||
     pathname.startsWith("/inquiries") ||
     pathname.startsWith("/orders") ||
-    pathname.startsWith("/messages");
+    pathname.startsWith("/messages") ||
+    pathname.startsWith("/settings");
 
   const isAdminRoute = pathname.startsWith("/admin");
 

@@ -205,7 +205,7 @@ npm run qa:chat
 | M2 | Seller | `/messages` | 列表出現 Buyer；點進 thread 可見 M1 訊息 |
 | M3 | Seller | 回覆一則 | Buyer 重新開 Sheet 或 `/messages/{buyerId}` 可見 |
 | M4 | Buyer | 已有訂單 → `/orders/{id}` Overview → **Message** 賣方 | **同一 thread**（非新房） |
-| M5 | Buyer | `/messages/{sellerId}` 全頁 | 與 Sheet 訊息連續；附件僅 image/PDF ≤5MB |
+| M5 | Buyer | `/messages/{sellerId}` 全頁 | 與 Sheet 訊息連續（純文字；MVP 無附件上傳） |
 
 **不應出現**：訂單頁 Communication Tab、`?tab=communication`。
 

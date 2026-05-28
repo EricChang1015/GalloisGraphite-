@@ -27,24 +27,27 @@
 > 部署到 production 後仍需重跑 `npx supabase gen types typescript ... > src/types/database.ts`
 > 以對齊型別（屬 A7 部署清單）。
 
-### A2. 站內 IM（Party DM ✅；訂單 Tab + 附件待補）
+### A2. ✅ 站內 IM（Party DM — 文字 only；附件不做）
 
 > **模型（migration 018）**：同一 buyer + seller 僅一條 `chat_rooms.type='party'` thread；訊息可帶
 > `context_type`（listing / inquiry / order）。**不再**為每張訂單開獨立 `type='order'` 房間。
 > 詳見 [`TESTING.md` §3.5](./TESTING.md#35-站內信party-dm合併-main-前必跑)。
 
-**已完成：**
+**已完成（MVP）：**
 
 - [x] `ensurePartyChat` + `openPartyChat` / `getPartyChatWithUser`（`src/lib/chat/ensure-room.ts`、`src/actions/chat.ts`）
 - [x] `/messages` 對話列表 + `/messages/[userId]` 全頁 thread（`<ConversationList />`、`<PartyChatPanel />`）
 - [x] Market / 訂單 Overview 的 `<MessageCounterpartyButton />`（同一 party thread，非新房）
 - [x] Realtime 訂閱 `messages`（`PartyChatPanel` 內）；`npm run qa:chat`（7/7）
 
-**仍待（MVP 上線前若要做完整 IM）：**
+**明確不做（產品決策 2026-05-28）：**
 
-- [ ] `(app)/orders/[id]` 可選：內嵌精簡版 `<PartyChatPanel />`（或維持僅 Overview「Message」按鈕 — 見 TESTING §3.5 M4）
-- [ ] `chat` Storage bucket + RLS（private，僅 `chat_members` 可讀寫）— 訊息附件 `image/*`、`application/pdf` ≤5MB
-- [ ] 風險備案：若 Realtime 不穩定，fallback 為 5s polling（`src/hooks/useMessages.ts`，尚未建立）
+- ~~`chat` Storage bucket + 訊息附件~~ — MVP 站內信僅文字，不支援 image/PDF 上傳
+
+**可選 Phase 2（非 MVP 阻塞）：**
+
+- [ ] `(app)/orders/[id]` 內嵌精簡版 `<PartyChatPanel />`（目前 Overview「Message」按鈕已足夠 — 見 TESTING §3.5 M4）
+- [ ] Realtime 不穩定時的 5s polling fallback（`src/hooks/useMessages.ts`）
 
 ### A3. ✅ 合約簽名掃描上傳 UI（已完成）
 
@@ -62,10 +65,10 @@
 - [x] **`avatars`**（public read，self write）— `021_avatars.sql`
 - [x] **`kyc`**（private，僅 owner + admin 可讀，僅 owner 可寫）— `019_kyc_storage_and_settings.sql`
 - [x] **`listings`**（public read，seller-owned write）— `024_listings_bucket.sql`（2 MiB / JPEG/PNG/WebP；路徑 `listings/{seller_uid}/{uuid}.ext`）；client 端 `compressTo720pWebp` 在上傳前縮到 720 px WebP；UI `<ListingImageUploader />` 提供 drag-drop + 「From your library」可重用既往上傳
-- [ ] `chat`（private，僅 chat_members 可讀寫）— 與 A2 一起做
+- ~~`chat`~~ — **不做**（MVP 站內信僅文字，無訊息附件）
 
 > `contracts` / `payments` 兩顆 legacy bucket 不再規劃 — `order-documents` 已涵蓋。
-> 其餘 bucket 可於對應功能（avatar 上傳、KYC、商品圖、IM 附件）實作時補上。
+> 其餘 bucket 可於對應功能（avatar 上傳、KYC、商品圖）實作時補上。
 
 ### A5. ✅ Disputed / Cancelled 觸發 UI（已完成）
 
@@ -364,9 +367,9 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 ## D. Definition of Done（MVP 上線版）
 
 - [x] A1 schema 對齊全部完成（TS types 由 `npm run db:types` 重新生成）
-- [ ] A2 IM 可雙方即時對話 + 圖片附件 — party DM (`/messages`) 已通；order detail tab 仍待
+- [x] A2 IM 雙方即時文字對話 — party DM (`/messages`) + Overview「Message」按鈕已通；訊息附件不做
 - [x] A3 簽名掃描可上傳並推進到 `contract_signed` 狀態（009 完成）+ 雙方簽名嵌入 PDF 預覽（commit 1620d8e）
-- [x] A4 **`order-documents`** / **`avatars`** / **`kyc`** / **`listings`** buckets 建立完成（010 / 021 / 019 / 024）；只剩 `chat`（與 A2 一起做）
+- [x] A4 **`order-documents`** / **`avatars`** / **`kyc`** / **`listings`** buckets 建立完成（010 / 021 / 019 / 024）；`chat` bucket 不做（無 IM 附件）
 - [x] A5 dispute / cancel 流程可走通（009 完成）
 - [x] A6 KYC 上傳 + admin 門檻 + 四級 level + phone OTP（migrations 019/020）
 - [x] A7 部署：站台已上 Vercel <https://galloisgraphite.vercel.app/>，所有 migrations 已套用

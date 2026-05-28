@@ -75,7 +75,7 @@
 
 ### 2.3 `(app)/` — 登入後
 
-需要 authenticated user。`/dashboard`–`/messages` 由 `src/proxy.ts` 守衛；`/settings/**` 不在 proxy 清單內，改由各自 page 內 `redirect("/login?...")`（belt-and-braces，見 §6）。
+需要 authenticated user，由 `src/proxy.ts` 守衛（含 `/settings/**`，見 §6）。
 
 | 路由 | 內容 |
 |---|---|
@@ -163,9 +163,9 @@
 | **`order-documents`** | 訂單通用文件中心（合約簽名、發票、B/L、檢驗、付款證明…） | private（owner / 訂單雙方 / admin） | ✅ 已建立 — `010_storage_order_documents.sql` |
 | `payments` | 付款憑證圖 | — | 由 `order-documents` 內 `payment_proof` 路徑覆蓋 |
 | `listings` | 商品圖 | public read, seller write | ✅ 已建立 — `024_listings_bucket.sql` |
-| `chat` | 聊天室附件 | private（chat members） | ⚠️ 待建立（與 ROADMAP §A2 一起做） |
+| `chat` | — | （未規劃）聊天室附件 | ❌ MVP 不做 — 站內信僅文字，無 `chat` bucket |
 
-> 僅 `chat` bucket 仍待 migration；其餘見 [`ROADMAP.md` §A4](./ROADMAP.md)。
+> MVP 所需 Storage buckets 已全部就位；站內信不支援附件，故不建立 `chat` bucket。
 > `010_storage_order_documents.sql` 已建立 `order-documents` bucket（private）並設好 RLS：
 > - SELECT：路徑首段為 `orders/<order_id>/...` 時，訂單雙方 / admin 可讀；其它路徑以上傳者 + admin 可讀
 > - INSERT：登入用戶可上傳，並由 server action 寫對應的 `order_documents` row
@@ -180,7 +180,7 @@ alter publication supabase_realtime add table public.messages;
 ```
 
 → 客戶端用 `supabase.channel('messages:room_id={uuid}')` + `postgres_changes` 監聽。
-**Party DM** 已由 `<PartyChatPanel />` 實作；訂單詳情內嵌 chat 與附件 bucket 見 ROADMAP §A2。
+**Party DM** 已由 `<PartyChatPanel />` 實作（純文字；附件與訂單 Tab 內嵌為可選 Phase 2，見 ROADMAP §A2）。
 
 ---
 
@@ -408,8 +408,7 @@ Request ──► updateSession() ──► 取得 user
             │
             ├─ /login|/register|/verify|/forgot-password + user 已登入 → /dashboard
             │   （/reset-password 刻意排除 — recovery flow 需帶 session 進入）
-            ├─ /dashboard|/market|/listings|/inquiries|/orders|/messages + 未登入 → /login?next=...
-            │   （/settings/** 不在此清單 — 由 page 內 redirect 兜底）
+            ├─ /dashboard|/market|/listings|/inquiries|/orders|/messages|/settings + 未登入 → /login?next=...
             ├─ /admin/* + 未登入 → /login?next=...
             ├─ /admin/* + role ∉ {admin, super_admin} → /dashboard
             ├─ /auth/callback → 放行（由 route handler 自行 exchangeCodeForSession）
@@ -647,8 +646,8 @@ npm run db:types             # 重新生成 src/types/database.ts
 | 8 | 付款證明上傳（非加密貨幣方式） | ✅ 已完成 | `<PaymentForm />` 對 `bank_transfer / usdi / mup` 顯示檔案上傳 input，存到 `order-documents` |
 | 9 | Full-prepay 端到端流程煙霧測試 | ✅ 已驗證 | 2026-05-15 走測 `ORD-TEST-MP6PL7MZ`：quotation → contract draft/approve/sign → payment submit/verify → ready/shipped/in_transit/arrived → customs_cleared → completed |
 | 10 | 分期付款 / 結案閘門（情境 B） | ✅ 已完成 | 2026-05-25：`npm run qa:a7` + `e2e-full-trading`（30/70，`customs_cleared` 未付清不得 `completed`） |
-| 11 | 站內 IM（A2） | 🟡 部分完成 | Party DM（`/messages`、`PartyChatPanel`、`qa:chat`）已完成；`chat` bucket、訊息附件、訂單 Tab 內嵌仍待 |
-| 12 | Storage `chat` bucket | ⚠️ 待實作 | `avatars` / `kyc` / `listings` / `order-documents` 已就位 |
+| 11 | 站內 IM（A2） | ✅ MVP 完成 | Party DM（`/messages`、`PartyChatPanel`、`qa:chat`）文字對話已通；訊息附件 / `chat` bucket 明確不做 |
+| 12 | Storage `chat` bucket | ❌ 不做 | MVP 站內信無附件；`avatars` / `kyc` / `listings` / `order-documents` 已就位 |
 | 13 | KYC + lazy-collect commercial profile（A6） | ✅ 已完成 | migrations 019/020、`/settings/kyc`、`npm run qa:kyc`；`submitPayment` 僅 commercial gate（不要求 kyc_level，見 ROADMAP §A6 決策） |
 | 14 | `(app)` / `admin` layout 缺 Logout 按鈕 | ✅ 已完成 | `(app)/layout.tsx` 與 `admin/layout.tsx` 已掛上 `<Navbar />`，desktop 有 LogoutButton 在右上、mobile 有 `<MobileNav />` 抽屜 |
 | 15 | Dashboard 待辦通知不完整（要進 Inquiries 才知道有待處理項） | ✅ 已完成 | `src/lib/notifications/counts.ts` 統一計算 sidebar / dashboard 上的 action-needed 數字；`(app)/layout.tsx` 與 `admin/layout.tsx` 顯示金 / 紅 badge，dashboard 加上 incomplete-profile banner + Priority Actions 區塊 + Active Orders「Your turn」/「Disputed」hint |

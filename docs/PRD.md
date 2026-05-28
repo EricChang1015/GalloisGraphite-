@@ -56,9 +56,9 @@
 詳見 [`ROADMAP.md` §A](./ROADMAP.md#a-mvp-補完項上線前必做)：
 
 - ~~**A1** Schema 對齊（payments / news / orders）~~ ✅ 已完成（migration 005）
-- **A2** 站內 IM — **Party DM 已完成**（`/messages`、`MessageCounterpartyButton`、`npm run qa:chat`）；**仍待**：訂單詳情 Communication Tab、`chat` Storage bucket、訊息附件（見 ROADMAP §A2）
+- ~~**A2** 站內 IM~~ ✅ Party DM 文字對話已完成（`/messages`、`MessageCounterpartyButton`、`npm run qa:chat`）；訊息附件 / `chat` bucket **不做**（2026-05-28 產品決策）
 - ~~**A3** 合約簽名掃描上傳 UI~~ ✅ 已完成（009 + `<SignedScanUploader />`，並可嵌入簽名後 PDF 預覽下載）
-- ~~**A4** Storage buckets~~ ✅ `order-documents` / `avatars` / `kyc` / `listings` 已建立；`chat` bucket 與 A2 一起做
+- ~~**A4** Storage buckets~~ ✅ `order-documents` / `avatars` / `kyc` / `listings` 已建立；`chat` bucket 不做（無 IM 附件）
 - ~~**A5** Disputed / Cancelled UI 觸發點~~ ✅ 已完成（009 + `<OrderPhaseActions />`）
 - ~~**A6** KYC~~ ✅ 已完成（migrations 019/020、`/settings/kyc`、四級 level、admin 門檻）；非阻塞延伸見 ROADMAP §A6「仍待」
 - ~~**A7** 部署與 E2E 煙霧測試~~ ✅ 已完成（2026-05-25，`npm run qa:a7` + 分期 UI 走測，見 [`TESTING.md`](./TESTING.md) §8）
@@ -178,7 +178,7 @@ quotation_pending → quoted ↔ negotiating
 > 部分情況回傳 size hint 為 0 導致沒付完款的訂單被誤推到 `completed`（ORD-260520-601b6b
 > 案例）。現改為 `select("id", { count: "exact", head: true })` 取真實 count。
 
-### 4.6 站內 IM（Party DM ✅；附件與訂單 Tab 待補 — A2）
+### 4.6 站內 IM（Party DM ✅ — 文字 only）
 
 **已實作（migration 016–018）**：
 
@@ -188,11 +188,9 @@ quotation_pending → quoted ↔ negotiating
 - Realtime：`postgres_changes` on `messages`（`PartyChatPanel` 內訂閱）
 - 訊息可帶 `context_type`（listing / inquiry / order / none）+ `context_id`
 
-**仍待（見 ROADMAP §A2）**：
+**明確不做**：訊息附件 / `chat` Storage bucket（MVP 僅文字）。
 
-- 訂單詳情可選內嵌精簡版 chat（目前僅 Overview「Message」按鈕）
-- `chat` Storage bucket + 訊息附件（image/PDF ≤5MB）
-- Realtime 不穩時的 polling fallback
+**可選 Phase 2**：訂單詳情內嵌精簡版 chat；Realtime polling fallback。
 
 ## 5. 非功能需求
 
