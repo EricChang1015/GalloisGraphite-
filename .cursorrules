@@ -91,7 +91,7 @@ B2B graphite trading platform connecting global buyers with Madagascar sellers.
 ## UI/UX
 - 主色: Graphite Dark `#1a1a1a` + Accent Gold `#c9a961`
 - 風格: 工業／礦業質感，深色底為主，金色點綴
-- 英文為主，預留 i18n（之後接 next-intl）
+- Dashboard（`(app)/**`）已接 next-intl：`en` + `zh-CN`（cookie `mg-locale` + `profiles.locale`）；合約 PDF / email / 公開頁 / admin 仍英文 — 見 `.cursor/rules/i18n.mdc` 與 `docs/I18N_PLAN.md`
 - Mobile-first，使用 Tailwind 預設斷點（sm/md/lg/xl）
 - icons 一律使用 `lucide-react`
 - toast 使用 sonner (`@/components/ui/sonner`)
@@ -121,9 +121,10 @@ src/
   types/
     database.ts   由 Supabase CLI 生成
 supabase/
-  migrations/     001_init.sql … 027_quotations_created_by.sql (see docs/ARCHITECTURE.md §10)
+  migrations/     001_init.sql … 028_profile_locale.sql (see docs/ARCHITECTURE.md §10)
+  i18n/           next-intl config + messages/{en,zh-CN}/*.json
 docs/
-  PRD.md SCHEMA.md CONTRACT_TEMPLATE.md ROADMAP.md LEGACY_CONTENT.md
+  PRD.md SCHEMA.md ARCHITECTURE.md I18N_PLAN.md ROADMAP.md CONTRACT_TEMPLATE.md LEGACY_CONTENT.md
 ```
 
 ## Git / Commit

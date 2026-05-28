@@ -4,7 +4,7 @@
 > 此文件以「中文 + 設計理由」描述 schema,方便 AI agent 與工程師對齊。
 >
 > **注意**：001_init.sql 與目前代碼實際使用的欄位有部分差異，已由後續 migration 修正。
-> 本文件描述的是 **執行完 001–027 所有 migration 後的最終 schema**。
+> 本文件描述的是 **執行完 001–028 所有 migration 後的最終 schema**。
 > 完整 migration 清單亦見 [`ARCHITECTURE.md` §10](./ARCHITECTURE.md#10-migrations-順序)。
 
 ## Migration 順序
@@ -38,6 +38,7 @@
 | `025_listings_delete_policy.sql` | **Listing DELETE RLS**：補 `listings_owner_delete` policy（先前 policy 名稱誤導，seller 無法真正刪除 listing） |
 | `026_waive_schedules_on_cancelled_orders.sql` | **取消訂單付款清理**：`orders.status='cancelled'` 時將未結清 `payment_schedules` 改 `waived`、pending `payments` 自動 `rejected` |
 | `027_quotations_created_by.sql` | **報價提案人**：`quotations.created_by` NOT NULL FK profiles；backfill 後 server/UI 用此欄判定「不能對自己的 offer 動作」與 Round 標籤 |
+| `028_profile_locale.sql` | **UI 語言偏好**：`profiles.locale text not null default 'en'` + CHECK (`en`, `zh-CN`)；解析順序見 `src/i18n/get-locale.ts`（cookie `mg-locale` → profile → Accept-Language → `en`）。合約 / email / SMS 不受此欄影響 |
 
 > ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >
@@ -66,6 +67,7 @@
 | kyc_level | int | 0=email verified, 1=phone verified, 2=docs verified, 3=premium（admin 指派）；見 `src/lib/kyc/types.ts` `KYC_LEVEL_LABELS` |
 | kyc_docs | jsonb | 上傳憑證 URL 列表 |
 | avatar_url | text | Google OAuth 頭像或 Storage 上傳的公開 URL（`021_avatars.sql`） |
+| locale | text NOT NULL DEFAULT `'en'` | UI 語言偏好（`028_profile_locale.sql`）；CHECK 限 `'en'` / `'zh-CN'`；由 `/settings` LanguageSelector 更新 |
 | created_at / updated_at | timestamptz | |
 
 設計理由:把 auth 與業務分離,RLS 易控制;super_admin 一律手動在 SQL 設定。

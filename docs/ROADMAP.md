@@ -110,7 +110,8 @@
 
 - [x] 推 GitHub
 - [x] Vercel import + env（含 POE / **AWS SES SMTP** / Supabase / 平台收款資訊）
-- [x] Supabase production schema：所有 **27** 個 migrations（001 → 027）都已透過 `scripts/apply-migrations.mjs` 套用，並由 `_agent_migrations` 追蹤表記錄
+- [x] Supabase production schema：所有 **28** 個 migrations（001 → 028）都已透過 `scripts/apply-migrations.mjs` 套用，並由 `_agent_migrations` 追蹤表記錄
+  > 若 production 仍停在 027，需額外跑 `028_profile_locale.sql`（`profiles.locale`）後執行 `npm run db:types`
   > 注意：未來如增量 migration，**enum add value 與使用該值必須分檔**（007/009 是現有範例：007 加 enum value、009 才使用）
 - [x] RLS policy review（005 / 010 / 015 / 018）— `npm run qa:verify-rls`（17/17 pass，2026-05-25）
 - [x] ~~Resend domain DNS（或先用 `onboarding@resend.dev` 寄件）~~ — 2026-05-20 改用 **AWS SES SMTP**（`src/lib/email/smtp.ts`）；production env 需設 `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM_ADDRESS`（必須是 SES 已驗證 identity）
@@ -319,8 +320,9 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - 重新評估：以 listings 內部成交價聚合 + Benchmark Mineral Intelligence 公開指數
 
 ### B3. 多語系
-- ✅ **Phase 2 已完成**（branch `feature/dashboard-i18n`）：next-intl + cookie `mg-locale`；`(app)/**` 儀表板 + Navbar/MobileNav 已翻譯 `en` / `zh-CN`
-- 合約 HTML / PDF 強制英文版（業務決策）
+- ✅ **Dashboard Phase 2 已完成**（2026-05-27，合併 `main`）：next-intl + cookie `mg-locale` + migration 028；`(app)/**` 儀表板 + Navbar/MobileNav 已翻譯 `en` / `zh-CN`
+- 合約 HTML / PDF **正文**強制英文（業務決策）；`ContractPreview` 下載/列印 chrome 亦英文
+- 已知部分缺口：`PaymentScheduleTable` 表頭/按鈕、`ContractDraftForm` 等（見 [`I18N_PLAN.md` §7](./I18N_PLAN.md#7-phase-2-completion--remaining-gaps)）
 - 待補：公開行銷頁 `(public)/**`、`/admin/**`、zh-TW / ja / fr / de 字典
 - 詳見 [`I18N_PLAN.md`](./I18N_PLAN.md) 與 [`.cursor/rules/i18n.mdc`](../.cursor/rules/i18n.mdc)
 

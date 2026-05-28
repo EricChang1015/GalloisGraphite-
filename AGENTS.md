@@ -16,14 +16,14 @@ Quick reference:
 
 - `docs/ARCHITECTURE.md` — **current implemented architecture** (start here)
 - `docs/PRD.md` — product requirements (with implementation status)
-- `docs/SCHEMA.md` — database schema rationale (post-027 migration)
+- `docs/SCHEMA.md` — database schema rationale (post-028 migration)
 - `docs/AI_PROMPT.md` — AI assistant prompt & FAQ maintenance guide
 - `docs/ROADMAP.md` — remaining MVP gaps + Phase 2 plan
 - `docs/TESTING.md` — **QA process** + test accounts + B2B E2E walkthrough (payment_schedules)
 - `docs/CONTRACT_TEMPLATE.md` — graphite sales contract template
 - `docs/LEGACY_CONTENT.md` — content migrated from old static madagraphite.com
 - `docs/COPY_DRAFTS.md` — marketing copy drafts
-- `supabase/migrations/` — SQL migrations (currently 001 → 027)
+- `supabase/migrations/` — SQL migrations (currently 001 → 028)
 - `.cursor/rules/migrations.mdc` — **migration authoring rules** (read before writing SQL)
 - `.env.example` — required environment variables
 

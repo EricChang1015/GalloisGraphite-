@@ -508,3 +508,22 @@ npm run qa:a7
 npm run build && npm run start   # 另一終端
 E2E_BASE_URL=http://127.0.0.1:3000 node scripts/e2e-full-trading.mjs
 ```
+
+---
+
+## Appendix: Dashboard i18n（Phase 2）
+
+> 規則與字典結構：[`I18N_PLAN.md`](./I18N_PLAN.md)、[`.cursor/rules/i18n.mdc`](../.cursor/rules/i18n.mdc)
+
+**前置**：migration 028 已套用（`profiles.locale`）；`npm run build` exit 0。
+
+| 步驟 | 操作 | 預期 |
+|---|---|---|
+| 1 | DevTools → Application → Cookies → 設 `mg-locale=en`，造訪 `/dashboard` | 英文標題、導航、卡片 |
+| 2 | 改 `mg-locale=zh-CN`，重新整理 `/dashboard` | 簡體中文 UI |
+| 3 | `/settings` → 語言選擇器切換 | toast「语言已更新」；cookie + DB 同步 |
+| 4 | 走訪 `/market`、`/inquiries`、`/orders`、`/messages`、`/settings/kyc` | 各頁主要 chrome 隨語系切換 |
+| 5 | `/orders/<id>?tab=contract`（zh-CN UI） | 合同 **HTML 正文仍為英文**（SALES CONTRACT 等） |
+| 6 | `npm run qa:check-dev` | exit 0（若 log 累積 Auth rate-limit 噪音，先 tail 或清空 `.next/dev/logs/next-development.log`） |
+
+**已知仍英文**（非 bug）：`PaymentScheduleTable` 部分按鈕、`ContractPreview` 下載/列印標籤、admin 後台、公開行銷頁。

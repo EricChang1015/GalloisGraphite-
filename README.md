@@ -76,7 +76,7 @@ sellers. Built on Next.js 16 (App Router) + Supabase + Tailwind v4 + shadcn/ui.
 - [`AGENTS.md`](./AGENTS.md) — quick reference for any AI tool
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — **current implemented architecture**
 - [`docs/PRD.md`](./docs/PRD.md) — product requirements (with implementation status)
-- [`docs/SCHEMA.md`](./docs/SCHEMA.md) — database schema rationale (post-027 migration)
+- [`docs/SCHEMA.md`](./docs/SCHEMA.md) — database schema rationale (post-028 migration)
 - [`docs/AI_PROMPT.md`](./docs/AI_PROMPT.md) — **AI assistant prompt & FAQ maintenance guide** (start here when changing AI behaviour)
 - [`docs/CONTRACT_TEMPLATE.md`](./docs/CONTRACT_TEMPLATE.md) — sales contract template
 - [`docs/ROADMAP.md`](./docs/ROADMAP.md) — remaining MVP gaps + Phase 2 plan
@@ -119,7 +119,7 @@ scripts/
   seed-test-order.mjs   Seed a `contract_pending` order between test buyer/seller
   q.mjs                 One-shot Supabase query helper (for smoke tests)
 supabase/
-  migrations/           Versioned SQL (001 → 027, run via `npm run db:migrate`)
+  migrations/           Versioned SQL (001 → 028, run via `npm run db:migrate`)
 docs/                   ARCHITECTURE / PRD / SCHEMA / ROADMAP / TESTING /
                         AI_PROMPT / CONTRACT_TEMPLATE / LEGACY_CONTENT /
                         COPY_DRAFTS / Requirements
@@ -136,22 +136,24 @@ end-to-end paths verified (see [`docs/TESTING.md`](./docs/TESTING.md)).
 | File | Role |
 |---|---|
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | **Implementation truth** — routes, actions, state machine |
-| [`docs/SCHEMA.md`](./docs/SCHEMA.md) | DB schema after migrations 001–027 |
+| [`docs/SCHEMA.md`](./docs/SCHEMA.md) | DB schema after migrations 001–028 |
+| [`docs/I18N_PLAN.md`](./docs/I18N_PLAN.md) | Dashboard i18n (en + zh-CN) |
 | [`docs/PRD.md`](./docs/PRD.md) | Product requirements + ✅/🟡 status |
 | [`docs/ROADMAP.md`](./docs/ROADMAP.md) | Remaining MVP gaps + Phase 2 |
 
 Implemented (high level):
 
 - [x] Next.js 16 (`proxy.ts`) + Tailwind v4 + shadcn base-nova
-- [x] Supabase Auth + Postgres + RLS (**migrations 001 → 027**)
+- [x] Supabase Auth + Postgres + RLS (**migrations 001 → 028**)
 - [x] B2B trade: quotation negotiation → 12-stage order + **`payment_schedules`** (seller-primary payment review)
 - [x] Storage: `order-documents`, `avatars`, `kyc`, `listings` (+ client 720p WebP compress)
 - [x] Party DM (`/messages`) + Realtime; KYC 4-level + `/settings/kyc`
 - [x] Listing edit/delete, MOQ, structured flake-graphite categories
 - [x] AWS SES SMTP notifications + optional SMS; AI chat with audit logs
+- [x] Dashboard i18n — **en + zh-CN** (`next-intl`, cookie `mg-locale`); public/admin still English
 - [x] E2E smoke: `npm run qa:a7`, `qa:chat`, `qa:kyc`, etc.
 
 **Remaining for full MVP** — see [`docs/ROADMAP.md`](./docs/ROADMAP.md) §A Definition of Done:
 
 - [ ] A2 — Order-detail embedded chat (optional); **`chat` Storage bucket** + message attachments
-- [ ] (Phase 2) AI logged-in tools, i18n, PDF renderer, Sentry, etc.
+- [ ] (Phase 2+) Public/admin i18n, PDF renderer, Sentry, etc.

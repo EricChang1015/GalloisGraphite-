@@ -8,12 +8,12 @@ Database column: `profiles.locale` (migration 028).
 
 ## 1. Goals & non-goals
 
-### Goals (Phase 1, this branch `feature/dashboard-i18n`)
+### Goals (Phase 1 + Phase 2 — **merged to `main` 2026-05-27**)
 
 - Multi-language the **post-login dashboard** (everything under
   `src/app/(app)/**`) — and the Navbar / MobileNav components shared
   with public pages.
-- Ship **English + Simplified Chinese (zh-CN)** today.
+- Ship **English + Simplified Chinese (zh-CN)**.
 - Auto-detect locale from browser, allow user override in `/settings`,
   default to `en` when no match.
 - Centralised, per-namespace dictionary files so translators can work
@@ -147,60 +147,66 @@ state always matches the resolved locale.
 
 ---
 
-## 6. Status of pages (Phase 1)
+## 6. Status of pages (2026-05-27)
 
 | Page / component                                 | Status        |
 |--------------------------------------------------|---------------|
 | `src/app/(app)/layout.tsx`                       | ✅ Translated |
 | `src/app/(app)/dashboard/page.tsx`               | ✅ Translated |
 | `src/app/(app)/settings/page.tsx`                | ✅ Translated |
+| `src/app/(app)/settings/kyc/page.tsx`            | ✅ Translated |
+| `src/app/(app)/market/**`                        | ✅ Translated |
+| `src/app/(app)/listings/**`                      | ✅ Translated |
+| `src/app/(app)/inquiries/**`                     | ✅ Translated |
+| `src/app/(app)/orders/**`                        | ✅ Translated (detail tabs + phase actions) |
+| `src/app/(app)/messages/**`                      | ✅ Translated |
 | `src/components/layout/Navbar.tsx`               | ✅ Auth chrome translated; public links English-only |
 | `src/components/layout/MobileNav.tsx`            | ✅ Translated (public links passed via props) |
+| `src/components/layout/NavSearchTrigger.tsx`     | ✅ Translated |
 | `src/components/auth/LogoutButton.tsx`           | ✅ Translated |
-| `src/components/settings/LanguageSelector.tsx`   | ✅ New, translated |
-| `src/lib/notifications/counts.ts`                | ✅ Key-returning variant added (`describeOrderActionKey`) |
-| `src/app/(app)/settings/kyc/page.tsx`            | ⏳ Pending (Phase 2) |
-| `src/app/(app)/market/**`                        | ⏳ Pending (Phase 2) |
-| `src/app/(app)/listings/**`                      | ⏳ Pending (Phase 2) |
-| `src/app/(app)/inquiries/**`                     | ⏳ Pending (Phase 2) |
-| `src/app/(app)/orders/**`                        | ⏳ Pending (Phase 2) |
-| `src/app/(app)/messages/**`                      | ⏳ Pending (Phase 2) |
-| `src/app/admin/**`                               | ⏳ Pending (Phase 3) |
-| `src/components/order/*` (forms, tables, panes)  | ⏳ Pending (Phase 2) |
-| `src/components/listing/*`                       | ⏳ Pending (Phase 2) |
-| `src/components/kyc/*`                           | ⏳ Pending (Phase 2) |
-| `src/components/messages/*`                      | ⏳ Pending (Phase 2) |
-| `src/components/auth/CommercialProfileForm.tsx`  | ⏳ Pending (Phase 2) |
-| Contract template + PDF output                   | 🚫 Locked English |
+| `src/components/auth/CommercialProfileForm.tsx`  | ✅ Translated |
+| `src/components/profile/AvatarUploader.tsx`      | ✅ Translated |
+| `src/components/settings/LanguageSelector.tsx`   | ✅ Translated |
+| `src/components/kyc/*`                           | ✅ Translated |
+| `src/components/messages/*`                      | ✅ Translated |
+| `src/components/listing/*`                       | ✅ Translated |
+| `src/components/market/MarketListingCard.tsx`    | ✅ Translated |
+| `src/components/order/*` (major UI)              | ✅ Mostly translated — see §7 gaps |
+| `src/lib/notifications/counts.ts`                | ✅ Key-returning variant (`describeOrderActionKey`) |
+| `src/app/admin/**`                               | ⏳ Phase 3 |
+| Contract template + PDF **body**                 | 🚫 Locked English |
+| `ContractPreview` download/print chrome          | 🚫 Locked English (PDF export) |
 | Email / SMS / audit log strings                  | 🚫 Locked English |
-| Public pages                                     | 🚫 Deferred |
+| Public pages `(public)/**`                       | 🚫 Deferred |
 
 ---
 
-## 7. Phase 2 plan (remaining dashboard pages)
+## 7. Phase 2 completion & remaining gaps
 
-Estimated 4–6 working days. Per page:
+**Completed 2026-05-27** (7 commits on `feature/dashboard-i18n`, fast-forward merged to `main`):
 
-1. Inventory English strings.
-2. Add keys under the appropriate namespace (extend or create).
-3. Replace literals with `t(...)` or `tEnums(...)`.
-4. Translate to `zh-CN`.
-5. Run `npm run build` + manual walkthrough in both locales.
+1. Foundation — next-intl plugin, `get-locale.ts`, migration 028, LanguageSelector
+2. KYC + Messages
+3. Listings
+4. Market + Inquiries
+5. Orders (list, detail tabs, progress bar, phase actions, contract approve, shipment form, …)
+6. Shared profile forms + nav search
+7. Fix `<strong>` in translation strings causing `FORMATTING_ERROR`
 
-Suggested order (smallest to biggest):
+**Known partial gaps** (UI chrome still English; safe to ship):
 
-1. `kyc.json` + `/settings/kyc` + `src/components/kyc/*`
-2. `messages.json` + `/messages` + `/messages/[userId]` + `src/components/messages/*`
-3. `listings.json` + `/listings`, `/listings/new`, `/listings/[id]/edit` + `src/components/listing/*`
-4. `market.json` + `/market`, `/market/[id]` + `src/components/market/MarketListingCard.tsx`
-5. `inquiries.json` + `/inquiries`, `/inquiries/[id]`
-6. `orders.json` + `/orders`, `/orders/[id]` (this is the biggest one — many sub-components)
+| Component | Examples still English |
+|---|---|
+| `PaymentScheduleTable.tsx` | Column headers, `Submit Payment` / `Pay Early` / `Resubmit Payment`, review dialog |
+| `ContractPreview.tsx` | `Download signed contract`, `Print / Save PDF` (intentional for PDF) |
+| `ContractDraftForm.tsx` / `PaymentScheduleBuilder.tsx` | Complex seller contract builder labels |
+| `PaymentScheduleTable` schedule enums | Uses `CATEGORY_LABEL` / `MILESTONE_LABEL` from `payment-schedule.ts` (English constants) |
 
-Each batch can be committed independently and the feature flag (the
-locale selector) makes it safe to ship half-translated dictionaries —
-missing keys fall back to English per `loadMessages()`.
+**Phase 3 (deferred):**
 
----
+- Public marketing pages `(public)/**`
+- Admin console `/admin/**`
+- Additional locales: `zh-TW`, `ja`, `fr`, `de`
 
 ## 8. Adding a new locale (future)
 
@@ -219,16 +225,16 @@ missing keys fall back to English per `loadMessages()`.
 
 ---
 
-## 9. QA checklist (run before merging)
+## 9. QA checklist (run after i18n changes)
 
 ```powershell
 npm run build                          # exit 0
-npm run db:migrate:status              # 028 applied
-node scripts/verify-schema.mjs         # locale column present (if script extended)
-npm run dev                            # then:
+npm run db:migrate:status              # 028 applied (profiles.locale)
 #   visit /dashboard with mg-locale=en   → English
 #   visit /dashboard with mg-locale=zh-CN → Simplified Chinese
 #   open /settings → change language → toast + locale switches
-#   open /orders/<id> contract preview → contract body still English
-npm run qa:check-dev                   # exit 0
+#   open /orders/<id>?tab=contract → contract HTML body still English
+npm run qa:check-dev                   # exit 0 (tail log or clear stale entries first)
 ```
+
+> **Merged to `main`**: 2026-05-27. Re-run the walkthrough above after any i18n dictionary or component change.

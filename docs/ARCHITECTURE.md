@@ -2,10 +2,10 @@
 
 > 此文件描述**現在實際長什麼樣子**的 Mada Graphite 平台（**實作單一真相來源**）。
 > - 規劃／需求面請看 [`PRD.md`](./PRD.md)（含 ✅/待補狀態）
-> - 資料表細節請看 [`SCHEMA.md`](./SCHEMA.md)（001–027 執行後的最終 schema）
+> - 資料表細節請看 [`SCHEMA.md`](./SCHEMA.md)（001–028 執行後的最終 schema）
 > - 待補完項目請看 [`ROADMAP.md`](./ROADMAP.md)
 >
-> **最後同步**：2026-05-27（對齊 migration 027、`quotations.created_by`、Party DM、seller-primary payment）
+> **最後同步**：2026-05-27（migration 028 `profiles.locale`、Dashboard i18n Phase 2 合併 main、`quotations.created_by`）
 
 ---
 
@@ -465,8 +465,9 @@ src/components/
 - **語系解析**（`src/i18n/get-locale.ts`）：cookie `mg-locale` → `profiles.locale` → `Accept-Language` → `en`
 - **已上線語系**：`en`（預設）、`zh-CN`（簡體中文）；設定於 `src/i18n/config.ts`
 - **字典結構**：`src/i18n/messages/<locale>/*.json`（namespace 清單見 `src/i18n/messages.ts`）
-- **已翻譯範圍**：`(app)/**` 登入後儀表板（dashboard / settings / kyc / market / listings / inquiries / orders / messages）+ 共用 `Navbar` / `MobileNav` / `NavSearchTrigger`
-- **刻意不翻譯**：合約 HTML / PDF（`src/lib/contract/template.ts`、`ContractPreview` 簽名區）、email / SMS、server-action 錯誤訊息、公開行銷頁 `(public)/**`、`/admin/**`
+- **已翻譯範圍**：`(app)/**` 登入後儀表板（dashboard / settings / kyc / market / listings / inquiries / orders / messages）+ 共用 `Navbar` / `MobileNav` / `NavSearchTrigger` / `CommercialProfileForm` / `AvatarUploader`
+- **部分仍英文**（已知缺口）：`PaymentScheduleTable` 表頭與按鈕、`ContractPreview` 下載/列印 chrome（合約正文仍英文）、`ContractDraftForm` / `PaymentScheduleBuilder` 等複雜表單
+- **刻意不翻譯**：合約 HTML / PDF 正文（`src/lib/contract/template.ts`）、email / SMS、server-action 錯誤訊息、公開行銷頁 `(public)/**`、`/admin/**`
 - **使用者切換**：`/settings` → LanguageSelector（寫入 `profiles.locale` + `mg-locale` cookie）
 - **作者規則**：[`docs/I18N_PLAN.md`](./I18N_PLAN.md)、[`.cursor/rules/i18n.mdc`](../.cursor/rules/i18n.mdc)
 
@@ -588,6 +589,7 @@ supabase/migrations/
   025_listings_delete_policy.sql    ← listings DELETE RLS（owner / admin）
   026_waive_schedules_on_cancelled_orders.sql  ← 訂單取消時把 `payment_schedules.status` 改 `waived`
   027_quotations_created_by.sql     ← `quotations.created_by` NOT NULL FK profiles + backfill：第一份永遠是 seller、counter-offer = parent.countered_by。修正 `inquiries/[id]` 的「Round #N · by seller/buyer」標籤誤判 + 提案人能接受/反提自己 offer 的兩個 bug；server-side 在 `acceptQuotation` / `counterQuotation` / `rejectQuotation` 加上「不能對自己的 offer 動作」校驗
+  028_profile_locale.sql            ← `profiles.locale text not null default 'en'` + CHECK (`en`, `zh-CN`)；供 next-intl 語系解析（cookie `mg-locale` → profile → Accept-Language）
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）
@@ -662,4 +664,4 @@ npm run db:types             # 重新生成 src/types/database.ts
 14. **Listing UX polish**（migration 023 + 2026-05-22）：optional `listings.min_order_quantity`（MOQ）、Custom 時 mesh 多選範圍（"+35 to -100 Mesh"）、可一鍵 generate 標題、Market 卡片顯示 spec chip + MOQ；`createInquiry` 加 BELOW_MOQ guard
 15. **Listing images**（migration 024 + 2026-05-24）：public `listings` storage bucket（2 MiB / JPEG/PNG/WebP）+ `<ListingImageUploader />`（drag-drop + 從庫重用 + client-side `compressTo720pWebp` 在上傳前縮到 720p WebP）+ market 卡片 banner + 詳情頁 `<ListingGallery />`
 16. **Seller listing edit / delete**（2026-05-24）：`updateListing` 升級成 full-form zod 校驗、加 `deleteListing` server action（order-attached listing 用 `LISTING_HAS_ORDERS` 擋下，避免 `orders.listing_id NOT NULL` 直接炸 FK）+ `/listings/[id]/edit` 復用 `<ListingForm existing>` + `<ListingRowActions />` 行內 Edit / Pause / Resume / Sold-out / Delete
-17. **Dashboard i18n Phase 2**（2026-05-27）：next-intl + cookie `mg-locale`；`(app)/**` 儀表板 UI 支援 `en` / `zh-CN`；合約 / 郵件 / 公開頁仍英文
+17. **Dashboard i18n Phase 2**（2026-05-27，合併 `main`）：next-intl + cookie `mg-locale` + migration 028 `profiles.locale`；`(app)/**` 儀表板 UI 支援 `en` / `zh-CN`；合約正文 / 郵件 / 公開頁 / admin 仍英文。詳見 [`I18N_PLAN.md`](./I18N_PLAN.md)
