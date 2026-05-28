@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowUpRightIcon, SparklesIcon, CommandIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { BgGrid, MeshGradient } from "@/components/home/BgGrid";
 import { LiveTicker } from "@/components/home/LiveTicker";
@@ -40,6 +41,8 @@ const FADE_UP = {
 };
 
 export function Hero() {
+  const t = useTranslations("home.hero");
+
   return (
     <section className="relative overflow-hidden bg-background">
       <MeshGradient />
@@ -56,7 +59,7 @@ export function Hero() {
             className="text-eyebrow"
           >
             <span className="mr-2 inline-block size-1.5 translate-y-[-2px] rounded-full bg-signal align-middle animate-signal-pulse" />
-            AI-Native Trading · Madagascar · Since 1901
+            {t("eyebrow")}
           </motion.p>
 
           <motion.h1
@@ -66,17 +69,17 @@ export function Hero() {
             animate="visible"
             className="text-display mt-6 text-balance text-foreground"
           >
-            Where 120 years of graphite meets an{" "}
+            {t("titleBefore")}{" "}
             <span className="relative inline-block">
               <span className="relative z-10 bg-gradient-to-br from-signal to-[color:var(--gold)] bg-clip-text text-transparent">
-                AI-assisted
+                {t("titleHighlight")}
               </span>
               <span
                 aria-hidden
                 className="absolute inset-x-0 -bottom-1 h-3 rounded-full bg-signal/20 blur-md"
               />
             </span>{" "}
-            trade desk.
+            {t("titleAfter")}
           </motion.h1>
 
           <motion.p
@@ -86,10 +89,7 @@ export function Hero() {
             animate="visible"
             className="mt-7 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
           >
-            Mada Graphite turns more than 120 years of mining knowhow into a B2B
-            platform for inquiry, contracting, settlement and shipment —
-            supported by an AI co-pilot that helps buyers compare specs,
-            documents and routes.
+            {t("body")}
           </motion.p>
 
           <motion.div
@@ -107,7 +107,7 @@ export function Hero() {
                 "bg-signal text-signal-foreground hover:bg-signal/90"
               )}
             >
-              Open an account
+              {t("openAccount")}
               <ArrowUpRightIcon className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Button>
 
@@ -118,7 +118,7 @@ export function Hero() {
               className="group h-11 gap-2 border-signal/40 px-5 text-sm font-medium hover:border-signal hover:bg-signal/5"
             >
               <SparklesIcon className="size-4 text-signal" />
-              Ask the AI assistant
+              {t("askAi")}
             </Button>
           </motion.div>
 
@@ -136,7 +136,7 @@ export function Hero() {
           >
             <CommandIcon className="size-3" />
             <span className="font-mono uppercase tracking-wider">
-              Search products & grades
+              {t("searchHint")}
             </span>
             <kbd className="ml-1 inline-flex items-center gap-0.5 rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
               ⌘K
@@ -151,7 +151,7 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.5, ease: EASE }}
           className="lg:col-span-5 lg:pt-6"
         >
-          <SpecTerminal />
+          <SpecTerminal matchScoreLabel={t("terminal.matchScore")} />
         </motion.div>
       </div>
 
@@ -165,7 +165,7 @@ export function Hero() {
  * inline COA snippet for MADA1 +80 mesh — keeps the trader/credibility
  * angle without resorting to stock photography.
  */
-function SpecTerminal() {
+function SpecTerminal({ matchScoreLabel }: { matchScoreLabel: string }) {
   return (
     <div className="group relative">
       {/* Glow halo (signal cyan) */}
@@ -212,7 +212,7 @@ function SpecTerminal() {
 
           <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
             <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              AI match score
+              {matchScoreLabel}
             </p>
             <p className="flex items-center gap-2 text-signal">
               <span className="relative flex size-2">

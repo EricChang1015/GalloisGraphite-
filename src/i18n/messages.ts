@@ -17,6 +17,12 @@ import type { Locale } from "./config";
 const NAMESPACES = [
   "common",
   "nav",
+  "home",
+  "about",
+  "products",
+  "sustainability",
+  "geopolitics",
+  "footer",
   "dashboard",
   "settings",
   "kyc",

@@ -1,0 +1,57 @@
+{
+  "metaTitle": "产品 - Mada Graphite",
+  "metaDescription": "MADA1 与 MADA2 天然鳞片石墨。标准品级固定碳为 80–99%，也可按需提供定制低碳原料。",
+  "hero": {
+    "eyebrow": "天然鳞片石墨 · 马达加斯加",
+    "title": "产品目录",
+    "body": "Etablissements Gallois S.A. 供应天然鳞片石墨，固定碳范围为 80% 至 99%，粒度覆盖 +32 至 −100 mesh。可按需提供定制规格。"
+  },
+  "brands": [
+    {
+      "name": "MADA1",
+      "subtitle": "高端品级 — 1 号矿区（Antsirakambo）",
+      "description": "MADA1 石墨晶体结构完整、密度高，灰分中不利于提纯的物质含量极低，是高技术应用的首选原料。",
+      "applications": [
+        "用于后续球化及锂离子电池负极认证的原料",
+        "可膨胀石墨（防火 / 膨胀型材料）",
+        "高纯石墨",
+        "军工与航空航天石墨",
+        "人造金刚石原料",
+        "先进耐火材料"
+      ]
+    },
+    {
+      "name": "MADA2",
+      "subtitle": "工业品级 — 2 号矿区（Marovintsy）",
+      "description": "MADA2 是稳定可靠的工业级鳞片石墨，适合大宗商品应用，在冶金与耐火材料领域拥有广泛且成熟的应用记录。",
+      "applications": [
+        "冶金",
+        "耐火材料",
+        "坩埚",
+        "高纯石墨原料",
+        "密封材料",
+        "刹车片与铅笔"
+      ]
+    }
+  ],
+  "applicationsLabel": "主要应用",
+  "standardGrades": {
+    "title": "标准品级",
+    "introBefore": "所有品级均可提供 MADA1 与 MADA2。",
+    "moisture": "水分：0.5% MAX",
+    "introAfter": "适用于所有品级。",
+    "headers": {
+      "grade": "品级",
+      "fixedCarbon": "固定碳",
+      "size": "粒度（最小留存）",
+      "moisture": "水分"
+    },
+    "footnote": "标准商业品级固定碳为 80–99%。较低碳含量原料或特殊规格可作为定制订单提供，并需逐批确认。"
+  },
+  "custom": {
+    "title": "定制规格",
+    "body": "碳含量范围为 <strong>80% 至 99%</strong>。可提供粒度：<mono>+32 / +50 / +80 / +100 / +150 / −100 mesh</mono>。请联系销售团队获取定制订单与技术咨询。",
+    "openAccount": "开通交易账户",
+    "askAi": "询问 AI 助手"
+  }
+}

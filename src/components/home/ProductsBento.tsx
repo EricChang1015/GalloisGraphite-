@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRightIcon, BoxIcon, FlaskConicalIcon, SettingsIcon } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -21,45 +22,29 @@ import { cn } from "@/lib/utils";
 
 type Spec = { k: string; v: string };
 
-const SPECS_MADA1: Spec[] = [
-  { k: "fixed_carbon", v: "94 – 99%" },
-  { k: "mesh_size", v: "+35 / +50 / +80 / +100 / +150" },
-  { k: "moisture", v: "≤ 0.5%" },
-  { k: "ash", v: "≤ 5.0%" },
-  { k: "applications", v: "Li-ion · expandable · high-purity · aerospace" },
-];
+type ProductCardCopy = {
+  label: string;
+  title: string;
+  desc: string;
+  specs: Spec[];
+};
 
-const SPECS_MADA2: Spec[] = [
-  { k: "fixed_carbon", v: "75 – 95%" },
-  { k: "mesh_size", v: "+50 / +80 / +100 / -100" },
-  { k: "moisture", v: "≤ 0.5%" },
-  { k: "ash", v: "≤ 12%" },
-  { k: "applications", v: "Refractory · metallurgy · crucibles" },
-];
+export async function ProductsBento() {
+  const t = await getTranslations("home.productsBento");
+  const cards = t.raw("cards") as ProductCardCopy[];
 
-const SPECS_CUSTOM: Spec[] = [
-  { k: "fixed_carbon", v: "80 – 99% on request" },
-  { k: "mesh_size", v: "+32 to −100 mesh" },
-  { k: "moisture", v: "Per buyer COA" },
-  { k: "min_lot", v: "20 MT (one container)" },
-  { k: "lead_time", v: "≈ 4–6 weeks from PO" },
-];
-
-export function ProductsBento() {
   return (
     <section className="relative bg-background">
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24">
         <div className="mb-12 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
           <div className="max-w-2xl space-y-3">
-            <p className="text-eyebrow">Catalogue</p>
+            <p className="text-eyebrow">{t("eyebrow")}</p>
             <h2 className="text-display-sm text-balance text-foreground">
-              Two brands, six standard grades,{" "}
-              <span className="text-signal">unlimited custom specs.</span>
+              {t("titleBefore")}{" "}
+              <span className="text-signal">{t("titleHighlight")}</span>
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              From battery-grade flake to refractory feedstock, every lot ships
-              with origin-traceable documentation. Hover any card for the full
-              technical sheet.
+              {t("body")}
             </p>
           </div>
           <Button
@@ -68,7 +53,7 @@ export function ProductsBento() {
             size="lg"
             className="h-10 shrink-0 gap-1.5 border-signal/40 hover:border-signal hover:bg-signal/5"
           >
-            View full catalogue
+            {t("viewCatalogue")}
             <ArrowUpRightIcon className="size-4" />
           </Button>
         </div>
@@ -76,32 +61,35 @@ export function ProductsBento() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:grid-rows-2">
           <BentoCard
             href="/products"
-            label="01 / MADA1"
-            title="Battery & aerospace flake"
-            desc="Perfect crystalline structure, high density, ultra-low purification-unfavorable ash. The reference feedstock for spheroidization, expandable graphite, high-purity routes and aerospace-grade carbon."
-            specs={SPECS_MADA1}
+            label={cards[0]?.label ?? "01 / MADA1"}
+            title={cards[0]?.title ?? "MADA1"}
+            desc={cards[0]?.desc ?? ""}
+            specs={cards[0]?.specs ?? []}
             Icon={BoxIcon}
             tone="signal"
             className="lg:col-span-2 lg:row-span-2"
             featured
+            specSheetLabel={t("specSheet")}
           />
           <BentoCard
             href="/products"
-            label="03 / Custom"
-            title="Tailored grades"
-            desc="80–99% fixed carbon, +32 to −100 mesh. We sample, qualify and contract to your COA — minimum one container."
-            specs={SPECS_CUSTOM}
+            label={cards[1]?.label ?? "03 / Custom"}
+            title={cards[1]?.title ?? "Custom"}
+            desc={cards[1]?.desc ?? ""}
+            specs={cards[1]?.specs ?? []}
             Icon={SettingsIcon}
             tone="gold"
+            specSheetLabel={t("specSheet")}
           />
           <BentoCard
             href="/products"
-            label="02 / MADA2"
-            title="Refractory & metallurgy flake"
-            desc="Industrial flake for refractories, metallurgy, crucibles and as feedstock for further high-purity processing. Optimised for thermal stability and packing density."
-            specs={SPECS_MADA2}
+            label={cards[2]?.label ?? "02 / MADA2"}
+            title={cards[2]?.title ?? "MADA2"}
+            desc={cards[2]?.desc ?? ""}
+            specs={cards[2]?.specs ?? []}
             Icon={FlaskConicalIcon}
             tone="signal"
+            specSheetLabel={t("specSheet")}
           />
         </div>
       </div>
@@ -119,6 +107,7 @@ function BentoCard({
   tone,
   className,
   featured,
+  specSheetLabel,
 }: {
   href: string;
   label: string;
@@ -129,6 +118,7 @@ function BentoCard({
   tone: "signal" | "gold";
   className?: string;
   featured?: boolean;
+  specSheetLabel: string;
 }) {
   const accent =
     tone === "signal"
@@ -198,7 +188,7 @@ function BentoCard({
         )}
       >
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-          Spec sheet
+          {specSheetLabel}
         </p>
         <ul className="space-y-1.5 font-mono text-[11px] sm:text-xs">
           {specs.map((s) => (

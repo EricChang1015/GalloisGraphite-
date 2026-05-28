@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { motion, useInView } from "framer-motion";
 import { SparklesIcon, SendIcon, BotIcon, UserIcon, ArrowUpRightIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { BgGrid } from "@/components/home/BgGrid";
 import { cn } from "@/lib/utils";
@@ -20,30 +21,26 @@ type Turn =
   | { role: "user"; text: string }
   | { role: "assistant"; chunks: string[]; tail?: React.ReactNode };
 
-const SCRIPT: Turn[] = [
-  {
-    role: "user",
-    text: "What grade do I need for Li-ion anodes?",
-  },
-  {
-    role: "assistant",
-    chunks: [
-      "For lithium-ion anode feedstock you typically want our ",
-      "**MADA1** flake — the perfect crystalline structure and very low ",
-      "purification-unfavorable ash make it the cleanest path to spherical graphite.",
-      "\n\nA reasonable starting spec is:",
-    ],
-    tail: <SpecBlock />,
-  },
-  {
-    role: "user",
-    text: "Can you check container availability into Yokohama for July?",
-  },
-];
-
 export function AiPreview() {
   const ref = React.useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.3, once: true });
+  const t = useTranslations("home.aiPreview");
+  const script = (t.raw("script") as Array<
+    | { role: "user"; text: string }
+    | { role: "assistant"; chunks: string[] }
+  >).map((turn) =>
+    turn.role === "assistant"
+      ? {
+          ...turn,
+          tail: (
+            <SpecBlock
+              suggestedSpecLabel={t("suggestedSpec")}
+              citation={t("citation")}
+            />
+          ),
+        }
+      : turn
+  ) as Turn[];
 
   return (
     <section
@@ -62,17 +59,14 @@ export function AiPreview() {
         <div className="space-y-6 lg:col-span-5">
           <p className="text-eyebrow">
             <SparklesIcon className="mr-1.5 inline size-3 text-signal animate-signal-pulse" />
-            AI co-pilot
+            {t("eyebrow")}
           </p>
           <h2 className="text-display-sm text-balance text-foreground">
-            Stop guessing the right grade.{" "}
-            <span className="text-signal">Ask the desk.</span>
+            {t("titleBefore")}{" "}
+            <span className="text-signal">{t("titleHighlight")}</span>
           </h2>
           <p className="text-base leading-relaxed text-muted-foreground">
-            Mada Graphite&apos;s assistant matches your application against our
-            COA library, surfaces the closest in-stock spec, and drafts the
-            inquiry — all before you create an account. Logged in, it can also
-            check live container availability and contract drafts.
+            {t("body")}
           </p>
           <div className="flex flex-wrap gap-3">
             <Button
@@ -81,7 +75,7 @@ export function AiPreview() {
               className="h-11 gap-2 bg-signal text-signal-foreground hover:bg-signal/90"
             >
               <SparklesIcon className="size-4" />
-              Try the assistant
+              {t("tryAssistant")}
               <ArrowUpRightIcon className="size-4" />
             </Button>
             <Button
@@ -90,17 +84,12 @@ export function AiPreview() {
               variant="outline"
               className="h-11 gap-2"
             >
-              Open an account
+              {t("openAccount")}
             </Button>
           </div>
 
           <ul className="grid gap-2 pt-4 font-mono text-[11px] text-muted-foreground">
-            {[
-              "→ Spec-to-application matching across all grades",
-              "→ Drafts an inquiry message you can edit & send",
-              "→ Cites the source COA / fact in every answer",
-              "→ Recognises buy intent — defers to your account-bound desk",
-            ].map((line) => (
+            {(t.raw("bullets") as string[]).map((line) => (
               <li key={line} className="text-foreground/80">
                 <span className="text-signal">{line.slice(0, 1)}</span>
                 {line.slice(1)}
@@ -110,13 +99,34 @@ export function AiPreview() {
         </div>
 
         {/* Right: chat mockup */}
-        <ChatMockup active={inView} className="lg:col-span-7" />
+        <ChatMockup
+          active={inView}
+          className="lg:col-span-7"
+          script={script}
+          windowTitle={t("windowTitle")}
+          inputPlaceholder={t("inputPlaceholder")}
+          demoNote={t("demoNote")}
+        />
       </div>
     </section>
   );
 }
 
-function ChatMockup({ active, className }: { active: boolean; className?: string }) {
+function ChatMockup({
+  active,
+  className,
+  script,
+  windowTitle,
+  inputPlaceholder,
+  demoNote,
+}: {
+  active: boolean;
+  className?: string;
+  script: Turn[];
+  windowTitle: string;
+  inputPlaceholder: string;
+  demoNote: string;
+}) {
   return (
     <div
       className={cn(
@@ -134,15 +144,15 @@ function ChatMockup({ active, className }: { active: boolean; className?: string
         </div>
         <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
           <span className="size-1.5 rounded-full bg-emerald-400 animate-signal-pulse" />
-          mada · ai assistant
+          {windowTitle}
         </div>
         <span className="size-2.5" />
       </div>
 
       {/* Conversation */}
       <div className="space-y-4 px-5 py-6 sm:px-6 sm:py-8">
-        {SCRIPT.map((turn, i) => (
-          <Bubble key={i} turn={turn} delay={i * 1.1} active={active} isLast={i === SCRIPT.length - 1} />
+        {script.map((turn, i) => (
+          <Bubble key={i} turn={turn} delay={i * 1.1} active={active} isLast={i === script.length - 1} />
         ))}
       </div>
 
@@ -152,7 +162,7 @@ function ChatMockup({ active, className }: { active: boolean; className?: string
           <SparklesIcon className="size-4 text-signal" />
           <input
             disabled
-            placeholder="Ask anything about specs, lots or routes…"
+            placeholder={inputPlaceholder}
             className="flex-1 bg-transparent text-sm text-foreground/70 placeholder:text-muted-foreground/70 outline-none"
           />
           <button
@@ -163,7 +173,7 @@ function ChatMockup({ active, className }: { active: boolean; className?: string
           </button>
         </div>
         <p className="mt-2 px-1 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          Demo · Try the live assistant on the chat page
+          {demoNote}
         </p>
       </div>
     </div>
@@ -262,7 +272,13 @@ function renderInline(text: string): string {
   return text.replace(/\*\*(.+?)\*\*/g, '<strong class="text-signal">$1</strong>');
 }
 
-function SpecBlock() {
+function SpecBlock({
+  suggestedSpecLabel,
+  citation,
+}: {
+  suggestedSpecLabel: string;
+  citation: string;
+}) {
   const rows: Array<[string, string]> = [
     ["brand", "MADA1"],
     ["mesh", "+150 mesh"],
@@ -273,7 +289,7 @@ function SpecBlock() {
   return (
     <div className="mt-3 rounded-xl border border-signal/30 bg-card/70 p-3 font-mono text-[11px]">
       <p className="mb-1.5 text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-        Suggested spec
+        {suggestedSpecLabel}
       </p>
       <ul className="space-y-1">
         {rows.map(([k, v]) => (
@@ -284,7 +300,7 @@ function SpecBlock() {
         ))}
       </ul>
       <p className="mt-2 text-[10px] text-muted-foreground/80">
-        Cited from MADA1 reference COA · Updated 2026-05
+        {citation}
       </p>
     </div>
   );

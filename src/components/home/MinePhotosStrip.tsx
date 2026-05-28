@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import { cn } from "@/lib/utils";
 
 /**
@@ -8,16 +9,21 @@ import { cn } from "@/lib/utils";
  * than stock filler.
  */
 
-const PHOTOS = [
-  { src: "/images/legacy/mining/header/1.jpg", alt: "Mine site overview" },
-  { src: "/images/legacy/mining/header/2.jpg", alt: "Processing plant" },
-  { src: "/images/legacy/mining/header/3.jpg", alt: "Final products warehouse" },
-  { src: "/images/legacy/mining/header/4.jpg", alt: "Quality control laboratory" },
-  { src: "/images/legacy/mining/header/5.jpg", alt: "Operations team" },
-  { src: "/images/legacy/mining/header/6.jpg", alt: "Local community engagement" },
+const PHOTO_SRCS = [
+  "/images/legacy/mining/header/1.jpg",
+  "/images/legacy/mining/header/2.jpg",
+  "/images/legacy/mining/header/3.jpg",
+  "/images/legacy/mining/header/4.jpg",
+  "/images/legacy/mining/header/5.jpg",
+  "/images/legacy/mining/header/6.jpg",
 ];
 
-export function MinePhotosStrip({ className }: { className?: string }) {
+export async function MinePhotosStrip({ className }: { className?: string }) {
+  const t = await getTranslations("home");
+  const photos = (t.raw("photos") as Array<{ alt: string }>).map(
+    (photo, index) => ({ ...photo, src: PHOTO_SRCS[index] })
+  );
+
   return (
     <section
       className={cn(
@@ -36,7 +42,7 @@ export function MinePhotosStrip({ className }: { className?: string }) {
       />
 
       <div className="flex">
-        {PHOTOS.map((p, i) => (
+        {photos.map((p, i) => (
           <div
             key={p.src}
             className="group relative aspect-[3/2] flex-1 min-w-0 overflow-hidden"

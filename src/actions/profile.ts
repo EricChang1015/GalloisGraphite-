@@ -184,6 +184,31 @@ export async function setLocaleFromString(
   return updateProfileLocale({ locale: value });
 }
 
+/**
+ * Persist locale for public/guest surfaces only. Unlike
+ * `updateProfileLocale`, this intentionally avoids touching `profiles.locale`
+ * so unauthenticated visitors can switch language from the public navbar.
+ */
+export async function setLocaleCookieOnly(
+  value: string
+): Promise<ActionResult<true>> {
+  const parsed = LocaleSchema.safeParse({ locale: value });
+  if (!parsed.success) {
+    return { data: null, error: { message: "Unsupported locale." } };
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(LOCALE_COOKIE, parsed.data.locale, {
+    maxAge: LOCALE_COOKIE_MAX_AGE,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  revalidatePath("/", "layout");
+  return { data: true, error: null };
+}
+
 /** Remove custom avatar; initials fallback is shown in the UI. */
 export async function clearProfileAvatar(): Promise<ActionResult<true>> {
   const supabase = await createServerClient();

@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { ArrowUpRightIcon } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 const NAV_LINKS = [
-  { href: "/about", label: "About Us" },
-  { href: "/products", label: "Products" },
-  { href: "/sustainability", label: "Sustainability" },
-  { href: "/geopolitics", label: "Geopolitics" },
-  { href: "/news", label: "News" },
-  { href: "/chat", label: "AI Assistant" },
-  { href: "/market", label: "Market" },
+  { href: "/about", key: "about" },
+  { href: "/products", key: "products" },
+  { href: "/sustainability", key: "sustainability" },
+  { href: "/geopolitics", key: "geopolitics" },
+  { href: "/news", key: "news" },
+  { href: "/chat", key: "chat" },
+  { href: "/market", key: "market" },
 ];
 
 const PAYMENTS = [
@@ -27,7 +28,10 @@ const PAYMENTS = [
  *
  * Server Component.
  */
-export function Footer() {
+export async function Footer() {
+  const tFooter = await getTranslations("footer");
+  const tNav = await getTranslations("nav");
+
   return (
     <footer className="relative border-t border-border bg-background text-muted-foreground">
       {/* Decorative dot grid */}
@@ -43,12 +47,10 @@ export function Footer() {
             </span>
           </Link>
           <p className="text-sm leading-relaxed">
-            B2B trading platform for Madagascar natural flake graphite.
-            Operated by Graphite Energy Inc. — exclusive sales agent of
-            Etablissements Gallois S.A.
+            {tFooter("brandBody")}
           </p>
           <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground/80">
-            In continuous production since 1901
+            {tFooter("since")}
           </p>
 
           <div className="flex flex-wrap gap-2 pt-2">
@@ -67,33 +69,33 @@ export function Footer() {
         {/* Contact */}
         <div className="lg:col-span-3 space-y-3">
           <h4 className="text-[10px] font-mono uppercase tracking-[0.28em] text-muted-foreground">
-            {"// Contact"}
+            {tFooter("contactHeading")}
           </h4>
           <div className="space-y-1.5 text-sm">
-            <p className="text-foreground/85">Madagascar office</p>
+            <p className="text-foreground/85">{tFooter("madagascarOffice")}</p>
             <p className="text-xs leading-relaxed">
-              Boulevard de l&apos;Ivondro, Cité Canada,
+              {tFooter("addressLine1")}
               <br />
-              Toamasina 501, Madagascar
+              {tFooter("addressLine2")}
             </p>
           </div>
           <div className="space-y-1.5 text-xs">
-            <FooterRow label="Head office">
+            <FooterRow label={tFooter("contactRows.headOffice")}>
               <a href="tel:+85366516516" className="hover:text-signal">
                 +853 66-516-516
               </a>
             </FooterRow>
-            <FooterRow label="China hotline">
+            <FooterRow label={tFooter("contactRows.chinaHotline")}>
               <a href="tel:+860532686800029" className="hover:text-signal">
                 +86 0532-68680029
               </a>
             </FooterRow>
-            <FooterRow label="Sales">
+            <FooterRow label={tFooter("contactRows.sales")}>
               <a href="mailto:sales@madagraphite.com" className="hover:text-signal">
                 sales@madagraphite.com
               </a>
             </FooterRow>
-            <FooterRow label="Direct">
+            <FooterRow label={tFooter("contactRows.direct")}>
               <a href="mailto:richard@madagraphite.com" className="hover:text-signal">
                 richard@madagraphite.com
               </a>
@@ -104,7 +106,7 @@ export function Footer() {
         {/* Quick links */}
         <div className="lg:col-span-2 space-y-3">
           <h4 className="text-[10px] font-mono uppercase tracking-[0.28em] text-muted-foreground">
-            {"// Sitemap"}
+            {tFooter("sitemapHeading")}
           </h4>
           <ul className="space-y-1.5 text-sm">
             {NAV_LINKS.map((l) => (
@@ -113,7 +115,9 @@ export function Footer() {
                   href={l.href}
                   className="group inline-flex items-center gap-1 text-foreground/75 transition-colors hover:text-signal"
                 >
-                  {l.label}
+                  {l.key === "market"
+                    ? tNav("items.market")
+                    : tNav(`publicLinks.${l.key}`)}
                   <ArrowUpRightIcon className="size-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5" />
                 </Link>
               </li>
@@ -124,16 +128,13 @@ export function Footer() {
         {/* Compliance */}
         <div className="lg:col-span-3 space-y-3">
           <h4 className="text-[10px] font-mono uppercase tracking-[0.28em] text-muted-foreground">
-            {"// Trading"}
+            {tFooter("tradingHeading")}
           </h4>
           <p className="text-sm leading-relaxed">
-            All payments are manually verified and remain subject to invoice
-            review, KYC/AML checks, sanctions screening, and final admin
-            approval.
+            {tFooter("tradingBody")}
           </p>
           <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/70">
-            Origin-traceable lots · Chain-of-custody documentation ·
-            Transaction-level compliance screening.
+            {tFooter("tradingNote")}
           </p>
         </div>
       </div>
@@ -142,10 +143,10 @@ export function Footer() {
       <div className="relative border-t border-border bg-background/60 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground/80">
           <span>
-            © {new Date().getFullYear()} Graphite Energy Inc. — All rights reserved
+            {tFooter("rights", { year: new Date().getFullYear() })}
           </span>
           <span className="text-muted-foreground/60">
-            Exclusive sales agent of Etablissements Gallois S.A.
+            {tFooter("agent")}
           </span>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { motion, useInView, useMotionValue, useTransform, animate } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -28,25 +29,20 @@ export type Kpi = {
   label: string;
 };
 
-export const HOME_KPIS: ReadonlyArray<Kpi> = [
-  { display: "1901", label: "Year founded" },
-  { value: 120, suffix: "+ yrs", display: "120+ yrs", label: "Years of production" },
-  { value: 240, suffix: "M t", display: "240M t", label: "Estimated reserves" },
-  { value: 140, suffix: "k t/a", display: "140k t/a", label: "Reported capacity" },
-];
-
-export function KpiStrip({ kpis = HOME_KPIS }: { kpis?: ReadonlyArray<Kpi> }) {
+export function KpiStrip({ kpis }: { kpis?: ReadonlyArray<Kpi> }) {
   const ref = React.useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.4 });
+  const t = useTranslations("home.kpis");
+  const items = kpis ?? (t.raw("items") as ReadonlyArray<Kpi>);
 
   return (
     <section
       ref={ref}
       className="relative border-b border-border bg-surface-1"
-      aria-label="Key statistics"
+      aria-label={t("aria")}
     >
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-px bg-border md:grid-cols-4">
-        {kpis.map((kpi, idx) => (
+        {items.map((kpi, idx) => (
           <KpiCell key={kpi.label} kpi={kpi} index={idx} active={inView} />
         ))}
       </div>

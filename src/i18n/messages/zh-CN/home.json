@@ -1,0 +1,262 @@
+{
+  "hero": {
+    "eyebrow": "AI 原生交易 · 马达加斯加 · 始于 1901",
+    "titleBefore": "让 120 年石墨经验连接",
+    "titleHighlight": "AI 辅助",
+    "titleAfter": "交易台。",
+    "body": "Mada Graphite 将超过 120 年矿业经验转化为覆盖询盘、合同、结算与发运的 B2B 平台，并由 AI 协同助手支持买家比较规格、文件与路线。",
+    "openAccount": "开通账户",
+    "askAi": "询问 AI 助手",
+    "searchHint": "搜索产品与品级",
+    "terminal": {
+      "matchScore": "AI 匹配评分"
+    }
+  },
+  "kpis": {
+    "aria": "关键统计",
+    "items": [
+      { "display": "1901", "label": "创立年份" },
+      { "value": 120, "suffix": "+ 年", "display": "120+ 年", "label": "生产历史" },
+      { "value": 240, "suffix": "M t", "display": "240M t", "label": "估算储量" },
+      { "value": 140, "suffix": "k t/a", "display": "140k t/a", "label": "申报产能" }
+    ]
+  },
+  "ticker": {
+    "aria": "近期交易台活动（示意）",
+    "label": "实时交易台",
+    "note": "示意 · 非实时数据",
+    "items": [
+      { "kind": "INQUIRY", "text": "MADA1 +80 MESH · 96% C · 200 MT · CFR Rotterdam" },
+      { "kind": "CONTRACT", "text": "MADA2 +50 MESH · 50 MT · USDT-TRC20 · FOB Tamatave" },
+      { "kind": "PAID", "text": "ORD-260512-A91F3 · 124,500 USDT · 已核验" },
+      { "kind": "SHIPPED", "text": "Container TGHU-7281 · ETA Hamburg 2026-06-22" },
+      { "kind": "QUALIFIED", "text": "Li-ion anode feed · +150 MESH · 99.0% C target" },
+      { "kind": "INQUIRY", "text": "MADA1 -100 MESH · 75 MT · Bank Transfer · CIF Yokohama" },
+      { "kind": "CONTRACT", "text": "Custom +35 MESH · 80 MT · USDI · CFR Mumbai" },
+      { "kind": "PAID", "text": "ORD-260510-77B22 · 87,200 USDT · 已核验" },
+      { "kind": "SHIPPED", "text": "Container HASU-9912 · ETA Antwerp 2026-06-18" },
+      { "kind": "QUALIFIED", "text": "Expandable graphite feed · +80 MESH · 94% C min" }
+    ]
+  },
+  "mineIntro": {
+    "eyebrow": "矿山 · 创立于 1901",
+    "titleBefore": "一座长期运营的大型马达加斯加石墨矿山，如今采用",
+    "titleHighlight": "计算机化管理",
+    "titleAfter": "控制。",
+    "paragraphs": [
+      "Gallois 矿山位于马达加斯加东北部 Tamatave 省，覆盖 280 km² 高品位鳞片石墨矿床；原矿平均碳含量约 ~10%，在全球范围内罕见。",
+      "Graphite Energy Inc. 自 2016 年接手后，将年产量从不足 5,000 吨推进至两个在产矿区合计约 140,000 t/a 的申报产能。第三矿区（Ambalafotaka）仍未开采，总面积仅 1% 已勘探，既有地质评审报告估算储量为 2.4 亿吨。"
+    ],
+    "learnMore": "了解矿山",
+    "mapAlt": "马达加斯加石墨矿位置",
+    "mapBadge": "Tamatave · MG",
+    "facts": [
+      { "k": "矿区", "v": "1 号（Antsirakambo）· 2 号（Marovintsy）· 3 号保留" },
+      { "k": "总面积", "v": "280 km² · <1% 已勘探" },
+      { "k": "平均原矿碳", "v": "~10%（运营估算）" },
+      { "k": "到港距离", "v": "距 Tamatave 45 km" }
+    ]
+  },
+  "supplyMap": {
+    "eyebrow": "战略采购 · 关键矿产",
+    "titleBefore": "石墨已进入所有关键矿产清单。",
+    "titleHighlight": "你的供应地图需要中国+1 可选性。",
+    "body": "中国仍是石墨行业核心。Mada Graphite 为需要冗余、可追溯性与采购灵活性的买家，补充马达加斯加原产供应选项。",
+    "readCase": "阅读战略案例",
+    "criticalBy": "被以下机构指定为关键矿产",
+    "mapAria": "马达加斯加至全球目的地供应地图",
+    "origin": "原产地 · 距 Tamatave 港 45 km",
+    "hover": "悬停港口查看运输时间",
+    "ctaTitle": "正在重绘供应链？",
+    "ctaBody": "长期供应协议、锁定数量、USD 定价、原产地可追溯文件与交易级合规筛查。",
+    "strategicCase": "战略案例",
+    "requestKyc": "索取 KYC 文件包",
+    "criticalLists": [
+      { "label": "US Critical Minerals List", "flag": "🇺🇸" },
+      { "label": "EU Critical Raw Materials Act", "flag": "🇪🇺" },
+      { "label": "Japan METI Strategic Minerals", "flag": "🇯🇵" },
+      { "label": "Korea MOTIE Critical Resources", "flag": "🇰🇷" },
+      { "label": "India Critical Minerals Mission", "flag": "🇮🇳" }
+    ],
+    "advantages": [
+      { "title": "中国+1 采购选项", "body": "马达加斯加原产石墨为既有中国供应之外增加可记录的第二来源路径，并配套完整监管链文件。" },
+      { "title": "深水港距矿区 45 km", "body": "1 号矿区（Antsirakambo）距离 Tamatave 国际港 45 km。到主要目的地运输时间约 10–60 天。" },
+      { "title": "冶金特性可比较，仍需认证", "body": "Gallois 鳞片可与黑龙江和内蒙古参考品级比较。最终替代取决于客户认证、COA 审查与应用专属测试。" },
+      { "title": "自 1901 年运营", "body": "运营时间足以证明其是基础设施，而非初创风险。供应穿越两次世界大战、独立时期与能源转型。" }
+    ]
+  },
+  "productsBento": {
+    "eyebrow": "目录",
+    "titleBefore": "两个品牌、六个标准品级，",
+    "titleHighlight": "无限定制规格。",
+    "body": "从电池级鳞片到耐火材料原料，每批货物均随附原产地可追溯文件。悬停任一卡片可查看完整技术表。",
+    "viewCatalogue": "查看完整目录",
+    "specSheet": "规格表",
+    "cards": [
+      {
+        "label": "01 / MADA1",
+        "title": "电池与航空航天鳞片",
+        "desc": "晶体结构完整、密度高、灰分中不利于提纯的物质极低。是球化、可膨胀石墨、高纯路线与航空级碳材料的参考原料。",
+        "specs": [
+          { "k": "fixed_carbon", "v": "94 – 99%" },
+          { "k": "mesh_size", "v": "+35 / +50 / +80 / +100 / +150" },
+          { "k": "moisture", "v": "≤ 0.5%" },
+          { "k": "ash", "v": "≤ 5.0%" },
+          { "k": "applications", "v": "锂电 · 可膨胀 · 高纯 · 航空航天" }
+        ]
+      },
+      {
+        "label": "03 / Custom",
+        "title": "定制品级",
+        "desc": "80–99% 固定碳，+32 至 −100 mesh。我们可按你的 COA 取样、认证并签约，最低一柜。",
+        "specs": [
+          { "k": "fixed_carbon", "v": "80 – 99% 按需" },
+          { "k": "mesh_size", "v": "+32 to −100 mesh" },
+          { "k": "moisture", "v": "按买方 COA" },
+          { "k": "min_lot", "v": "20 MT（一柜）" },
+          { "k": "lead_time", "v": "PO 后约 4–6 周" }
+        ]
+      },
+      {
+        "label": "02 / MADA2",
+        "title": "耐火与冶金鳞片",
+        "desc": "适用于耐火材料、冶金、坩埚，以及进一步高纯加工原料的工业鳞片；针对热稳定性与堆积密度优化。",
+        "specs": [
+          { "k": "fixed_carbon", "v": "75 – 95%" },
+          { "k": "mesh_size", "v": "+50 / +80 / +100 / -100" },
+          { "k": "moisture", "v": "≤ 0.5%" },
+          { "k": "ash", "v": "≤ 12%" },
+          { "k": "applications", "v": "耐火 · 冶金 · 坩埚" }
+        ]
+      }
+    ]
+  },
+  "sustainabilityDashboard": {
+    "eyebrow": "更低影响的开采",
+    "titleBefore": "一条",
+    "titleHighlight": "不会让气候承担双重成本的石墨供应链。",
+    "body": "多数鳞片石墨来自变质盆地地下开采，并依赖高能耗浮选。Gallois 在结构上不同：露天、高品位，并处于无需季节性停产的气候环境。",
+    "readBrief": "阅读 ESG 简报",
+    "intensityLabel": "强度指数 · 指示性",
+    "intensityTitle": "露天 vs 地下 · 标准化强度",
+    "intensityBody": "仅作参考比较。第三方审计完成后，经验证的 Gallois 数据将替换该图表。",
+    "metrics": {
+      "energy": "能源",
+      "water": "水",
+      "diesel": "柴油"
+    },
+    "calendarLabel": "生产日历 · 365 天",
+    "calendarTitle": "全年生产",
+    "calendarBody": "Tamatave 15–35 °C 气候下连续运营。格子颜色表示模型化利用率；实际批次级开机率随 COA 提供。",
+    "low": "低",
+    "high": "高",
+    "roadmapLabel": "披露路线图 · 2024 → 2028",
+    "roadmapTitle": "从运营估算走向经验证的批次级披露",
+    "disclaimer": "所有数字均基于运营估算。第三方验证正在进行；审计完成后，经验证数据将替换估算。",
+    "readDisclosure": "阅读完整披露 →",
+    "pillars": [
+      { "k": "open_cast", "v": "无地下爆破" },
+      { "k": "production_days", "v": "365 / 年" },
+      { "k": "ore_carbon", "v": "~10%（运营估算）" },
+      { "k": "esg_target", "v": "2026 数据表 · 2028 验证标签" }
+    ],
+    "intensityData": [
+      { "name": "地下开采", "energy": 100, "water": 80, "diesel": 95 },
+      { "name": "露天开采（Gallois）", "energy": 42, "water": 28, "diesel": 36 }
+    ],
+    "roadmap": [
+      { "year": "2024", "text": "运营基线 · 达到 140k t/a 产能", "state": "done" },
+      { "year": "2025", "text": "批次级 COA + 监管链文件推出", "state": "done" },
+      { "year": "2026", "text": "每批货物附带 ESG 数据表", "state": "active" },
+      { "year": "2027", "text": "第三方试点审计（能源 / 水 / 柴油）", "state": "future" },
+      { "year": "2028", "text": "每批次经验证碳强度标签", "state": "future" }
+    ]
+  },
+  "applications": {
+    "eyebrow": "应用",
+    "titleBefore": "Gallois 石墨服务于",
+    "titleHighlight": "全球碳素工业的所有主要领域。",
+    "items": [
+      { "title": "锂离子电池负极", "caption": "球化级鳞片原料" },
+      { "title": "可膨胀石墨", "caption": "膨胀型 / 防火密封" },
+      { "title": "高纯石墨", "caption": ">99.9% C 提纯原料" },
+      { "title": "耐火材料", "caption": "钢铁与陶瓷耐火基体" },
+      { "title": "冶金与坩埚", "caption": "铸造循环用结合碳" },
+      { "title": "密封材料", "caption": "机械密封 · 垫片 · 盘根" },
+      { "title": "军工与航空航天", "caption": "再入防热罩 · 固体火箭喷嘴" },
+      { "title": "人造金刚石", "caption": "HPHT / CVD 合成碳源" }
+    ]
+  },
+  "aiPreview": {
+    "eyebrow": "AI 协同助手",
+    "titleBefore": "不用再猜该选哪种品级。",
+    "titleHighlight": "直接询问交易台。",
+    "body": "Mada Graphite 助手会将你的应用与我们的 COA 库匹配，找出最接近的现货规格并起草询盘；这些都可在创建账户前完成。登录后，它还能查询实时集装箱可用性与合同草案。",
+    "tryAssistant": "试用助手",
+    "openAccount": "开通账户",
+    "bullets": [
+      "→ 跨所有品级匹配规格与应用",
+      "→ 起草可编辑并发送的询盘消息",
+      "→ 每个回答引用来源 COA / 事实",
+      "→ 识别购买意图，并转交账户绑定交易台"
+    ],
+    "windowTitle": "mada · ai assistant",
+    "inputPlaceholder": "询问规格、批次或路线…",
+    "demoNote": "演示 · 在聊天页面试用实时助手",
+    "suggestedSpec": "建议规格",
+    "citation": "引用自 MADA1 参考 COA · 更新于 2026-05",
+    "script": [
+      { "role": "user", "text": "锂离子电池负极需要什么品级？" },
+      {
+        "role": "assistant",
+        "chunks": [
+          "对于锂离子负极原料，你通常会从我们的 ",
+          "**MADA1** 鳞片开始 — 完整晶体结构与极低不利提纯灰分，",
+          "使其成为通往球形石墨最干净的路径。",
+          "\n\n合理的起始规格是："
+        ]
+      },
+      { "role": "user", "text": "你能查询 7 月到 Yokohama 的集装箱可用性吗？" }
+    ]
+  },
+  "partners": {
+    "eyebrow": "历史合作关系",
+    "title": "覆盖全球碳素供应链的合作伙伴",
+    "body": "Logo 仅识别历史商业关系或公开公司引用；除非明确说明，否则不代表背书。",
+    "visit": "访问 {name} 网站"
+  },
+  "closingCta": {
+    "eyebrow": "联系交易台",
+    "titleLine1": "不确定需要哪种品级？",
+    "titleLine2": "让 AI 协同助手为你推荐。",
+    "body": "我们的 AI 助手会将你的应用与 COA 库匹配、回答技术问题，并引导你完成询盘流程；无需账户即可开始。",
+    "askAi": "询问 AI 助手",
+    "startTrading": "开始交易"
+  },
+  "photos": [
+    { "alt": "矿区全景" },
+    { "alt": "加工厂" },
+    { "alt": "成品仓库" },
+    { "alt": "质量控制实验室" },
+    { "alt": "运营团队" },
+    { "alt": "当地社区参与" }
+  ],
+  "commandPalette": {
+    "aria": "搜索 Mada Graphite",
+    "placeholder": "搜索产品、品级或页面…",
+    "empty": "没有匹配结果。试试 “mada1”、“esg”、“china+1”…",
+    "navigate": "↑ ↓ 导航",
+    "open": "↵ 打开",
+    "dismiss": "ESC 关闭",
+    "items": [
+      { "id": "mada1", "label": "MADA1 — 电池 / 航空航天鳞片", "hint": "产品 · 球化与高纯原料", "keywords": ["spherical", "li-ion", "anode", "expandable", "high purity"] },
+      { "id": "mada2", "label": "MADA2 — 耐火 / 冶金鳞片", "hint": "产品 · 坩埚与冶金工业鳞片", "keywords": ["refractory", "metallurgy", "crucible"] },
+      { "id": "custom", "label": "定制品级 — 按需规格", "hint": "产品 · 80–99% C，+32 至 −100 mesh", "keywords": ["custom", "tailored", "spec"] },
+      { "id": "market", "label": "浏览交易市场", "hint": "操作 · 查看有效挂牌", "keywords": [] },
+      { "id": "ai", "label": "询问 AI 助手", "hint": "操作 · 规格匹配、技术问答", "keywords": ["ai", "chat", "co-pilot", "help"] },
+      { "id": "esg", "label": "ESG 简报 — 可持续发展", "hint": "页面 · 露天、365 天生产、路线图", "keywords": ["esg", "sustainability", "carbon"] },
+      { "id": "geopolitics", "label": "中国+1 战略案例", "hint": "页面 · 关键矿产与采购", "keywords": ["china+1", "supply", "critical mineral"] },
+      { "id": "kyc", "label": "索取 KYC 文件包", "hint": "操作 · 注册开始入驻", "keywords": ["kyc", "onboarding", "register"] }
+    ]
+  }
+}

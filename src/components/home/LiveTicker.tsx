@@ -1,6 +1,7 @@
 "use client";
 
 import { ActivityIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 /**
@@ -22,23 +23,13 @@ const KIND_STYLES: Record<Kind, string> = {
   QUALIFIED: "bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/30",
 };
 
-const ITEMS: Array<{ kind: Kind; text: string }> = [
-  { kind: "INQUIRY", text: "MADA1 +80 MESH · 96% C · 200 MT · CFR Rotterdam" },
-  { kind: "CONTRACT", text: "MADA2 +50 MESH · 50 MT · USDT-TRC20 · FOB Tamatave" },
-  { kind: "PAID", text: "ORD-260512-A91F3 · 124,500 USDT · Verified" },
-  { kind: "SHIPPED", text: "Container TGHU-7281 · ETA Hamburg 2026-06-22" },
-  { kind: "QUALIFIED", text: "Li-ion anode feed · +150 MESH · 99.0% C target" },
-  { kind: "INQUIRY", text: "MADA1 -100 MESH · 75 MT · Bank Transfer · CIF Yokohama" },
-  { kind: "CONTRACT", text: "Custom +35 MESH · 80 MT · USDI · CFR Mumbai" },
-  { kind: "PAID", text: "ORD-260510-77B22 · 87,200 USDT · Verified" },
-  { kind: "SHIPPED", text: "Container HASU-9912 · ETA Antwerp 2026-06-18" },
-  { kind: "QUALIFIED", text: "Expandable graphite feed · +80 MESH · 94% C min" },
-];
-
 export function LiveTicker() {
+  const t = useTranslations("home.ticker");
+  const items = t.raw("items") as Array<{ kind: Kind; text: string }>;
+
   const stack = (
     <div className="flex shrink-0 items-center gap-3 pr-3">
-      {ITEMS.map((item, i) => (
+      {items.map((item, i) => (
         <div
           key={i}
           className="flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1.5 text-[11px] font-mono whitespace-nowrap"
@@ -60,13 +51,13 @@ export function LiveTicker() {
   return (
     <div
       role="marquee"
-      aria-label="Recent trade desk activity (illustrative)"
+      aria-label={t("aria")}
       className="relative border-y border-border bg-background/60 backdrop-blur"
     >
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2">
         <div className="flex shrink-0 items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground">
           <ActivityIcon className="size-3 text-signal animate-ticker-blink" />
-          Live desk
+          {t("label")}
         </div>
 
         <div className="mask-fade-x relative flex flex-1 overflow-hidden">
@@ -77,7 +68,7 @@ export function LiveTicker() {
         </div>
 
         <span className="hidden md:inline text-[9px] font-mono uppercase tracking-[0.22em] text-muted-foreground/60">
-          Illustrative · Not live data
+          {t("note")}
         </span>
       </div>
     </div>

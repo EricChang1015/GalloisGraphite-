@@ -17,6 +17,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 
 type NavLink = { href: string; label: string };
 
@@ -130,6 +131,12 @@ export function MobileNav({
         </nav>
 
         <div className="mt-auto flex flex-col gap-2 border-t border-border p-4">
+          <div className="mb-1 flex items-center justify-between rounded-md border border-border px-3 py-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              {t("localeSwitcher.label")}
+            </span>
+            <LocaleSwitcher className="text-muted-foreground hover:text-foreground" />
+          </div>
           {isAuthenticated ? (
             <>
               <SheetClose

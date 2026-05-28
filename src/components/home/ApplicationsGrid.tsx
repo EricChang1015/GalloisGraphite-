@@ -9,6 +9,7 @@ import {
   SparklesIcon,
   type LucideIcon,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,31 +26,37 @@ type App = {
   Icon: LucideIcon;
 };
 
-const APPS: App[] = [
-  { title: "Li-ion battery anodes", caption: "Spheroidization-grade flake feedstock", Icon: BatteryChargingIcon },
-  { title: "Expandable graphite", caption: "Intumescent / fire-proofing seals", Icon: FlameIcon },
-  { title: "High-purity graphite", caption: "Feedstock for >99.9% C purification", Icon: SparklesIcon },
-  { title: "Refractories", caption: "Steel & ceramic refractory matrices", Icon: HammerIcon },
-  { title: "Metallurgy & crucibles", caption: "Bonded carbon for casting cycles", Icon: FlaskConicalIcon },
-  { title: "Sealing materials", caption: "Mechanical seals · gaskets · packing", Icon: CircleDashedIcon },
-  { title: "Military & aerospace", caption: "Reentry shields · solid-rocket nozzles", Icon: PlaneIcon },
-  { title: "Man-made diamond", caption: "Carbon source for HPHT / CVD synthesis", Icon: GemIcon },
+const APP_ICONS: LucideIcon[] = [
+  BatteryChargingIcon,
+  FlameIcon,
+  SparklesIcon,
+  HammerIcon,
+  FlaskConicalIcon,
+  CircleDashedIcon,
+  PlaneIcon,
+  GemIcon,
 ];
 
-export function ApplicationsGrid() {
+export async function ApplicationsGrid() {
+  const t = await getTranslations("home.applications");
+  const apps = (t.raw("items") as Array<Omit<App, "Icon">>).map((app, index) => ({
+    ...app,
+    Icon: APP_ICONS[index] ?? SparklesIcon,
+  }));
+
   return (
     <section className="relative bg-background">
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24">
         <div className="mb-12 max-w-2xl space-y-3">
-          <p className="text-eyebrow">Applications</p>
+          <p className="text-eyebrow">{t("eyebrow")}</p>
           <h2 className="text-display-sm text-balance text-foreground">
-            Gallois graphite serves every major segment of the{" "}
-            <span className="text-signal">global carbon industry.</span>
+            {t("titleBefore")}{" "}
+            <span className="text-signal">{t("titleHighlight")}</span>
           </h2>
         </div>
 
         <ul className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-4">
-          {APPS.map((a) => {
+          {apps.map((a) => {
             const Icon = a.Icon;
             return (
               <li

@@ -29,11 +29,15 @@ constraint on `profiles.locale`):
 ## What MUST be translated
 
 - Any user-visible string inside `src/app/(app)/**` (logged-in dashboard).
+- Any user-visible string inside these public marketing pages:
+  `src/app/(public)/page.tsx`, `about/page.tsx`, `products/page.tsx`,
+  `sustainability/page.tsx`, and `geopolitics/page.tsx`.
 - Any user-visible string inside `src/app/admin/**` (when added later).
 - Any component imported by those pages — `src/components/{order, listing,
-  inquiry, messages, layout, profile, kyc, settings, auth, chat}/*.tsx`.
-- The Navbar / MobileNav auth buttons (Dashboard / Messages / Admin /
-  Log in / Sign up / Log out).
+  inquiry, messages, layout, profile, kyc, settings, auth, chat, home}/*.tsx`.
+- The Navbar / MobileNav auth buttons and public links (Dashboard / Messages /
+  Admin / Log in / Sign up / Log out / About / Products / Sustainability /
+  Geopolitics / News / AI Assistant), plus Footer chrome.
 - Status / role / KYC-level labels — go through `src/i18n/messages/<locale>/enums.json`.
 
 ## What MUST NOT be translated (business decision)
@@ -47,10 +51,8 @@ constraint on `profiles.locale`):
   strings stay English (decision: error codes maintained English).
 - **SMS messages** — short and English-only.
 - **Audit log entries / timeline events** — stored English in DB.
-- **Public marketing pages** (`src/app/(public)/**`) — deferred until
-  marketing copy stabilises. The Navbar's public link labels (About,
-  Products, Sustainability, Geopolitics, News, AI Assistant) are
-  English-only for now and held inline in `Navbar.tsx`.
+- **Public marketing pages not yet migrated** (`src/app/(public)/news/**` and
+  `src/app/(public)/chat/**`) — deferred until content/data model stabilises.
 
 If you're tempted to translate any of the above, STOP. Talk to the user.
 
@@ -96,6 +98,10 @@ export function Widget() {
    so word order can change per locale:
    - ✅ `"welcome": "Welcome back, {name}"`
    - ❌ `"welcomeFragment1" + name + "welcomeFragment2"`
+5. **Critical-mineral list names** on public pages (e.g. `US Critical
+   Minerals List`, `Critical Raw Materials Act (2024)`) and **flag-region
+   labels** (e.g. `🇺🇸 United States`) stay **English** in every locale.
+   Translate surrounding copy only; do not localise official instrument titles.
 
 ## Adding a new namespace
 

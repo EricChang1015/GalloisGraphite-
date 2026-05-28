@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRightIcon, SparklesIcon } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { BgGrid } from "@/components/home/BgGrid";
 
@@ -9,7 +10,9 @@ import { BgGrid } from "@/components/home/BgGrid";
  * the left, dual CTAs floating right.
  */
 
-export function ClosingCta() {
+export async function ClosingCta() {
+  const t = await getTranslations("home.closingCta");
+
   return (
     <section className="relative overflow-hidden bg-background">
       <BgGrid pattern="dot" className="opacity-50" />
@@ -24,19 +27,17 @@ export function ClosingCta() {
         <div className="mx-auto max-w-4xl">
           <p className="text-eyebrow text-center">
             <SparklesIcon className="mr-1.5 inline size-3 text-signal animate-signal-pulse" />
-            Talk to the desk
+            {t("eyebrow")}
           </p>
           <h2 className="mt-4 text-center text-display text-balance">
-            <span className="text-foreground">Not sure what grade you need?</span>
+            <span className="text-foreground">{t("titleLine1")}</span>
             <br />
             <span className="bg-gradient-to-br from-signal to-[color:var(--gold)] bg-clip-text text-transparent">
-              Let the AI co-pilot suggest one.
+              {t("titleLine2")}
             </span>
           </h2>
           <p className="mx-auto mt-6 max-w-xl text-center text-base leading-relaxed text-muted-foreground">
-            Our AI assistant matches your application against our COA library,
-            answers technical questions, and guides you through the inquiry
-            process — no account required.
+            {t("body")}
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
             <Button
@@ -45,7 +46,7 @@ export function ClosingCta() {
               className="group h-12 gap-2 px-6 text-sm font-semibold bg-signal text-signal-foreground hover:bg-signal/90"
             >
               <SparklesIcon className="size-4" />
-              Ask the AI assistant
+              {t("askAi")}
               <ArrowUpRightIcon className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Button>
             <Button
@@ -54,7 +55,7 @@ export function ClosingCta() {
               variant="outline"
               className="h-12 gap-2 px-6 text-sm font-medium"
             >
-              Start trading
+              {t("startTrading")}
             </Button>
           </div>
         </div>

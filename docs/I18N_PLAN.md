@@ -8,11 +8,13 @@ Database column: `profiles.locale` (migration 028).
 
 ## 1. Goals & non-goals
 
-### Goals (Phase 1 + Phase 2 — **merged to `main` 2026-05-27**)
+### Goals (Phase 1 + Phase 2 — **merged to `main` 2026-05-27**; public marketing update 2026-05-28)
 
 - Multi-language the **post-login dashboard** (everything under
   `src/app/(app)/**`) — and the Navbar / MobileNav components shared
   with public pages.
+- Multi-language the core **public marketing pages**: `/`, `/about`,
+  `/products`, `/sustainability`, and `/geopolitics`.
 - Ship **English + Simplified Chinese (zh-CN)**.
 - Auto-detect locale from browser, allow user override in `/settings`,
   default to `en` when no match.
@@ -21,8 +23,8 @@ Database column: `profiles.locale` (migration 028).
 
 ### Non-goals (deferred)
 
-- **Public marketing pages** (`src/app/(public)/**`) — too much
-  in-flight content work. Public pages stay English.
+- **Remaining public pages** (`/news/**` and `/chat`) — deferred until
+  content/data model stabilises.
 - **Contract HTML / PDF** — legal documents are English-only by business
   decision. See §4.
 - **Email & SMS notifications** — English-only (SMS additionally must
@@ -74,7 +76,13 @@ src/i18n/
 └─ messages/
    ├─ en/
    │  ├─ common.json          // buttons, generic labels, units
-   │  ├─ nav.json             // navbar items, sidebar headings
+   │  ├─ nav.json             // navbar items, sidebar headings, locale switcher
+   │  ├─ home.json            // homepage sections (Hero, KPIs, SupplyMap, …)
+   │  ├─ about.json           // /about
+   │  ├─ products.json        // /products
+   │  ├─ sustainability.json  // /sustainability
+   │  ├─ geopolitics.json     // /geopolitics
+   │  ├─ footer.json          // Footer chrome
    │  ├─ dashboard.json       // /dashboard
    │  ├─ settings.json        // /settings (incl. language selector)
    │  ├─ kyc.json             // /settings/kyc
@@ -147,7 +155,7 @@ state always matches the resolved locale.
 
 ---
 
-## 6. Status of pages (2026-05-27)
+## 6. Status of pages (2026-05-28)
 
 | Page / component                                 | Status        |
 |--------------------------------------------------|---------------|
@@ -160,8 +168,15 @@ state always matches the resolved locale.
 | `src/app/(app)/inquiries/**`                     | ✅ Translated |
 | `src/app/(app)/orders/**`                        | ✅ Translated (detail tabs + phase actions) |
 | `src/app/(app)/messages/**`                      | ✅ Translated |
-| `src/components/layout/Navbar.tsx`               | ✅ Auth chrome translated; public links English-only |
-| `src/components/layout/MobileNav.tsx`            | ✅ Translated (public links passed via props) |
+| `src/app/(public)/page.tsx`                      | ✅ Translated |
+| `src/app/(public)/about/page.tsx`                | ✅ Translated |
+| `src/app/(public)/products/page.tsx`             | ✅ Translated |
+| `src/app/(public)/sustainability/page.tsx`       | ✅ Translated |
+| `src/app/(public)/geopolitics/page.tsx`          | ✅ Translated |
+| `src/components/home/*`                          | ✅ Translated |
+| `src/components/layout/Navbar.tsx`               | ✅ Translated (auth + public links + locale switcher) |
+| `src/components/layout/MobileNav.tsx`            | ✅ Translated (auth + public links + locale switcher) |
+| `src/components/layout/Footer.tsx`               | ✅ Translated |
 | `src/components/layout/NavSearchTrigger.tsx`     | ✅ Translated |
 | `src/components/auth/LogoutButton.tsx`           | ✅ Translated |
 | `src/components/auth/CommercialProfileForm.tsx`  | ✅ Translated |
@@ -177,7 +192,8 @@ state always matches the resolved locale.
 | Contract template + PDF **body**                 | 🚫 Locked English |
 | `ContractPreview` download/print chrome          | 🚫 Locked English (PDF export) |
 | Email / SMS / audit log strings                  | 🚫 Locked English |
-| Public pages `(public)/**`                       | 🚫 Deferred |
+| `src/app/(public)/news/**`                       | ⏳ Deferred (DB content model) |
+| `src/app/(public)/chat/**`                       | ⏳ Deferred |
 
 ---
 
@@ -202,9 +218,18 @@ state always matches the resolved locale.
 | `ContractDraftForm.tsx` / `PaymentScheduleBuilder.tsx` | Complex seller contract builder labels |
 | `PaymentScheduleTable` schedule enums | Uses `CATEGORY_LABEL` / `MILESTONE_LABEL` from `payment-schedule.ts` (English constants) |
 
+**Completed 2026-05-28**:
+
+1. Public marketing foundation — `home`, `about`, `products`,
+   `sustainability`, `geopolitics`, and `footer` namespaces
+2. Public Navbar / MobileNav link labels + guest locale switcher
+3. Homepage component tree (`src/components/home/*`)
+4. Public marketing pages: `/`, `/about`, `/products`, `/sustainability`,
+   `/geopolitics`
+
 **Phase 3 (deferred):**
 
-- Public marketing pages `(public)/**`
+- Remaining public pages: `/news/**` chrome + DB-backed translated content model, `/chat`
 - Admin console `/admin/**`
 - Additional locales: `zh-TW`, `ja`, `fr`, `de`
 
@@ -233,6 +258,8 @@ npm run db:migrate:status              # 028 applied (profiles.locale)
 #   visit /dashboard with mg-locale=en   → English
 #   visit /dashboard with mg-locale=zh-CN → Simplified Chinese
 #   open /settings → change language → toast + locale switches
+#   visit /, /about, /products, /sustainability, /geopolitics with
+#   mg-locale=en and mg-locale=zh-CN
 #   open /orders/<id>?tab=contract → contract HTML body still English
 npm run qa:check-dev                   # exit 0 (tail log or clear stale entries first)
 ```

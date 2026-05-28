@@ -15,18 +15,15 @@ import {
 } from "@/components/layout/MobileNav";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { NavSearchTrigger } from "@/components/layout/NavSearchTrigger";
+import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 
-// Public marketing pages are deferred for i18n (decision: docs/I18N_PLAN.md).
-// The navbar labels here are kept in English on purpose — they link to
-// English-only marketing content. When public pages are translated later,
-// promote these to nav.json keys.
 const PUBLIC_LINKS = [
-  { href: "/about", label: "About" },
-  { href: "/products", label: "Products" },
-  { href: "/sustainability", label: "Sustainability" },
-  { href: "/geopolitics", label: "Geopolitics" },
-  { href: "/news", label: "News" },
-  { href: "/chat", label: "AI Assistant" },
+  { href: "/about", key: "about" },
+  { href: "/products", key: "products" },
+  { href: "/sustainability", key: "sustainability" },
+  { href: "/geopolitics", key: "geopolitics" },
+  { href: "/news", key: "news" },
+  { href: "/chat", key: "chat" },
 ] as const;
 
 /**
@@ -54,6 +51,10 @@ export async function Navbar({
   const profile = user ? await getCurrentProfile() : null;
   const isAuthenticated = Boolean(user);
   const isAdmin = isAdminRole(profile?.role);
+  const publicLinks = PUBLIC_LINKS.map((link) => ({
+    href: link.href,
+    label: tNav(`publicLinks.${link.key}`),
+  }));
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
@@ -76,9 +77,9 @@ export async function Navbar({
           </span>
         </Link>
 
-        {/* Desktop nav (public marketing links — English-only for now) */}
+        {/* Desktop nav */}
         <nav className="hidden lg:flex items-center gap-1 text-sm">
-          {PUBLIC_LINKS.map((link) => (
+          {publicLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -96,6 +97,7 @@ export async function Navbar({
         {/* Right cluster */}
         <div className="flex items-center gap-1.5 shrink-0">
           <NavSearchTrigger />
+          <LocaleSwitcher className="text-muted-foreground hover:text-foreground" />
           <ThemeToggle />
           <div className="hidden md:flex items-center gap-1">
             {isAuthenticated ? (
@@ -149,7 +151,7 @@ export async function Navbar({
             )}
           </div>
           <MobileNav
-            links={PUBLIC_LINKS}
+            links={publicLinks}
             isAuthenticated={isAuthenticated}
             isAdmin={isAdmin}
             workspace={workspace}

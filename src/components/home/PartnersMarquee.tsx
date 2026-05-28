@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 /**
  * Partner logo marquee. Two duplicated rails sliding in opposite directions
@@ -29,21 +30,21 @@ const PARTNERS = [
   { name: "UNIMEX", href: "https://unimextr.com/", logo: "/images/partners/unimex.png" },
 ] as const;
 
-export function PartnersMarquee() {
+export async function PartnersMarquee() {
+  const t = await getTranslations("home.partners");
+
   return (
     <section className="relative border-y border-border bg-surface-1">
       <div className="mx-auto max-w-7xl px-4 pt-16 pb-8 sm:px-6 sm:pt-20">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
           <div className="space-y-2">
-            <p className="text-eyebrow">Historical relationships</p>
+            <p className="text-eyebrow">{t("eyebrow")}</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              Partners across the global carbon supply chain
+              {t("title")}
             </h2>
           </div>
           <p className="max-w-md text-xs text-muted-foreground">
-            Logos identify historical commercial relationships or public
-            company references only; they do not imply endorsement unless
-            expressly stated.
+            {t("body")}
           </p>
         </div>
       </div>
@@ -52,7 +53,7 @@ export function PartnersMarquee() {
       <div className="mask-fade-x relative overflow-hidden">
         <div className="flex w-max animate-marquee pause-on-hover gap-3 px-3 pb-3">
           {[...PARTNERS, ...PARTNERS].map((p, i) => (
-            <PartnerCard key={`a-${i}`} partner={p} />
+            <PartnerCard key={`a-${i}`} partner={p} visitLabel={t("visit", { name: p.name })} />
           ))}
         </div>
       </div>
@@ -61,7 +62,7 @@ export function PartnersMarquee() {
       <div className="mask-fade-x relative overflow-hidden">
         <div className="flex w-max animate-marquee-slow pause-on-hover gap-3 px-3 pb-12 [animation-direction:reverse]">
           {[...PARTNERS.slice().reverse(), ...PARTNERS.slice().reverse()].map((p, i) => (
-            <PartnerCard key={`b-${i}`} partner={p} />
+            <PartnerCard key={`b-${i}`} partner={p} visitLabel={t("visit", { name: p.name })} />
           ))}
         </div>
       </div>
@@ -69,7 +70,13 @@ export function PartnersMarquee() {
   );
 }
 
-function PartnerCard({ partner }: { partner: { name: string; href: string; logo: string } }) {
+function PartnerCard({
+  partner,
+  visitLabel,
+}: {
+  partner: { name: string; href: string; logo: string };
+  visitLabel: string;
+}) {
   const inner = (
     <div className="group flex h-16 w-44 shrink-0 items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-all hover:border-signal/40 hover:bg-background">
       <div className="relative h-8 w-24">
@@ -95,7 +102,7 @@ function PartnerCard({ partner }: { partner: { name: string; href: string; logo:
       href={partner.href}
       target="_blank"
       rel="noreferrer"
-      aria-label={`Visit ${partner.name} website`}
+      aria-label={visitLabel}
       className="shrink-0"
     >
       {inner}

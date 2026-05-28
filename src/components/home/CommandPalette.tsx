@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   SearchIcon,
@@ -34,71 +35,16 @@ type CmdItem = {
   keywords?: string[];
 };
 
-const ITEMS: CmdItem[] = [
-  {
-    id: "mada1",
-    label: "MADA1 — battery / aerospace flake",
-    hint: "Product · feedstock for spheroidization & high-purity",
-    href: "/products",
-    Icon: PackageIcon,
-    keywords: ["spherical", "li-ion", "anode", "expandable", "high purity"],
-  },
-  {
-    id: "mada2",
-    label: "MADA2 — refractory / metallurgy flake",
-    hint: "Product · industrial flake for crucibles & metallurgy",
-    href: "/products",
-    Icon: PackageIcon,
-    keywords: ["refractory", "metallurgy", "crucible"],
-  },
-  {
-    id: "custom",
-    label: "Custom grade — tailored specs",
-    hint: "Product · 80–99% C, +32 to −100 mesh",
-    href: "/products",
-    Icon: PackageIcon,
-    keywords: ["custom", "tailored", "spec"],
-  },
-  {
-    id: "market",
-    label: "Browse the trading market",
-    hint: "Action · view active listings",
-    href: "/market",
-    Icon: ShoppingBagIcon,
-  },
-  {
-    id: "ai",
-    label: "Ask the AI assistant",
-    hint: "Action · spec matching, technical Q&A",
-    href: "/chat",
-    Icon: BotIcon,
-    keywords: ["ai", "chat", "co-pilot", "help"],
-  },
-  {
-    id: "esg",
-    label: "ESG brief — sustainability",
-    hint: "Page · open-cast, 365-day production, roadmap",
-    href: "/sustainability",
-    Icon: LeafIcon,
-    keywords: ["esg", "sustainability", "carbon"],
-  },
-  {
-    id: "geopolitics",
-    label: "China+1 strategic case",
-    hint: "Page · critical minerals & sourcing",
-    href: "/geopolitics",
-    Icon: GlobeIcon,
-    keywords: ["china+1", "supply", "critical mineral"],
-  },
-  {
-    id: "kyc",
-    label: "Request a KYC pack",
-    hint: "Action · sign up to start onboarding",
-    href: "/register",
-    Icon: FileTextIcon,
-    keywords: ["kyc", "onboarding", "register"],
-  },
-];
+const ITEM_META: Record<string, { href: string; Icon: LucideIcon }> = {
+  mada1: { href: "/products", Icon: PackageIcon },
+  mada2: { href: "/products", Icon: PackageIcon },
+  custom: { href: "/products", Icon: PackageIcon },
+  market: { href: "/market", Icon: ShoppingBagIcon },
+  ai: { href: "/chat", Icon: BotIcon },
+  esg: { href: "/sustainability", Icon: LeafIcon },
+  geopolitics: { href: "/geopolitics", Icon: GlobeIcon },
+  kyc: { href: "/register", Icon: FileTextIcon },
+};
 
 export function useCommandPalette() {
   const [open, setOpen] = React.useState(false);
@@ -151,8 +97,18 @@ export function CommandPalette({
 
 function PalettePanel({ onOpenChange }: { onOpenChange: (v: boolean) => void }) {
   const router = useRouter();
+  const t = useTranslations("home.commandPalette");
   const [query, setQuery] = React.useState("");
   const [active, setActive] = React.useState(0);
+  const items = React.useMemo(
+    () =>
+      (t.raw("items") as Array<Omit<CmdItem, "href" | "Icon">>).map((item) => ({
+        ...item,
+        href: ITEM_META[item.id]?.href ?? "/",
+        Icon: ITEM_META[item.id]?.Icon ?? FileTextIcon,
+      })),
+    [t]
+  );
 
   // React 19 "store info from previous render" pattern — keeps highlight in
   // bounds when the filtered list shrinks, without setState-in-effect.
@@ -164,14 +120,14 @@ function PalettePanel({ onOpenChange }: { onOpenChange: (v: boolean) => void }) 
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return ITEMS;
-    return ITEMS.filter(
+    if (!q) return items;
+    return items.filter(
       (it) =>
         it.label.toLowerCase().includes(q) ||
         it.hint.toLowerCase().includes(q) ||
         it.keywords?.some((k) => k.toLowerCase().includes(q))
     );
-  }, [query]);
+  }, [items, query]);
 
   function go(item: CmdItem) {
     onOpenChange(false);
@@ -206,7 +162,7 @@ function PalettePanel({ onOpenChange }: { onOpenChange: (v: boolean) => void }) 
         "signal-glow"
       )}
       role="dialog"
-      aria-label="Search Mada Graphite"
+      aria-label={t("aria")}
     >
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <SearchIcon className="size-4 text-muted-foreground" />
@@ -215,7 +171,7 @@ function PalettePanel({ onOpenChange }: { onOpenChange: (v: boolean) => void }) 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Search products, grades or pages…"
+          placeholder={t("placeholder")}
           className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
         />
         <kbd className="rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
@@ -226,7 +182,7 @@ function PalettePanel({ onOpenChange }: { onOpenChange: (v: boolean) => void }) 
       <ul className="max-h-[60vh] overflow-y-auto py-2">
         {filtered.length === 0 ? (
           <li className="px-5 py-8 text-center text-sm text-muted-foreground">
-            No matches. Try &ldquo;mada1&rdquo;, &ldquo;esg&rdquo;, &ldquo;china+1&rdquo;…
+            {t("empty")}
           </li>
         ) : (
           filtered.map((it, i) => {
@@ -272,9 +228,9 @@ function PalettePanel({ onOpenChange }: { onOpenChange: (v: boolean) => void }) 
       </ul>
 
       <div className="flex items-center justify-between border-t border-border bg-surface-2/40 px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-        <span>↑ ↓ to navigate</span>
-        <span>↵ to open</span>
-        <span>ESC to dismiss</span>
+        <span>{t("navigate")}</span>
+        <span>{t("open")}</span>
+        <span>{t("dismiss")}</span>
       </div>
     </motion.div>
   );

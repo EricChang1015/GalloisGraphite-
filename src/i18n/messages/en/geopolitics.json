@@ -1,0 +1,122 @@
+{
+  "metaTitle": "The China+1 Case for Madagascar Graphite - Mada Graphite",
+  "metaDescription": "Why supply-chain professionals, OEMs and government buyers use Madagascar graphite as an additional China+1 sourcing option for resilience and traceability.",
+  "hero": {
+    "eyebrow": "Strategic Mineral · China+1 Optionality",
+    "title": "The China+1 case for Madagascar graphite.",
+    "body": "Graphite is on every critical-mineral list — US, EU, Japan, Korea, India. China remains the graphite industry's central supplier and processing hub. If you build batteries, refractories, or anything that pours metal, your supply map benefits from an additional China+1 option.",
+    "requestKyc": "Request KYC pack",
+    "askAi": "Ask the AI assistant"
+  },
+  "criticalLists": [
+    {
+      "region": "🇺🇸 United States",
+      "instrument": "Critical Minerals List (2022 update)",
+      "note": "Graphite designated as critical; IIJA and IRA funding tied to domestic/allied sourcing."
+    },
+    {
+      "region": "🇪🇺 European Union",
+      "instrument": "Critical Raw Materials Act (2024)",
+      "note": "Graphite listed as strategic raw material with domestic/diversified sourcing benchmarks."
+    },
+    {
+      "region": "🇯🇵 Japan",
+      "instrument": "METI Strategic Minerals Policy",
+      "note": "Graphite included in Japan's critical minerals framework for battery supply security."
+    },
+    {
+      "region": "🇰🇷 South Korea",
+      "instrument": "MOTIE Critical Resources Act",
+      "note": "Graphite among 33 core minerals targeted for supply-chain diversification."
+    },
+    {
+      "region": "🇮🇳 India",
+      "instrument": "Critical Minerals Mission (2023)",
+      "note": "Graphite designated; India seeking diversified anode material options for domestic gigafactory pipeline."
+    }
+  ],
+  "madagascarAdvantages": [
+    {
+      "title": "Country-level sanctions position",
+      "detail": "As of May 2026, Madagascar is not subject to broad country-level US, EU, UK, or UN sanctions. Each shipment still requires counterparty, beneficial ownership, bank, vessel, and end-use screening."
+    },
+    {
+      "title": "AGOA eligibility",
+      "detail": "Madagascar is currently listed as AGOA-eligible by USTR. Any preferential tariff outcome depends on HS code, rules of origin, direct shipment, importer documentation, and CBP determination."
+    },
+    {
+      "title": "Deep-water port 45 km from Site No. 1",
+      "detail": "The international port of Toamasina is the closest major Indian Ocean port to the mine. Transit times: Europe 20–30 days, East Asia 15–20 days, US East Coast 30–45 days."
+    },
+    {
+      "title": "Stable operating environment since 2018",
+      "detail": "Madagascar has maintained a functioning constitutional government since the 2018 election. The IMF Article IV consultation is consistently positive on macro fundamentals."
+    }
+  ],
+  "whatWeOffer": [
+    "Long-term supply agreements with locked volumes and USD floor pricing",
+    "Origin-traceable lots with mine-to-port chain-of-custody documentation",
+    "AI-assisted grade comparison to support sample qualification, COA review, and application-specific testing",
+    "KYC pack including entity verification, beneficial ownership declaration, and export licence copies",
+    "Dual-source structure: position Mada Graphite as a strategic second source, not your only one"
+  ],
+  "honestRisks": [
+    {
+      "risk": "Cyclone season",
+      "mitigation": "The Indian Ocean cyclone season (November–April) can affect Toamasina port operations for days to weeks. We mitigate with forward inventory held at the port warehouse."
+    },
+    {
+      "risk": "Currency: Malagasy Ariary volatility",
+      "mitigation": "All Gallois contracts are denominated in USD. Ariary exposure is on the production cost side only, not on the buyer's payable."
+    },
+    {
+      "risk": "Single-country exposure",
+      "mitigation": "Yes, Madagascar is one country. We offset this with two active mining sites (No. 1 + No. 2) and a third site (Ambalafotaka) held in reserve — not a single-site operation."
+    },
+    {
+      "risk": "Exploration upside (unverified scale)",
+      "mitigation": "Only 1% of the 280 km² concession has been explored. The 240M-tonne reserve figure is an Australian geologist estimate — treat as indicative, not certified."
+    }
+  ],
+  "sections": {
+    "inflection": {
+      "title": "1 — The October 2023 inflection",
+      "paragraphs": [
+        "In October 2023, China's Ministry of Commerce announced export-licensing controls on natural graphite — including the high-purity, high-hardness, and large-flake grades most relevant to battery anodes and aerospace applications. The controls are not an outright ban: they add documentation and licensing steps for certain export categories.",
+        "What licensing latency means in practice: lead times lengthen by weeks, shipment volumes become uncertain, and price discovery becomes less transparent. In 2024–2025, this created visible spot price volatility and accelerated Western OEM procurement reviews."
+      ],
+      "note": "The licensing regime highlights why many buyers prefer China+1 redundancy. Gallois shipments add a Madagascar-origin lane with standard Malagasy export documentation and the buyer's import clearance."
+    },
+    "criticalMap": {
+      "title": "2 — The critical-mineral map",
+      "body": "Graphite is now a designated critical mineral in every major industrialised economy. This drives procurement policy, incentive eligibility, and in some cases mandatory supply-chain audits for downstream manufacturers."
+    },
+    "whyMadagascar": {
+      "title": "3 — Why Madagascar"
+    },
+    "whyGallois": {
+      "title": "4 — Why Gallois specifically",
+      "body": "Etablissements Gallois is not a junior miner. Operating since 1901 and scaled to 140,000 tonnes annual capacity under Graphite Energy Inc., it represents established infrastructure with a documented track record — the kind of supplier that passes procurement audits, not just spot enquiries.",
+      "bullets": [
+        { "strong": "Major China+1 natural flake graphite source", "body": "by reported capacity (140,000 t/a across two active sites)" },
+        { "strong": "Same metallurgy", "body": "as Heilongjiang and Inner Mongolia benchmarks — crystalline flake with high carbon purity, suitable for the same downstream processing routes" },
+        { "strong": "Documented buyer roster", "body": "including Vesuvius, SGL Carbon, RHI Magnesita, Morgan Advanced Materials, and Superior Graphite" },
+        { "strong": "AI-assisted spec matching", "body": "— our platform can map your current reference grade against Mada Graphite grades and flag potential equivalence or required adjustment for technical review" }
+      ],
+      "disclaimer": "Policy and tariff statements are informational only and should be reviewed by the buyer's customs, sanctions, and export-control counsel before shipment."
+    },
+    "offer": {
+      "title": "5 — What we offer buyers re-mapping their supply"
+    },
+    "risks": {
+      "title": "6 — Honest risks (and mitigations)",
+      "body": "We believe credible sourcing narratives require naming real risks, not just listing advantages."
+    }
+  },
+  "bottomCta": {
+    "title": "Ready to diversify your graphite supply?",
+    "body": "Register for a trading account to access long-term supply agreements, KYC documentation, and AI-assisted spec matching.",
+    "openAccount": "Open an account",
+    "viewProducts": "View product grades"
+  }
+}

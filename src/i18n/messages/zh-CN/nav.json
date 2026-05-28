@@ -23,5 +23,20 @@
   "search": {
     "label": "搜索",
     "aria": "搜索 Mada Graphite"
+  },
+  "publicLinks": {
+    "about": "关于",
+    "products": "产品",
+    "sustainability": "可持续发展",
+    "geopolitics": "地缘供应",
+    "news": "新闻",
+    "chat": "AI 助手"
+  },
+  "localeSwitcher": {
+    "label": "语言",
+    "short": {
+      "en": "EN",
+      "zh-CN": "中文"
+    }
   }
 }

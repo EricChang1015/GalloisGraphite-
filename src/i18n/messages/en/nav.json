@@ -23,5 +23,20 @@
   "search": {
     "label": "Search",
     "aria": "Search Mada Graphite"
+  },
+  "publicLinks": {
+    "about": "About",
+    "products": "Products",
+    "sustainability": "Sustainability",
+    "geopolitics": "Geopolitics",
+    "news": "News",
+    "chat": "AI Assistant"
+  },
+  "localeSwitcher": {
+    "label": "Language",
+    "short": {
+      "en": "EN",
+      "zh-CN": "中文"
+    }
   }
 }

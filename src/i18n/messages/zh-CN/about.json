@@ -1,0 +1,63 @@
+{
+  "metaTitle": "关于 - Mada Graphite",
+  "metaDescription": "Graphite Energy Inc. 是 Etablissements Gallois S.A. 的独家销售代理；后者是马达加斯加大型天然鳞片石墨矿山，自 1901 年起持续运营。",
+  "hero": {
+    "eyebrow": "创立于 1901 · 马达加斯加",
+    "title": "关于 Mada Graphite",
+    "bodyBefore": "Graphite Energy Inc. 是",
+    "company": "Etablissements Gallois S.A.",
+    "bodyAfter": "的独家销售代理；这是一座位于马达加斯加的大型天然鳞片石墨矿山，自 1901 年起运营，拥有超过 120 年的生产历史。"
+  },
+  "stats": [
+    { "value": "120+", "label": "生产历史年数" },
+    { "value": "280 km²", "label": "矿区面积" },
+    { "value": "240M t", "label": "估算石墨储量" },
+    { "value": "140,000 t", "label": "年产能（1 号 + 2 号矿区）" }
+  ],
+  "sections": [
+    {
+      "title": "历史与位置",
+      "imageAlt": "马达加斯加矿山位置地图",
+      "paragraphs": [
+        "Etablissements Gallois S.A. 的天然鳞片石墨矿位于马达加斯加东北部 Tamatave 省。该矿山由 Gallois 家族于 1901 年创立，最初生产并出口石墨至美国和欧洲。",
+        "伴随全球多轮工业革命，Gallois 矿山已运营超过 120 年。凭借独特属性与稳定品质，Gallois 石墨长期服务于全球碳素工业。",
+        "2016 年，矿山由新的运营方接手，并投入大量资金，以先进技术替换老旧生产设备。年产量从不足 5,000 吨提升至 2017 年的 60,000 吨。",
+        "Gallois 矿区面积达 280 平方公里。矿床完全由风化作用形成，原矿平均碳含量约 10%，在全球范围内相当罕见。露天开采使运营更简单且安全；通过简单浮选即可将碳含量提升至较高水平。澳大利亚地质团队已估算石墨储量达 2.4 亿吨，而目前勘探面积仍不足总面积的 1%。",
+        "马达加斯加 Tamatave 地区全年气候温和（15–35 °C），水资源丰富，有利于全年生产规划，但仍需考虑正常物流与天气风险。"
+      ]
+    },
+    {
+      "title": "三大矿区",
+      "imageAlt": "三大矿区地图",
+      "paragraphs": [
+        "矿山共有三大矿区：1 号（Antsirakambo）、2 号（Marovintsy）和 3 号（Ambalafotaka）。目前正在开采的是 1 号和 2 号矿区。",
+        "1 号矿区设计年产能约 80,000 吨；2 号矿区约 60,000 吨。两个在产矿区合计形成约 140,000 t/a 的申报产能基础。",
+        "其战略位置带来高度便利的物流条件：1 号矿区距离 Tamatave 国际港仅 45 km。",
+        "经过改造升级后，矿山已实现计算机化管理。生产全过程进行取样与数据追踪，以确保每袋最终产品质量均匀稳定。无论订单数量大小，均可按客户具体要求提供定制产品。",
+        "石墨装入集装箱后，可出口至全球各目的地，运输时间通常为 10 至 60 天。"
+      ]
+    },
+    {
+      "title": "全球覆盖",
+      "imageAlt": "全球客户分布地图",
+      "paragraphs": [
+        "Gallois 石墨销往欧洲、美国、英国、中国、俄罗斯、日本、韩国、印度、土耳其、巴西、墨西哥及其他国家和地区，覆盖碳素应用的各个领域。",
+        "我们销售 MADA1 与 MADA2 两个品牌，名称来源于不同矿区。自矿山投产以来，Gallois 石墨已广泛应用于耐火材料、冶金、坩埚、密封材料、刹车材料、铅笔及更多应用场景。",
+        "MADA1 石墨具备天然优势与高品质：晶体结构完整、密度高，且灰分中不利于提纯的物质含量低。经客户认证后，可作为天然鳞片石墨原料，用于锂离子电池负极方向的后续球化与提纯。",
+        "秉持“每一片都真实，质量第一”的理念，Gallois 矿山将延续下一个 120 年的辉煌。未来五年，我们将继续以科技投入推动产品升级，在原材料之外发展高技术产品。"
+      ]
+    }
+  ],
+  "photos": {
+    "title": "矿区照片",
+    "subtitle": "走进马达加斯加 Gallois 矿山运营现场。",
+    "items": [
+      { "src": "/images/legacy/mining/header/1.jpg", "label": "矿山全景" },
+      { "src": "/images/legacy/mining/header/2.jpg", "label": "加工厂" },
+      { "src": "/images/legacy/mining/header/3.jpg", "label": "成品仓库 + 实验室" },
+      { "src": "/images/legacy/mining/header/4.jpg", "label": "团队与文化活动" },
+      { "src": "/images/legacy/mining/header/5.jpg", "label": "社会责任" },
+      { "src": "/images/legacy/mining/header/6.jpg", "label": "当地风俗与实践" }
+    ]
+  }
+}

@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import {
   ShieldCheckIcon,
   AnchorIcon,
@@ -22,35 +23,11 @@ import {
   project,
 } from "@/lib/maps/world";
 
-const CRITICAL_LISTS = [
-  { label: "US Critical Minerals List", flag: "🇺🇸" },
-  { label: "EU Critical Raw Materials Act", flag: "🇪🇺" },
-  { label: "Japan METI Strategic Minerals", flag: "🇯🇵" },
-  { label: "Korea MOTIE Critical Resources", flag: "🇰🇷" },
-  { label: "India Critical Minerals Mission", flag: "🇮🇳" },
-];
-
-const ADVANTAGES = [
-  {
-    Icon: ShieldCheckIcon,
-    title: "China+1 sourcing option",
-    body: "Madagascar-origin graphite adds a documented second-source pathway alongside established Chinese supply. Origin-traceable lots with full chain-of-custody documentation.",
-  },
-  {
-    Icon: AnchorIcon,
-    title: "Deep-water port 45 km away",
-    body: "Site No. 1 (Antsirakambo) sits 45 km from the international port of Tamatave. Transit time to major destinations: 10–60 days.",
-  },
-  {
-    Icon: MapPinIcon,
-    title: "Comparable metallurgy, qualification required",
-    body: "Gallois flake can be compared against Heilongjiang and Inner Mongolia reference grades. Final substitution depends on customer qualification, COA review, and application-specific testing.",
-  },
-  {
-    Icon: ClockIcon,
-    title: "Operating since 1901",
-    body: "Long enough to be infrastructure, not a startup risk. Continuous supply through two world wars, independence, and the energy transition.",
-  },
+const ADVANTAGE_ICONS = [
+  ShieldCheckIcon,
+  AnchorIcon,
+  MapPinIcon,
+  ClockIcon,
 ];
 
 // ─── How to add a destination port ─────────────────────────────────────────────
@@ -107,6 +84,18 @@ const DESTINATIONS: Destination[] = [
 
 
 export function SupplyMap() {
+  const t = useTranslations("home.supplyMap");
+  const criticalLists = t.raw("criticalLists") as Array<{
+    label: string;
+    flag: string;
+  }>;
+  const advantages = (
+    t.raw("advantages") as Array<{ title: string; body: string }>
+  ).map((advantage, index) => ({
+    ...advantage,
+    Icon: ADVANTAGE_ICONS[index] ?? ShieldCheckIcon,
+  }));
+
   return (
     <section className="relative border-y border-border bg-surface-1">
       <BgGrid pattern="line" className="opacity-30" />
@@ -115,18 +104,15 @@ export function SupplyMap() {
         {/* Header */}
         <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
           <div className="max-w-2xl space-y-4">
-            <p className="text-eyebrow">Strategic sourcing · Critical mineral</p>
+            <p className="text-eyebrow">{t("eyebrow")}</p>
             <h2 className="text-display-sm text-balance text-foreground">
-              Graphite is on every critical-mineral list.{" "}
+              {t("titleBefore")}{" "}
               <span className="text-signal">
-                Your supply map needs China+1 optionality.
+                {t("titleHighlight")}
               </span>
             </h2>
             <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-              China remains central to the graphite industry. Mada Graphite
-              complements that base with a Madagascar-origin supply option for
-              buyers who need redundancy, traceability, and procurement
-              flexibility.
+              {t("body")}
             </p>
           </div>
           <Button
@@ -135,20 +121,24 @@ export function SupplyMap() {
             size="lg"
             className="h-10 shrink-0 gap-1.5 border-signal/40 hover:border-signal hover:bg-signal/5"
           >
-            Read the strategic case
+            {t("readCase")}
             <ArrowRightIcon className="size-4" />
           </Button>
         </div>
 
         {/* Interactive map */}
         <div className="mt-12 grid gap-6 lg:grid-cols-12 lg:gap-8">
-          <WorldMap />
+          <WorldMap
+            mapAria={t("mapAria")}
+            originLabel={t("origin")}
+            hoverLabel={t("hover")}
+          />
 
           {/* Critical-mineral chip grid */}
           <div className="space-y-4 lg:col-span-4">
-            <p className="text-eyebrow">Designated critical mineral by</p>
+            <p className="text-eyebrow">{t("criticalBy")}</p>
             <ul className="grid gap-2">
-              {CRITICAL_LISTS.map((c) => (
+              {criticalLists.map((c) => (
                 <li
                   key={c.label}
                   className="flex items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs"
@@ -163,7 +153,7 @@ export function SupplyMap() {
 
         {/* Advantage cards */}
         <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {ADVANTAGES.map((a, idx) => {
+          {advantages.map((a, idx) => {
             const Ic = a.Icon;
             return (
               <motion.div
@@ -191,12 +181,10 @@ export function SupplyMap() {
         <div className="mt-12 grid items-center gap-4 rounded-2xl border border-signal/30 bg-card/50 p-5 backdrop-blur sm:grid-cols-[1fr_auto] sm:p-6">
           <div className="space-y-1">
             <p className="text-sm font-semibold text-foreground">
-              Re-mapping your supply chain?
+              {t("ctaTitle")}
             </p>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Long-term supply agreements with locked volumes, USD pricing,
-              origin-traceable documentation, and transaction-level compliance
-              screening.
+              {t("ctaBody")}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 sm:justify-end">
@@ -205,7 +193,7 @@ export function SupplyMap() {
               size="lg"
               className="h-10 bg-signal text-signal-foreground hover:bg-signal/90"
             >
-              The strategic case
+              {t("strategicCase")}
             </Button>
             <Button
               render={<Link href="/register" />}
@@ -213,7 +201,7 @@ export function SupplyMap() {
               variant="outline"
               className="h-10"
             >
-              Request KYC pack
+              {t("requestKyc")}
             </Button>
           </div>
         </div>
@@ -230,7 +218,15 @@ export function SupplyMap() {
  * All marker positions come from `project(lon, lat)`, so adding new ports is
  * just appending lat/lng to the DESTINATIONS list above.
  */
-function WorldMap() {
+function WorldMap({
+  mapAria,
+  originLabel,
+  hoverLabel,
+}: {
+  mapAria: string;
+  originLabel: string;
+  hoverLabel: string;
+}) {
   const [hover, setHover] = React.useState<string | null>(null);
 
   // Pre-project once per render (cheap; ~6 ops)
@@ -246,7 +242,7 @@ function WorldMap() {
         viewBox={VIEW_BOX}
         className="relative aspect-[2/1] w-full"
         role="img"
-        aria-label="Madagascar to global destinations supply map"
+        aria-label={mapAria}
       >
         <defs>
           <linearGradient id="sm-route" x1="0" y1="0" x2="1" y2="0">
@@ -441,9 +437,9 @@ function WorldMap() {
       <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="size-1.5 animate-signal-pulse rounded-full bg-signal" />
-          Origin · 45 km from Tamatave port
+          {originLabel}
         </span>
-        <span>Hover ports for transit time</span>
+        <span>{hoverLabel}</span>
       </div>
     </div>
   );

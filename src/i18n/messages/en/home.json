@@ -1,0 +1,262 @@
+{
+  "hero": {
+    "eyebrow": "AI-Native Trading · Madagascar · Since 1901",
+    "titleBefore": "Where 120 years of graphite meets an",
+    "titleHighlight": "AI-assisted",
+    "titleAfter": "trade desk.",
+    "body": "Mada Graphite turns more than 120 years of mining knowhow into a B2B platform for inquiry, contracting, settlement and shipment — supported by an AI co-pilot that helps buyers compare specs, documents and routes.",
+    "openAccount": "Open an account",
+    "askAi": "Ask the AI assistant",
+    "searchHint": "Search products & grades",
+    "terminal": {
+      "matchScore": "AI match score"
+    }
+  },
+  "kpis": {
+    "aria": "Key statistics",
+    "items": [
+      { "display": "1901", "label": "Year founded" },
+      { "value": 120, "suffix": "+ yrs", "display": "120+ yrs", "label": "Years of production" },
+      { "value": 240, "suffix": "M t", "display": "240M t", "label": "Estimated reserves" },
+      { "value": 140, "suffix": "k t/a", "display": "140k t/a", "label": "Reported capacity" }
+    ]
+  },
+  "ticker": {
+    "aria": "Recent trade desk activity (illustrative)",
+    "label": "Live desk",
+    "note": "Illustrative · Not live data",
+    "items": [
+      { "kind": "INQUIRY", "text": "MADA1 +80 MESH · 96% C · 200 MT · CFR Rotterdam" },
+      { "kind": "CONTRACT", "text": "MADA2 +50 MESH · 50 MT · USDT-TRC20 · FOB Tamatave" },
+      { "kind": "PAID", "text": "ORD-260512-A91F3 · 124,500 USDT · Verified" },
+      { "kind": "SHIPPED", "text": "Container TGHU-7281 · ETA Hamburg 2026-06-22" },
+      { "kind": "QUALIFIED", "text": "Li-ion anode feed · +150 MESH · 99.0% C target" },
+      { "kind": "INQUIRY", "text": "MADA1 -100 MESH · 75 MT · Bank Transfer · CIF Yokohama" },
+      { "kind": "CONTRACT", "text": "Custom +35 MESH · 80 MT · USDI · CFR Mumbai" },
+      { "kind": "PAID", "text": "ORD-260510-77B22 · 87,200 USDT · Verified" },
+      { "kind": "SHIPPED", "text": "Container HASU-9912 · ETA Antwerp 2026-06-18" },
+      { "kind": "QUALIFIED", "text": "Expandable graphite feed · +80 MESH · 94% C min" }
+    ]
+  },
+  "mineIntro": {
+    "eyebrow": "The mine · est. 1901",
+    "titleBefore": "A major long-operating Madagascar graphite operation, now under",
+    "titleHighlight": "computer-managed",
+    "titleAfter": "control.",
+    "paragraphs": [
+      "Located in the Tamatave province of northeast Madagascar, the Gallois mine covers 280 km² of high-grade flake graphite deposit — with an average ore carbon content of ~10%, rare globally.",
+      "Since taking over in 2016, Graphite Energy Inc. has driven annual production from under 5,000 tonnes toward a reported 140,000 t/a capacity across two active sites. A third site (Ambalafotaka) remains unexploited, and only 1% of the total area has been explored, with 240 million tonnes of estimated reserves reported by prior geological review."
+    ],
+    "learnMore": "Learn about the mine",
+    "mapAlt": "Madagascar graphite mine location",
+    "mapBadge": "Tamatave · MG",
+    "facts": [
+      { "k": "Sites", "v": "No. 1 (Antsirakambo) · No. 2 (Marovintsy) · No. 3 reserved" },
+      { "k": "Total area", "v": "280 km² · <1% explored" },
+      { "k": "Average ore C", "v": "~10% (operational estimate)" },
+      { "k": "Distance to port", "v": "45 km from Tamatave" }
+    ]
+  },
+  "supplyMap": {
+    "eyebrow": "Strategic sourcing · Critical mineral",
+    "titleBefore": "Graphite is on every critical-mineral list.",
+    "titleHighlight": "Your supply map needs China+1 optionality.",
+    "body": "China remains central to the graphite industry. Mada Graphite complements that base with a Madagascar-origin supply option for buyers who need redundancy, traceability, and procurement flexibility.",
+    "readCase": "Read the strategic case",
+    "criticalBy": "Designated critical mineral by",
+    "mapAria": "Madagascar to global destinations supply map",
+    "origin": "Origin · 45 km from Tamatave port",
+    "hover": "Hover ports for transit time",
+    "ctaTitle": "Re-mapping your supply chain?",
+    "ctaBody": "Long-term supply agreements with locked volumes, USD pricing, origin-traceable documentation, and transaction-level compliance screening.",
+    "strategicCase": "The strategic case",
+    "requestKyc": "Request KYC pack",
+    "criticalLists": [
+      { "label": "US Critical Minerals List", "flag": "🇺🇸" },
+      { "label": "EU Critical Raw Materials Act", "flag": "🇪🇺" },
+      { "label": "Japan METI Strategic Minerals", "flag": "🇯🇵" },
+      { "label": "Korea MOTIE Critical Resources", "flag": "🇰🇷" },
+      { "label": "India Critical Minerals Mission", "flag": "🇮🇳" }
+    ],
+    "advantages": [
+      { "title": "China+1 sourcing option", "body": "Madagascar-origin graphite adds a documented second-source pathway alongside established Chinese supply. Origin-traceable lots with full chain-of-custody documentation." },
+      { "title": "Deep-water port 45 km away", "body": "Site No. 1 (Antsirakambo) sits 45 km from the international port of Tamatave. Transit time to major destinations: 10–60 days." },
+      { "title": "Comparable metallurgy, qualification required", "body": "Gallois flake can be compared against Heilongjiang and Inner Mongolia reference grades. Final substitution depends on customer qualification, COA review, and application-specific testing." },
+      { "title": "Operating since 1901", "body": "Long enough to be infrastructure, not a startup risk. Continuous supply through two world wars, independence, and the energy transition." }
+    ]
+  },
+  "productsBento": {
+    "eyebrow": "Catalogue",
+    "titleBefore": "Two brands, six standard grades,",
+    "titleHighlight": "unlimited custom specs.",
+    "body": "From battery-grade flake to refractory feedstock, every lot ships with origin-traceable documentation. Hover any card for the full technical sheet.",
+    "viewCatalogue": "View full catalogue",
+    "specSheet": "Spec sheet",
+    "cards": [
+      {
+        "label": "01 / MADA1",
+        "title": "Battery & aerospace flake",
+        "desc": "Perfect crystalline structure, high density, ultra-low purification-unfavorable ash. The reference feedstock for spheroidization, expandable graphite, high-purity routes and aerospace-grade carbon.",
+        "specs": [
+          { "k": "fixed_carbon", "v": "94 – 99%" },
+          { "k": "mesh_size", "v": "+35 / +50 / +80 / +100 / +150" },
+          { "k": "moisture", "v": "≤ 0.5%" },
+          { "k": "ash", "v": "≤ 5.0%" },
+          { "k": "applications", "v": "Li-ion · expandable · high-purity · aerospace" }
+        ]
+      },
+      {
+        "label": "03 / Custom",
+        "title": "Tailored grades",
+        "desc": "80–99% fixed carbon, +32 to −100 mesh. We sample, qualify and contract to your COA — minimum one container.",
+        "specs": [
+          { "k": "fixed_carbon", "v": "80 – 99% on request" },
+          { "k": "mesh_size", "v": "+32 to −100 mesh" },
+          { "k": "moisture", "v": "Per buyer COA" },
+          { "k": "min_lot", "v": "20 MT (one container)" },
+          { "k": "lead_time", "v": "≈ 4–6 weeks from PO" }
+        ]
+      },
+      {
+        "label": "02 / MADA2",
+        "title": "Refractory & metallurgy flake",
+        "desc": "Industrial flake for refractories, metallurgy, crucibles and as feedstock for further high-purity processing. Optimised for thermal stability and packing density.",
+        "specs": [
+          { "k": "fixed_carbon", "v": "75 – 95%" },
+          { "k": "mesh_size", "v": "+50 / +80 / +100 / -100" },
+          { "k": "moisture", "v": "≤ 0.5%" },
+          { "k": "ash", "v": "≤ 12%" },
+          { "k": "applications", "v": "Refractory · metallurgy · crucibles" }
+        ]
+      }
+    ]
+  },
+  "sustainabilityDashboard": {
+    "eyebrow": "Lower-impact extraction",
+    "titleBefore": "A graphite supply that",
+    "titleHighlight": "doesn't cost the climate twice.",
+    "body": "Most flake graphite is mined underground in metamorphic basins with energy-intensive flotation. Gallois is structurally different — open-cast, high-grade, and operating in a climate that never requires a seasonal shutdown.",
+    "readBrief": "Read the ESG brief",
+    "intensityLabel": "Intensity index · indicative",
+    "intensityTitle": "Open-cast vs underground · normalised intensity",
+    "intensityBody": "Reference comparison only. Verified Gallois figures will replace this chart as third-party audits complete.",
+    "metrics": {
+      "energy": "Energy",
+      "water": "Water",
+      "diesel": "Diesel"
+    },
+    "calendarLabel": "Production calendar · 365 days",
+    "calendarTitle": "Year-round production",
+    "calendarBody": "Continuous operation in Tamatave's 15–35 °C climate. Cell tint shows modelled utilisation — actual lot-level uptime ships with the COA.",
+    "low": "Low",
+    "high": "High",
+    "roadmapLabel": "Disclosure roadmap · 2024 → 2028",
+    "roadmapTitle": "From operational estimates to verified, lot-level disclosure",
+    "disclaimer": "All figures are based on operational estimates. Third-party verification is in progress; verified data will replace estimates as audits complete.",
+    "readDisclosure": "Read the full disclosure →",
+    "pillars": [
+      { "k": "open_cast", "v": "No underground blasting" },
+      { "k": "production_days", "v": "365 / year" },
+      { "k": "ore_carbon", "v": "~10% (operational est.)" },
+      { "k": "esg_target", "v": "Datasheet 2026 · Verified label 2028" }
+    ],
+    "intensityData": [
+      { "name": "Underground", "energy": 100, "water": 80, "diesel": 95 },
+      { "name": "Open-cast (Gallois)", "energy": 42, "water": 28, "diesel": 36 }
+    ],
+    "roadmap": [
+      { "year": "2024", "text": "Operational baseline · 140k t/a capacity reached", "state": "done" },
+      { "year": "2025", "text": "Lot-level COA + chain-of-custody documentation rolled out", "state": "done" },
+      { "year": "2026", "text": "ESG datasheet attached to every shipment", "state": "active" },
+      { "year": "2027", "text": "Pilot third-party audit (energy / water / diesel)", "state": "future" },
+      { "year": "2028", "text": "Verified carbon-intensity label per lot", "state": "future" }
+    ]
+  },
+  "applications": {
+    "eyebrow": "Applications",
+    "titleBefore": "Gallois graphite serves every major segment of the",
+    "titleHighlight": "global carbon industry.",
+    "items": [
+      { "title": "Li-ion battery anodes", "caption": "Spheroidization-grade flake feedstock" },
+      { "title": "Expandable graphite", "caption": "Intumescent / fire-proofing seals" },
+      { "title": "High-purity graphite", "caption": "Feedstock for >99.9% C purification" },
+      { "title": "Refractories", "caption": "Steel & ceramic refractory matrices" },
+      { "title": "Metallurgy & crucibles", "caption": "Bonded carbon for casting cycles" },
+      { "title": "Sealing materials", "caption": "Mechanical seals · gaskets · packing" },
+      { "title": "Military & aerospace", "caption": "Reentry shields · solid-rocket nozzles" },
+      { "title": "Man-made diamond", "caption": "Carbon source for HPHT / CVD synthesis" }
+    ]
+  },
+  "aiPreview": {
+    "eyebrow": "AI co-pilot",
+    "titleBefore": "Stop guessing the right grade.",
+    "titleHighlight": "Ask the desk.",
+    "body": "Mada Graphite's assistant matches your application against our COA library, surfaces the closest in-stock spec, and drafts the inquiry — all before you create an account. Logged in, it can also check live container availability and contract drafts.",
+    "tryAssistant": "Try the assistant",
+    "openAccount": "Open an account",
+    "bullets": [
+      "→ Spec-to-application matching across all grades",
+      "→ Drafts an inquiry message you can edit & send",
+      "→ Cites the source COA / fact in every answer",
+      "→ Recognises buy intent — defers to your account-bound desk"
+    ],
+    "windowTitle": "mada · ai assistant",
+    "inputPlaceholder": "Ask anything about specs, lots or routes…",
+    "demoNote": "Demo · Try the live assistant on the chat page",
+    "suggestedSpec": "Suggested spec",
+    "citation": "Cited from MADA1 reference COA · Updated 2026-05",
+    "script": [
+      { "role": "user", "text": "What grade do I need for Li-ion anodes?" },
+      {
+        "role": "assistant",
+        "chunks": [
+          "For lithium-ion anode feedstock you typically want our ",
+          "**MADA1** flake — the perfect crystalline structure and very low ",
+          "purification-unfavorable ash make it the cleanest path to spherical graphite.",
+          "\n\nA reasonable starting spec is:"
+        ]
+      },
+      { "role": "user", "text": "Can you check container availability into Yokohama for July?" }
+    ]
+  },
+  "partners": {
+    "eyebrow": "Historical relationships",
+    "title": "Partners across the global carbon supply chain",
+    "body": "Logos identify historical commercial relationships or public company references only; they do not imply endorsement unless expressly stated.",
+    "visit": "Visit {name} website"
+  },
+  "closingCta": {
+    "eyebrow": "Talk to the desk",
+    "titleLine1": "Not sure what grade you need?",
+    "titleLine2": "Let the AI co-pilot suggest one.",
+    "body": "Our AI assistant matches your application against our COA library, answers technical questions, and guides you through the inquiry process — no account required.",
+    "askAi": "Ask the AI assistant",
+    "startTrading": "Start trading"
+  },
+  "photos": [
+    { "alt": "Mine site overview" },
+    { "alt": "Processing plant" },
+    { "alt": "Final products warehouse" },
+    { "alt": "Quality control laboratory" },
+    { "alt": "Operations team" },
+    { "alt": "Local community engagement" }
+  ],
+  "commandPalette": {
+    "aria": "Search Mada Graphite",
+    "placeholder": "Search products, grades or pages…",
+    "empty": "No matches. Try “mada1”, “esg”, “china+1”…",
+    "navigate": "↑ ↓ to navigate",
+    "open": "↵ to open",
+    "dismiss": "ESC to dismiss",
+    "items": [
+      { "id": "mada1", "label": "MADA1 — battery / aerospace flake", "hint": "Product · feedstock for spheroidization & high-purity", "keywords": ["spherical", "li-ion", "anode", "expandable", "high purity"] },
+      { "id": "mada2", "label": "MADA2 — refractory / metallurgy flake", "hint": "Product · industrial flake for crucibles & metallurgy", "keywords": ["refractory", "metallurgy", "crucible"] },
+      { "id": "custom", "label": "Custom grade — tailored specs", "hint": "Product · 80–99% C, +32 to −100 mesh", "keywords": ["custom", "tailored", "spec"] },
+      { "id": "market", "label": "Browse the trading market", "hint": "Action · view active listings", "keywords": [] },
+      { "id": "ai", "label": "Ask the AI assistant", "hint": "Action · spec matching, technical Q&A", "keywords": ["ai", "chat", "co-pilot", "help"] },
+      { "id": "esg", "label": "ESG brief — sustainability", "hint": "Page · open-cast, 365-day production, roadmap", "keywords": ["esg", "sustainability", "carbon"] },
+      { "id": "geopolitics", "label": "China+1 strategic case", "hint": "Page · critical minerals & sourcing", "keywords": ["china+1", "supply", "critical mineral"] },
+      { "id": "kyc", "label": "Request a KYC pack", "hint": "Action · sign up to start onboarding", "keywords": ["kyc", "onboarding", "register"] }
+    ]
+  }
+}

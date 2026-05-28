@@ -1,0 +1,82 @@
+{
+  "metaTitle": "Sustainability Brief - Mada Graphite",
+  "metaDescription": "How open-cast, high-grade, year-round mining in Madagascar compares to the global graphite supply on energy, waste, and community impact.",
+  "hero": {
+    "eyebrow": "Sustainability Brief · 2026",
+    "title": "A graphite supply that doesn't cost the climate twice.",
+    "body": "Most of the world's flake graphite is mined underground, in mountainous metamorphic basins, and processed with energy-intensive flotation. Gallois is different — and the difference matters for any anode-grade buyer trying to hit Scope 3 targets.",
+    "openAccount": "Open a trading account",
+    "askAi": "Ask the AI assistant"
+  },
+  "sections": [
+    {
+      "title": "1 — How Gallois mines differently",
+      "paragraphs": [
+        "The Gallois deposit is entirely weathering-formed. The graphite flakes have migrated upward over geological time — meaning the ore body sits at or near the surface, accessible by open-cast excavation without blasting or deep shaft sinking.",
+        "Average carbon content of the raw ore runs around <strong>~10%</strong>, compared to the industry-typical 4–6% in metamorphic hard-rock deposits. That higher grade translates directly into less material moved per tonne of fixed carbon, fewer flotation stages, and lower chemical and energy inputs per tonne of product.",
+        "Current operations do not use a conventional wet tailings dam. Flotation tailings are managed on-site with standard earthwork containment; independent geotechnical characterisation is pending."
+      ]
+    },
+    {
+      "title": "2 — Climate & year-round operations",
+      "paragraphs": [
+        "The Tamatave province maintains an average temperature of 15–35 °C year-round with abundant water resources. Unlike mines in northern China (Heilongjiang), Inner Mongolia, or Canada, Gallois faces no winter shutdown, no freeze-thaw cycle, and no seasonal production halt.",
+        "365-day continuous production has two sustainability advantages that are often overlooked: it eliminates the stockpiling carbon embedded in accumulating inventory between production seasons, and it allows a leaner, lower-waste supply chain — buyers can order closer to need."
+      ]
+    },
+    {
+      "title": "3 — Land footprint & community",
+      "paragraphs": [
+        "The Gallois concession covers 280 km². Active mining currently occupies Sites No. 1 and No. 2; Site No. 3 (Ambalafotaka) remains unexploited. Less than 1% of the total concession area has been explored, meaning the operating footprint is a small fraction of the licensed land."
+      ],
+      "callout": {
+        "title": "Community metrics under collection",
+        "items": [
+          "Local employment ratio at both active sites",
+          "Safety performance and training hours",
+          "Community infrastructure support",
+          "Education support for workers' families"
+        ],
+        "note": "These metrics are being collected for the 2026 ESG datasheet and will be marked as verified, estimated, or pending review."
+      }
+    },
+    {
+      "title": "4 — What we don't yet track (honest disclosure)",
+      "paragraphs": [
+        "We believe supply-chain credibility is built on what you admit you don't know, not just what you claim. The following metrics are not yet third-party verified:"
+      ],
+      "items": [
+        {
+          "label": "Diesel intensity per tonne",
+          "body": "haul trucks and processing plant generators are diesel-powered; exact kWh/tonne FC is under measurement, target to publish 2027."
+        },
+        {
+          "label": "Carbon intensity per tonne",
+          "body": "full Scope 1+2 measurement is in progress; no verified figure published yet."
+        },
+        {
+          "label": "Tailings characterisation",
+          "body": "we describe tailings as \"inert sandy waste\" based on ore mineralogy; independent geotechnical characterisation is pending."
+        },
+        {
+          "label": "Water discharge quality",
+          "body": "flotation process water is recirculated; discharge monitoring programme to be published in 2026 ESG datasheet."
+        }
+      ]
+    },
+    {
+      "title": "5 — Sustainability roadmap",
+      "roadmap": [
+        { "year": "2026", "milestone": "ESG datasheet attached to every shipment" },
+        { "year": "2027", "milestone": "ISO 14001-aligned environmental audit" },
+        { "year": "2028", "milestone": "Third-party verified carbon intensity label per lot" }
+      ]
+    }
+  ],
+  "bottomCta": {
+    "title": "Buying for Scope 3 compliance?",
+    "body": "Contact our team to discuss origin documentation, lot traceability, and the 2026 ESG datasheet schedule.",
+    "openAccount": "Open an account",
+    "askAi": "Ask the AI assistant"
+  }
+}

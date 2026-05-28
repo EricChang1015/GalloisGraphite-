@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import {
   Bar,
   BarChart,
@@ -42,21 +43,10 @@ function useIsClient() {
  * captions / tooltips so no copy is lost.
  */
 
-const PILLAR_HIGHLIGHTS = [
-  { k: "open_cast", v: "No underground blasting" },
-  { k: "production_days", v: "365 / year" },
-  { k: "ore_carbon", v: "~10% (operational est.)" },
-  { k: "esg_target", v: "Datasheet 2026 · Verified label 2028" },
-];
-
-// Indicative — labelled accordingly. Numbers are normalised reference
-// figures, NOT a third-party audit.
-const INTENSITY_DATA = [
-  { name: "Underground", energy: 100, water: 80, diesel: 95, fill: "url(#bar-grey)" },
-  { name: "Open-cast (Gallois)", energy: 42, water: 28, diesel: 36, fill: "url(#bar-signal)" },
-];
-
 export function SustainabilityDashboard() {
+  const t = useTranslations("home.sustainabilityDashboard");
+  const pillars = t.raw("pillars") as Array<{ k: string; v: string }>;
+
   return (
     <section className="relative border-y border-border bg-surface-1">
       <BgGrid pattern="line" className="opacity-25" />
@@ -65,16 +55,13 @@ export function SustainabilityDashboard() {
         {/* Header */}
         <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
           <div className="max-w-2xl space-y-3">
-            <p className="text-eyebrow">Lower-impact extraction</p>
+            <p className="text-eyebrow">{t("eyebrow")}</p>
             <h2 className="text-display-sm text-balance text-foreground">
-              A graphite supply that{" "}
-              <span className="text-signal">doesn&apos;t cost the climate twice.</span>
+              {t("titleBefore")}{" "}
+              <span className="text-signal">{t("titleHighlight")}</span>
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Most flake graphite is mined underground in metamorphic basins
-              with energy-intensive flotation. Gallois is structurally
-              different — open-cast, high-grade, and operating in a climate
-              that never requires a seasonal shutdown.
+              {t("body")}
             </p>
           </div>
           <Button
@@ -83,7 +70,7 @@ export function SustainabilityDashboard() {
             size="lg"
             className="h-10 shrink-0 gap-1.5 border-signal/40 hover:border-signal hover:bg-signal/5"
           >
-            Read the ESG brief
+            {t("readBrief")}
             <ArrowRightIcon className="size-4" />
           </Button>
         </div>
@@ -97,7 +84,7 @@ export function SustainabilityDashboard() {
 
         {/* Pillar key-value strip */}
         <ul className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-          {PILLAR_HIGHLIGHTS.map((p) => (
+          {pillars.map((p) => (
             <li key={p.k} className="bg-card px-4 py-4 sm:px-5 sm:py-5">
               <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
                 {p.k}
@@ -109,14 +96,12 @@ export function SustainabilityDashboard() {
 
         {/* Honest disclaimer */}
         <p className="mt-8 max-w-3xl border-l-2 border-signal/40 pl-4 text-xs leading-relaxed text-muted-foreground/80">
-          All figures are based on operational estimates. Third-party
-          verification is in progress; verified data will replace estimates as
-          audits complete.{" "}
+          {t("disclaimer")}{" "}
           <Link
             href="/sustainability"
             className="text-signal underline-offset-2 hover:underline"
           >
-            Read the full disclosure →
+            {t("readDisclosure")}
           </Link>
         </p>
       </div>
@@ -130,15 +115,24 @@ function IntensityPanel() {
   // Defer Recharts to the client only; ResponsiveContainer can't measure
   // a 0×0 SSR DOM tree, which produces a noisy build warning.
   const mounted = useIsClient();
+  const t = useTranslations("home.sustainabilityDashboard");
+  const data = (t.raw("intensityData") as Array<{
+    name: string;
+    energy: number;
+    water: number;
+    diesel: number;
+  }>).map((item, index) => ({
+    ...item,
+    fill: index === 0 ? "url(#bar-grey)" : "url(#bar-signal)",
+  }));
 
   return (
-    <Panel className="lg:col-span-7 lg:row-span-1" label="Intensity index · indicative">
+    <Panel className="lg:col-span-7 lg:row-span-1" label={t("intensityLabel")}>
       <h3 className="text-base font-semibold text-foreground">
-        Open-cast vs underground · normalised intensity
+        {t("intensityTitle")}
       </h3>
       <p className="text-xs text-muted-foreground">
-        Reference comparison only. Verified Gallois figures will replace this
-        chart as third-party audits complete.
+        {t("intensityBody")}
       </p>
 
       <div className="mt-4 h-[220px] w-full">
@@ -153,7 +147,7 @@ function IntensityPanel() {
           initialDimension={{ width: 100, height: 220 }}
         >
           <BarChart
-            data={INTENSITY_DATA}
+            data={data}
             barCategoryGap={28}
             margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
           >
@@ -180,18 +174,18 @@ function IntensityPanel() {
               width={28}
             />
             <Tooltip cursor={{ fill: "var(--muted)", opacity: 0.4 }} content={<DashboardTooltip />} />
-            <Bar dataKey="energy" name="Energy" radius={[4, 4, 0, 0]}>
-              {INTENSITY_DATA.map((d, i) => (
+            <Bar dataKey="energy" name={t("metrics.energy")} radius={[4, 4, 0, 0]}>
+              {data.map((d, i) => (
                 <Cell key={i} fill={d.fill} />
               ))}
             </Bar>
-            <Bar dataKey="water" name="Water" radius={[4, 4, 0, 0]} fillOpacity={0.7}>
-              {INTENSITY_DATA.map((d, i) => (
+            <Bar dataKey="water" name={t("metrics.water")} radius={[4, 4, 0, 0]} fillOpacity={0.7}>
+              {data.map((d, i) => (
                 <Cell key={i} fill={d.fill} />
               ))}
             </Bar>
-            <Bar dataKey="diesel" name="Diesel" radius={[4, 4, 0, 0]} fillOpacity={0.45}>
-              {INTENSITY_DATA.map((d, i) => (
+            <Bar dataKey="diesel" name={t("metrics.diesel")} radius={[4, 4, 0, 0]} fillOpacity={0.45}>
+              {data.map((d, i) => (
                 <Cell key={i} fill={d.fill} />
               ))}
             </Bar>
@@ -235,6 +229,7 @@ function DashboardTooltip({
 /* ── 365-day production calendar heatmap ─────────────────────────── */
 
 function CalendarPanel() {
+  const t = useTranslations("home.sustainabilityDashboard");
   // Build 52 weeks × 7 days = 364 cells. We tint each cell by a simulated
   // utilisation index — Tamatave runs year-round; only short cyclone-window
   // dips appear (cells 0–6, 32–38, 220–226 modelled as light dips).
@@ -251,13 +246,12 @@ function CalendarPanel() {
   }, []);
 
   return (
-    <Panel className="lg:col-span-5" label="Production calendar · 365 days">
+    <Panel className="lg:col-span-5" label={t("calendarLabel")}>
       <h3 className="text-base font-semibold text-foreground">
-        Year-round production
+        {t("calendarTitle")}
       </h3>
       <p className="text-xs text-muted-foreground">
-        Continuous operation in Tamatave&apos;s 15–35 °C climate. Cell tint shows
-        modelled utilisation — actual lot-level uptime ships with the COA.
+        {t("calendarBody")}
       </p>
 
       <div className="mt-5 grid grid-flow-col grid-rows-7 gap-[3px]">
@@ -281,7 +275,7 @@ function CalendarPanel() {
       </div>
 
       <div className="mt-4 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        <span>Low</span>
+        <span>{t("low")}</span>
         <div className="flex gap-[2px]">
           {[0.18, 0.4, 0.7, 1].map((v) => (
             <span
@@ -291,7 +285,7 @@ function CalendarPanel() {
             />
           ))}
         </div>
-        <span>High</span>
+        <span>{t("high")}</span>
       </div>
     </Panel>
   );
@@ -299,23 +293,22 @@ function CalendarPanel() {
 
 /* ── ESG roadmap timeline ───────────────────────────────────────── */
 
-const ROADMAP = [
-  { year: "2024", text: "Operational baseline · 140k t/a capacity reached", state: "done" as const },
-  { year: "2025", text: "Lot-level COA + chain-of-custody documentation rolled out", state: "done" as const },
-  { year: "2026", text: "ESG datasheet attached to every shipment", state: "active" as const },
-  { year: "2027", text: "Pilot third-party audit (energy / water / diesel)", state: "future" as const },
-  { year: "2028", text: "Verified carbon-intensity label per lot", state: "future" as const },
-];
-
 function RoadmapPanel() {
+  const t = useTranslations("home.sustainabilityDashboard");
+  const roadmap = t.raw("roadmap") as Array<{
+    year: string;
+    text: string;
+    state: "done" | "active" | "future";
+  }>;
+
   return (
-    <Panel className="lg:col-span-12" label="Disclosure roadmap · 2024 → 2028">
+    <Panel className="lg:col-span-12" label={t("roadmapLabel")}>
       <h3 className="text-base font-semibold text-foreground">
-        From operational estimates to verified, lot-level disclosure
+        {t("roadmapTitle")}
       </h3>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-5">
-        {ROADMAP.map((r, i) => (
+        {roadmap.map((r, i) => (
           <motion.div
             key={r.year}
             initial={{ opacity: 0, y: 10 }}

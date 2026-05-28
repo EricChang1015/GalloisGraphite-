@@ -1,48 +1,27 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = {
-  title: "Products — Mada Graphite",
-  description:
-    "MADA1 and MADA2 natural flake graphite. Standard grades run 80–99% fixed carbon, with custom lower-carbon feedstock available on request.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("products");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
-const BRANDS = [
+const BRAND_CHROME = [
   {
-    name: "MADA1",
     logo: "/images/legacy/mada_logo_a.png",
-    subtitle: "Premium grade — No.1 mine (Antsirakambo)",
-    description:
-      "MADA1 graphite has a perfect crystalline structure, high density, and in ash a very low content of substances unfavourable for purification. It is the first choice for high-technology applications.",
-    applications: [
-      "Feedstock for downstream spheroidization and Li-ion anode qualification",
-      "Expandable graphite (fire-proofing / intumescent)",
-      "High-purity graphite",
-      "Military & aerospace graphite",
-      "Man-made diamond feedstock",
-      "Advanced refractories",
-    ],
     accentClass: "text-[color:var(--gold)]",
     borderClass: "border-[color:var(--gold)]/40",
     dotClass: "bg-[color:var(--gold)]",
   },
   {
-    name: "MADA2",
     logo: "/images/legacy/mada_logo_b.png",
-    subtitle: "Industrial grade — No.2 mine (Marovintsy)",
-    description:
-      "MADA2 is a robust industrial-grade flake graphite well-suited for high-volume commodity applications with broad and proven track record across metallurgy and refractory sectors.",
-    applications: [
-      "Metallurgy",
-      "Refractories",
-      "Crucibles",
-      "High-purity graphite feedstock",
-      "Sealing materials",
-      "Brake pads & pencils",
-    ],
     accentClass: "text-sky-500 dark:text-sky-300 editorial:text-sky-700",
     borderClass:
       "border-sky-500/40 dark:border-sky-300/40 editorial:border-sky-700/40",
@@ -59,27 +38,36 @@ const GRADES: { grade: string; fc: string; mesh: string }[] = [
   { grade: "−100 MESH", fc: "80–99%", mesh: "−100 MESH  80% MIN" },
 ];
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const t = await getTranslations("products");
+  const brands = (t.raw("brands") as Array<{
+    name: string;
+    subtitle: string;
+    description: string;
+    applications: string[];
+  }>).map((brand, index) => ({
+    ...brand,
+    ...(BRAND_CHROME[index] ?? BRAND_CHROME[0]),
+  }));
+
   return (
     <div className="bg-background text-foreground">
       {/* Hero */}
       <section className="mx-auto max-w-5xl px-6 py-20 text-center space-y-4">
         <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--gold)]">
-          Natural Flake Graphite · Madagascar
+          {t("hero.eyebrow")}
         </p>
         <h1 className="text-4xl sm:text-5xl font-semibold leading-tight">
-          Product Catalogue
+          {t("hero.title")}
         </h1>
         <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg">
-          Etablissements Gallois S.A. supplies natural flake graphite with fixed
-          carbon ranging from 80% to 99%, flake sizes +32 to −100 mesh.
-          Custom specifications available on request.
+          {t("hero.body")}
         </p>
       </section>
 
       {/* Brand cards */}
       <section className="mx-auto max-w-5xl px-6 pb-16 grid gap-8 md:grid-cols-2">
-        {BRANDS.map((brand) => (
+        {brands.map((brand) => (
           <div
             key={brand.name}
             className={cn(
@@ -111,7 +99,7 @@ export default function ProductsPage() {
             </p>
             <div>
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                Key Applications
+                {t("applicationsLabel")}
               </p>
               <ul className="space-y-1">
                 {brand.applications.map((app) => (
@@ -138,13 +126,15 @@ export default function ProductsPage() {
       <section className="bg-card border-t border-border">
         <div className="mx-auto max-w-5xl px-6 py-16 space-y-8">
           <div className="space-y-2">
-            <h2 className="text-2xl font-semibold">Standard Grades</h2>
+            <h2 className="text-2xl font-semibold">
+              {t("standardGrades.title")}
+            </h2>
             <p className="text-muted-foreground text-sm">
-              All grades available in MADA1 and MADA2.{" "}
+              {t("standardGrades.introBefore")}{" "}
               <span className="text-[color:var(--gold)]">
-                Moisture: 0.5% MAX
+                {t("standardGrades.moisture")}
               </span>{" "}
-              for all grades.
+              {t("standardGrades.introAfter")}
             </p>
           </div>
 
@@ -152,15 +142,17 @@ export default function ProductsPage() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-muted text-foreground">
-                  <th className="px-4 py-3 text-left font-semibold">Grade</th>
                   <th className="px-4 py-3 text-left font-semibold">
-                    Fixed Carbon
+                    {t("standardGrades.headers.grade")}
                   </th>
                   <th className="px-4 py-3 text-left font-semibold">
-                    Size (min. retained)
+                    {t("standardGrades.headers.fixedCarbon")}
                   </th>
                   <th className="px-4 py-3 text-left font-semibold">
-                    Moisture
+                    {t("standardGrades.headers.size")}
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold">
+                    {t("standardGrades.headers.moisture")}
                   </th>
                 </tr>
               </thead>
@@ -190,9 +182,7 @@ export default function ProductsPage() {
                     colSpan={4}
                     className="px-4 py-3 text-xs text-muted-foreground italic"
                   >
-                    Standard commercial grades run 80–99% fixed carbon. Lower
-                    carbon feedstock or special specifications may be available
-                    as custom orders and must be confirmed lot by lot.
+                    {t("standardGrades.footnote")}
                   </td>
                 </tr>
               </tbody>
@@ -201,24 +191,24 @@ export default function ProductsPage() {
 
           <div className="rounded-lg border border-[color:var(--gold)]/30 bg-[color:var(--gold)]/8 p-5 space-y-3">
             <h3 className="font-semibold text-[color:var(--gold)]">
-              Custom Specifications
+              {t("custom.title")}
             </h3>
             <p className="text-sm text-foreground/90">
-              Carbon content ranges from{" "}
-              <strong className="text-foreground">80% to 99%</strong>. Flake
-              sizes available:{" "}
-              <strong className="text-foreground font-mono">
-                +32 / +50 / +80 / +100 / +150 / −100 mesh
-              </strong>
-              . Contact our sales team for custom orders and technical
-              consultation.
+              {t.rich("custom.body", {
+                strong: (chunks) => (
+                  <strong className="text-foreground">{chunks}</strong>
+                ),
+                mono: (chunks) => (
+                  <strong className="text-foreground font-mono">{chunks}</strong>
+                ),
+              })}
             </p>
             <div className="flex flex-wrap gap-3 pt-1">
               <Link
                 href="/register"
                 className={cn(buttonVariants({ size: "sm" }))}
               >
-                Open a trading account
+                {t("custom.openAccount")}
               </Link>
               <Link
                 href="/chat"
@@ -226,7 +216,7 @@ export default function ProductsPage() {
                   buttonVariants({ variant: "outline", size: "sm" })
                 )}
               >
-                Ask the AI assistant
+                {t("custom.askAi")}
               </Link>
             </div>
           </div>

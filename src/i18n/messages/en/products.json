@@ -1,0 +1,57 @@
+{
+  "metaTitle": "Products - Mada Graphite",
+  "metaDescription": "MADA1 and MADA2 natural flake graphite. Standard grades run 80–99% fixed carbon, with custom lower-carbon feedstock available on request.",
+  "hero": {
+    "eyebrow": "Natural Flake Graphite · Madagascar",
+    "title": "Product Catalogue",
+    "body": "Etablissements Gallois S.A. supplies natural flake graphite with fixed carbon ranging from 80% to 99%, flake sizes +32 to −100 mesh. Custom specifications available on request."
+  },
+  "brands": [
+    {
+      "name": "MADA1",
+      "subtitle": "Premium grade — No.1 mine (Antsirakambo)",
+      "description": "MADA1 graphite has a perfect crystalline structure, high density, and in ash a very low content of substances unfavourable for purification. It is the first choice for high-technology applications.",
+      "applications": [
+        "Feedstock for downstream spheroidization and Li-ion anode qualification",
+        "Expandable graphite (fire-proofing / intumescent)",
+        "High-purity graphite",
+        "Military & aerospace graphite",
+        "Man-made diamond feedstock",
+        "Advanced refractories"
+      ]
+    },
+    {
+      "name": "MADA2",
+      "subtitle": "Industrial grade — No.2 mine (Marovintsy)",
+      "description": "MADA2 is a robust industrial-grade flake graphite well-suited for high-volume commodity applications with broad and proven track record across metallurgy and refractory sectors.",
+      "applications": [
+        "Metallurgy",
+        "Refractories",
+        "Crucibles",
+        "High-purity graphite feedstock",
+        "Sealing materials",
+        "Brake pads & pencils"
+      ]
+    }
+  ],
+  "applicationsLabel": "Key Applications",
+  "standardGrades": {
+    "title": "Standard Grades",
+    "introBefore": "All grades available in MADA1 and MADA2.",
+    "moisture": "Moisture: 0.5% MAX",
+    "introAfter": "for all grades.",
+    "headers": {
+      "grade": "Grade",
+      "fixedCarbon": "Fixed Carbon",
+      "size": "Size (min. retained)",
+      "moisture": "Moisture"
+    },
+    "footnote": "Standard commercial grades run 80–99% fixed carbon. Lower carbon feedstock or special specifications may be available as custom orders and must be confirmed lot by lot."
+  },
+  "custom": {
+    "title": "Custom Specifications",
+    "body": "Carbon content ranges from <strong>80% to 99%</strong>. Flake sizes available: <mono>+32 / +50 / +80 / +100 / +150 / −100 mesh</mono>. Contact our sales team for custom orders and technical consultation.",
+    "openAccount": "Open a trading account",
+    "askAi": "Ask the AI assistant"
+  }
+}
