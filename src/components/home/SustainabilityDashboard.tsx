@@ -4,30 +4,10 @@ import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import {
-  Bar,
-  BarChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Cell,
-} from "recharts";
 import { ArrowRightIcon, MountainSnowIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BgGrid } from "@/components/home/BgGrid";
 import { cn } from "@/lib/utils";
-
-/** Returns true only on the client. Safe in React 19 / Next 16 — uses
- *  `useSyncExternalStore` so we avoid the `setState`-in-effect anti-pattern.
- *  Recharts ResponsiveContainer needs a measurable DOM, so we gate it. */
-function useIsClient() {
-  return React.useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  );
-}
 
 /**
  * Sustainability section, redesigned as a compact data-viz dashboard.
@@ -109,22 +89,49 @@ export function SustainabilityDashboard() {
   );
 }
 
-/* ── Intensity bar chart ────────────────────────────────────────── */
+/* ── Intensity bar chart (pure SVG) ─────────────────────────────── */
+
+type IntensityDatum = {
+  name: string;
+  energy: number;
+  water: number;
+  diesel: number;
+};
+
+type IntensityMetricKey = "energy" | "water" | "diesel";
+
+type TooltipState = {
+  x: number;
+  y: number;
+  category: string;
+  rows: Array<{ name: string; value: number }>;
+};
+
+const CHART = {
+  width: 420,
+  height: 200,
+  margin: { top: 8, right: 8, bottom: 36, left: 32 },
+  maxY: 100,
+  yTicks: [0, 25, 50, 75, 100],
+} as const;
 
 function IntensityPanel() {
-  // Defer Recharts to the client only; ResponsiveContainer can't measure
-  // a 0×0 SSR DOM tree, which produces a noisy build warning.
-  const mounted = useIsClient();
   const t = useTranslations("home.sustainabilityDashboard");
-  const data = (t.raw("intensityData") as Array<{
-    name: string;
-    energy: number;
-    water: number;
-    diesel: number;
-  }>).map((item, index) => ({
-    ...item,
-    fill: index === 0 ? "url(#bar-grey)" : "url(#bar-signal)",
-  }));
+  const data = t.raw("intensityData") as IntensityDatum[];
+  const metrics: Array<{ key: IntensityMetricKey; label: string }> = [
+    { key: "energy", label: t("metrics.energy") },
+    { key: "water", label: t("metrics.water") },
+    { key: "diesel", label: t("metrics.diesel") },
+  ];
+  const [tooltip, setTooltip] = React.useState<TooltipState | null>(null);
+
+  const plotW = CHART.width - CHART.margin.left - CHART.margin.right;
+  const plotH = CHART.height - CHART.margin.top - CHART.margin.bottom;
+  const groupCount = data.length;
+  const groupGap = 28;
+  const groupWidth = (plotW - groupGap * (groupCount - 1)) / groupCount;
+  const barGap = 6;
+  const barWidth = (groupWidth - barGap * (metrics.length - 1)) / metrics.length;
 
   return (
     <Panel className="lg:col-span-7 lg:row-span-1" label={t("intensityLabel")}>
@@ -135,90 +142,152 @@ function IntensityPanel() {
         {t("intensityBody")}
       </p>
 
-      <div className="mt-4 h-[220px] w-full">
-        {mounted ? (
-        <ResponsiveContainer
-          width="100%"
-          height="100%"
-          // Workaround for recharts 3.x noisy "width(-1) and height(-1)"
-          // console warning during the brief gap between first render and
-          // ResizeObserver settling. See recharts/recharts#6716 (fix landed
-          // post-3.8.1; remove this prop once the upstream patch ships).
-          initialDimension={{ width: 100, height: 220 }}
+      <div className="relative mt-4 h-[220px] w-full">
+        <svg
+          viewBox={`0 0 ${CHART.width} ${CHART.height}`}
+          className="size-full"
+          role="img"
+          aria-label={t("intensityTitle")}
         >
-          <BarChart
-            data={data}
-            barCategoryGap={28}
-            margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="bar-grey" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="color-mix(in oklch, var(--foreground) 22%, transparent)" />
-                <stop offset="100%" stopColor="color-mix(in oklch, var(--foreground) 8%, transparent)" />
-              </linearGradient>
-              <linearGradient id="bar-signal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--signal)" stopOpacity={0.95} />
-                <stop offset="100%" stopColor="var(--signal)" stopOpacity={0.5} />
-              </linearGradient>
-            </defs>
-            <XAxis
-              dataKey="name"
-              tickLine={false}
-              axisLine={false}
-              tick={{ fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)", fontSize: 10 }}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tick={{ fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)", fontSize: 10 }}
-              width={28}
-            />
-            <Tooltip cursor={{ fill: "var(--muted)", opacity: 0.4 }} content={<DashboardTooltip />} />
-            <Bar dataKey="energy" name={t("metrics.energy")} radius={[4, 4, 0, 0]}>
-              {data.map((d, i) => (
-                <Cell key={i} fill={d.fill} />
-              ))}
-            </Bar>
-            <Bar dataKey="water" name={t("metrics.water")} radius={[4, 4, 0, 0]} fillOpacity={0.7}>
-              {data.map((d, i) => (
-                <Cell key={i} fill={d.fill} />
-              ))}
-            </Bar>
-            <Bar dataKey="diesel" name={t("metrics.diesel")} radius={[4, 4, 0, 0]} fillOpacity={0.45}>
-              {data.map((d, i) => (
-                <Cell key={i} fill={d.fill} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-        ) : (
-          <div className="size-full animate-pulse rounded-xl bg-muted/30" />
-        )}
+          <defs>
+            <linearGradient id="bar-grey" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="color-mix(in oklch, var(--foreground) 22%, transparent)" />
+              <stop offset="100%" stopColor="color-mix(in oklch, var(--foreground) 8%, transparent)" />
+            </linearGradient>
+            <linearGradient id="bar-signal" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--signal)" stopOpacity={0.95} />
+              <stop offset="100%" stopColor="var(--signal)" stopOpacity={0.5} />
+            </linearGradient>
+          </defs>
+
+          <g transform={`translate(${CHART.margin.left}, ${CHART.margin.top})`}>
+            {CHART.yTicks.map((tick) => {
+              const y = plotH - (tick / CHART.maxY) * plotH;
+              return (
+                <g key={tick}>
+                  <line
+                    x1={0}
+                    y1={y}
+                    x2={plotW}
+                    y2={y}
+                    stroke="color-mix(in oklch, var(--foreground) 8%, transparent)"
+                    strokeWidth={0.5}
+                  />
+                  <text
+                    x={-8}
+                    y={y}
+                    textAnchor="end"
+                    dominantBaseline="middle"
+                    fill="var(--muted-foreground)"
+                    fontFamily="var(--font-mono)"
+                    fontSize={10}
+                  >
+                    {tick}
+                  </text>
+                </g>
+              );
+            })}
+
+            {data.map((item, groupIndex) => {
+              const groupX = groupIndex * (groupWidth + groupGap);
+              const fill = groupIndex === 0 ? "url(#bar-grey)" : "url(#bar-signal)";
+
+              return (
+                <g key={item.name} transform={`translate(${groupX}, 0)`}>
+                  {metrics.map((metric, metricIndex) => {
+                    const value = item[metric.key];
+                    const barH = (value / CHART.maxY) * plotH;
+                    const x = metricIndex * (barWidth + barGap);
+                    const y = plotH - barH;
+                    const opacity =
+                      metric.key === "energy" ? 1 : metric.key === "water" ? 0.7 : 0.45;
+
+                    return (
+                      <rect
+                        key={metric.key}
+                        x={x}
+                        y={y}
+                        width={barWidth}
+                        height={barH}
+                        rx={4}
+                        ry={4}
+                        fill={fill}
+                        fillOpacity={opacity}
+                        className="cursor-pointer"
+                        onMouseEnter={(event) => {
+                          const svg = event.currentTarget.ownerSVGElement;
+                          const rect = svg?.getBoundingClientRect();
+                          if (!rect) return;
+                          const scaleX = rect.width / CHART.width;
+                          const scaleY = rect.height / CHART.height;
+                          setTooltip({
+                            x: rect.left + (CHART.margin.left + groupX + x + barWidth / 2) * scaleX,
+                            y: rect.top + (CHART.margin.top + y) * scaleY,
+                            category: item.name,
+                            rows: metrics.map((m) => ({
+                              name: m.label,
+                              value: item[m.key],
+                            })),
+                          });
+                        }}
+                        onMouseLeave={() => setTooltip(null)}
+                      />
+                    );
+                  })}
+
+                  <text
+                    x={groupWidth / 2}
+                    y={plotH + 22}
+                    textAnchor="middle"
+                    fill="var(--muted-foreground)"
+                    fontFamily="var(--font-mono)"
+                    fontSize={10}
+                  >
+                    {item.name}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        </svg>
+
+        {tooltip ? (
+          <DashboardTooltip
+            x={tooltip.x}
+            y={tooltip.y}
+            category={tooltip.category}
+            rows={tooltip.rows}
+          />
+        ) : null}
       </div>
     </Panel>
   );
 }
 
 function DashboardTooltip({
-  active,
-  payload,
-  label,
+  x,
+  y,
+  category,
+  rows,
 }: {
-  active?: boolean;
-  payload?: Array<{ name: string; value: number }>;
-  label?: string;
+  x: number;
+  y: number;
+  category: string;
+  rows: Array<{ name: string; value: number }>;
 }) {
-  if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-border bg-card/95 p-3 backdrop-blur shadow-lg">
+    <div
+      className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full rounded-lg border border-border bg-card/95 p-3 shadow-lg backdrop-blur"
+      style={{ left: x, top: y - 8 }}
+    >
       <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        {label}
+        {category}
       </p>
       <ul className="space-y-1 font-mono text-xs">
-        {payload.map((p) => (
-          <li key={p.name} className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">{p.name}</span>
-            <span className="tabular-nums text-foreground">{p.value}</span>
+        {rows.map((row) => (
+          <li key={row.name} className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{row.name}</span>
+            <span className="tabular-nums text-foreground">{row.value}</span>
           </li>
         ))}
       </ul>

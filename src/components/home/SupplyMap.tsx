@@ -15,13 +15,15 @@ import { Button } from "@/components/ui/button";
 import { BgGrid } from "@/components/home/BgGrid";
 import { cn } from "@/lib/utils";
 import {
-  COUNTRIES,
+  COUNTRY_PATHS,
+  LATITUDE_GUIDE_LINES,
   MADAGASCAR_ID,
+  PROJECTED_DESTINATIONS,
+  PROJECTED_ORIGIN,
   VIEW_BOX,
   VIEW_W,
-  pathGen,
-  project,
 } from "@/lib/maps/world";
+import { DESTINATIONS, ORIGIN } from "@/lib/maps/supply-map-points";
 
 const ADVANTAGE_ICONS = [
   ShieldCheckIcon,
@@ -36,8 +38,8 @@ const ADVANTAGE_ICONS = [
 //      East lon → positive,  West lon → negative
 //      North lat → positive, South lat → negative
 //
-// 2. Append one entry to DESTINATIONS below — that's it. The d3 projection
-//    handles all coordinate math; you do NOT need to compute SVG x/y yourself.
+// 2. Append one entry to `src/lib/maps/supply-map-points.ts`, then run:
+//      npm run gen:world-map
 //
 //      { id: "sgp", lon: 103.85, lat: 1.29, label: "Singapore", transitDays: "~12 days" }
 //
@@ -45,42 +47,10 @@ const ADVANTAGE_ICONS = [
 //    Hamburg), set `labelAnchor: "start"` or `"end"` to push the text aside.
 //
 // Origin: Toamasina (Tamatave) port, Madagascar — 49.4°E, 18.15°S
-const ORIGIN = { lon: 49.4, lat: -18.15, label: "Toamasina" };
 
-type Destination = {
-  id: string;
-  lon: number;
-  lat: number;
-  label: string;
-  transitDays?: string;
-  /** SVG textAnchor for the label — tune this when ports cluster together */
-  labelAnchor?: "start" | "middle" | "end";
+type DestinationPoint = (typeof DESTINATIONS)[number] & {
+  xy: [number, number];
 };
-
-const DESTINATIONS: Destination[] = [
-  // --- 您原本的港口（優化坐標至精確港口位置，並修正實際轉運航期） ---
-  { id: "rot", lon:    4.11, lat:  51.95, label: "Rotterdam",  transitDays: "~35 days", labelAnchor: "end"   }, // 荷蘭：歐洲最大石墨分銷中心
-  { id: "ham", lon:    9.93, lat:  53.54, label: "Hamburg",    transitDays: "~37 days", labelAnchor: "start" }, // 德國：傳統工業與碳素產品進口港
-  { id: "yok", lon:  139.68, lat:  35.45, label: "Yokohama",   transitDays: "~32 days" },                       // 日本：東日本核心港口，鄰近部分碳素加工廠
-  { id: "mum", lon:   72.95, lat:  18.95, label: "Mumbai (JNPT)", transitDays: "~12 days" },                    // 印度：西岸最大貨櫃港，最快航期
-  { id: "hou", lon:  -94.98, lat:  29.68, label: "Houston",    transitDays: "~42 days" },                       // 美國：墨西哥灣傳統工業與耐火材料市場
-  { id: "spo", lon:  -46.33, lat: -23.93, label: "Santos (São Paulo)", transitDays: "~18 days" },               // 巴西：桑托斯港（聖保羅外港）
-
-  // --- 🆕 亞洲關鍵石墨與電池材料核心港口 ---
-//  { id: "sha", lon:  121.61, lat:  31.37, label: "Shanghai",   transitDays: "~28 days" },                       // 中國：全球最大石墨加工與負極材料市場入口
-  { id: "pus", lon:  129.08, lat:  35.10, label: "Busan",      transitDays: "~30 days" },                       // 韓國：三大電池廠（LG、SK、Samsung）戰略進口港
-  //{ id: "osa", lon:  135.42, lat:  34.64, label: "Osaka",      transitDays: "~34 days" },                       // 日本：關西工業區，鄰近多家日系負極與碳素大廠
-  { id: "hcm", lon:  106.77, lat:  10.76, label: "Ho Chi Minh (Cat Lai)", transitDays: "~25 days" },            // 越南：新興電子與加工供應鏈核心港
-  //{ id: "mun", lon:   76.69, lat:  22.84, label: "Mundra",     transitDays: "~14 days" },                       // 印度：古吉拉特邦，西北部工業區重要石墨門戶
-    // 新加坡
-  { id: "sgp", lon: 103.85, lat:   1.29, label: "Singapore", transitDays: "~12 days" },                       // 新加坡：東南亞最大轉運中心，航線密集且頻次高
-
-  // --- 🆕 歐美關鍵石墨與耐火材料核心港口 ---
-  { id: "sav", lon:  -81.14, lat:  32.12, label: "Savannah",   transitDays: "~40 days" },                       // 美國：東岸最大貨櫃港，主供美東汽車與電池供應鏈
-  { id: "det", lon:  -83.04, lat:  42.33, label: "Detroit",    transitDays: "~46 days" },                       // 美國：五大湖傳統五金/五大車廠（多經加拿大或東岸內陸轉運）
-  //{ id: "ant", lon:    4.33, lat:  51.27, label: "Antwerp",    transitDays: "~34 days" },                       // 比利時：歐洲第二大港，耐火材料與化工核心
-  //{ id: "光陽", lon:  127.69, lat:  34.91, label: "Gwangyang",  transitDays: "~29 days" },                       // 韓國：光陽港，POSCO Future M（韓國核心負極廠）所在地
-];
 
 
 export function SupplyMap() {
@@ -211,12 +181,8 @@ export function SupplyMap() {
 }
 
 /**
- * Real-data world map. Continent paths are generated from Natural Earth 110m
- * country boundaries via d3-geo's `geoNaturalEarth1` projection — the same
- * pipeline used by The New York Times, FT, and most thematic-map publishers.
- *
- * All marker positions come from `project(lon, lat)`, so adding new ports is
- * just appending lat/lng to the DESTINATIONS list above.
+ * Real-data world map. Continent paths and marker positions are pre-computed
+ * at build time (`npm run gen:world-map`) from Natural Earth 110m boundaries.
  */
 function WorldMap({
   mapAria,
@@ -229,10 +195,13 @@ function WorldMap({
 }) {
   const [hover, setHover] = React.useState<string | null>(null);
 
-  // Pre-project once per render (cheap; ~6 ops)
-  const originXY = React.useMemo(() => project(ORIGIN.lon, ORIGIN.lat), []);
-  const destPoints = React.useMemo(
-    () => DESTINATIONS.map((d) => ({ ...d, xy: project(d.lon, d.lat) })),
+  const originXY = PROJECTED_ORIGIN;
+  const destPoints = React.useMemo<DestinationPoint[]>(
+    () =>
+      DESTINATIONS.map((d) => ({
+        ...d,
+        xy: PROJECTED_DESTINATIONS[d.id] ?? [0, 0],
+      })),
     []
   );
 
@@ -275,14 +244,12 @@ function WorldMap({
           strokeWidth="0.6"
           strokeLinejoin="round"
         >
-          {COUNTRIES.map((c, i) => {
-            const isMG = String(c.id) === MADAGASCAR_ID;
-            const d = pathGen(c);
-            if (!d) return null;
+          {COUNTRY_PATHS.map((c) => {
+            const isMG = c.id === MADAGASCAR_ID;
             return (
               <path
-                key={c.id !== undefined ? String(c.id) : `country-${i}`}
-                d={d}
+                key={c.id}
+                d={c.d}
                 fill={
                   isMG
                     ? "color-mix(in oklch, var(--signal) 50%, transparent)"
@@ -450,13 +417,6 @@ function WorldMap({
  * shared projection so they stay aligned even if the projection is retuned.
  */
 function LatitudeGuides() {
-  const lats = [
-    { value: 66.5,  label: "66°N" },
-    { value: 23.5,  label: "23°N" },
-    { value: 0,     label: "0°"   },
-    { value: -23.5, label: "23°S" },
-  ];
-
   return (
     <g>
       <g
@@ -464,10 +424,9 @@ function LatitudeGuides() {
         strokeWidth="0.8"
         strokeDasharray="4 6"
       >
-        {lats.map((l) => {
-          const y = project(0, l.value)[1];
-          return <line key={l.label} x1="0" y1={y} x2={VIEW_W} y2={y} />;
-        })}
+        {LATITUDE_GUIDE_LINES.map((l) => (
+          <line key={l.label} x1="0" y1={l.y} x2={VIEW_W} y2={l.y} />
+        ))}
       </g>
       <g
         fontSize="11"
@@ -475,14 +434,11 @@ function LatitudeGuides() {
         fill="color-mix(in oklch, var(--foreground) 35%, transparent)"
         dominantBaseline="middle"
       >
-        {lats.map((l) => {
-          const y = project(0, l.value)[1];
-          return (
-            <text key={l.label} x={6} y={y}>
-              {l.label}
-            </text>
-          );
-        })}
+        {LATITUDE_GUIDE_LINES.map((l) => (
+          <text key={l.label} x={6} y={l.y}>
+            {l.label}
+          </text>
+        ))}
       </g>
     </g>
   );
