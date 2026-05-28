@@ -51,6 +51,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SUPPORTED_LOCALES, type Locale } from "@/i18n/config";
+import { cn } from "@/lib/utils";
 
 type NewsInput = z.infer<typeof NewsInputSchema>;
 
@@ -70,7 +71,13 @@ interface NewsArticle {
 // Manual create / edit form (unchanged behaviour)
 // ---------------------------------------------------------------------------
 
-export function NewsFormDialog({ existing }: { existing?: NewsArticle }) {
+export function NewsFormDialog({
+  existing,
+  className,
+}: {
+  existing?: NewsArticle;
+  className?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -103,9 +110,9 @@ export function NewsFormDialog({ existing }: { existing?: NewsArticle }) {
       <DialogTrigger
         render={
           existing ? (
-            <Button size="sm" variant="outline" className="h-7 text-xs" />
+            <Button size="sm" variant="outline" className={cn("h-7 text-xs", className)} />
           ) : (
-            <Button size="sm" variant="outline" />
+            <Button size="sm" variant="outline" className={className} />
           )
         }
       >
@@ -115,7 +122,7 @@ export function NewsFormDialog({ existing }: { existing?: NewsArticle }) {
           <><PlusIcon className="w-4 h-4 mr-2" />Manual article</>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-h-[min(90vh,720px)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{existing ? "Edit Article" : "New Article"}</DialogTitle>
         </DialogHeader>
@@ -214,7 +221,7 @@ type CandidateState = FetchedCandidate & {
   selected: boolean;
 };
 
-export function FetchNewsButton() {
+export function FetchNewsButton({ className }: { className?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
@@ -314,11 +321,11 @@ export function FetchNewsButton() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" />}>
+      <DialogTrigger render={<Button size="sm" className={className} />}>
         <DownloadIcon className="w-4 h-4 mr-2" />
         Fetch latest news
       </DialogTrigger>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="max-h-[min(92vh,800px)] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Fetch news candidates</DialogTitle>
         </DialogHeader>
@@ -445,13 +452,20 @@ export function FetchNewsButton() {
 // Per-row actions (approve / reject / translate / edit / unpublish)
 // ---------------------------------------------------------------------------
 
-export function NewsRowActions({ article }: { article: NewsArticle }) {
+export function NewsRowActions({
+  article,
+  compact = false,
+}: {
+  article: NewsArticle;
+  compact?: boolean;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [translateOpen, setTranslateOpen] = useState(false);
 
   const status = article.status ?? (article.is_published ? "published" : "draft");
+  const actionBtnClass = compact ? "h-9 w-full text-xs justify-center" : "h-7 text-xs";
 
   function approve() {
     startTransition(async () => {
@@ -472,9 +486,19 @@ export function NewsRowActions({ article }: { article: NewsArticle }) {
   }
 
   return (
-    <div className="flex justify-end gap-1.5 flex-wrap">
+    <div
+      className={cn(
+        compact ? "grid w-full grid-cols-2 gap-2" : "flex flex-wrap justify-end gap-1.5"
+      )}
+    >
       {(status === "pending" || status === "draft" || status === "rejected") && (
-        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={approve} disabled={isPending}>
+        <Button
+          size="sm"
+          variant="outline"
+          className={actionBtnClass}
+          onClick={approve}
+          disabled={isPending}
+        >
           <CheckIcon className="w-3 h-3 mr-1" />Approve
         </Button>
       )}
@@ -482,7 +506,10 @@ export function NewsRowActions({ article }: { article: NewsArticle }) {
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs text-red-400 border-red-400/40 hover:text-red-300"
+          className={cn(
+            actionBtnClass,
+            "text-red-400 border-red-400/40 hover:text-red-300"
+          )}
           onClick={() => setRejectOpen(true)}
           disabled={isPending}
         >
@@ -493,7 +520,7 @@ export function NewsRowActions({ article }: { article: NewsArticle }) {
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs"
+          className={actionBtnClass}
           onClick={unpublish}
           disabled={isPending}
         >
@@ -503,12 +530,13 @@ export function NewsRowActions({ article }: { article: NewsArticle }) {
       <Button
         size="sm"
         variant="outline"
-        className="h-7 text-xs"
+        className={actionBtnClass}
         onClick={() => setTranslateOpen(true)}
       >
         <LanguagesIcon className="w-3 h-3 mr-1" />Translate
       </Button>
       <NewsFormDialog
+        className={compact ? "col-span-2 h-9 w-full justify-center text-xs" : undefined}
         existing={{
           id: article.id,
           title: article.title,
@@ -533,6 +561,7 @@ export function NewsRowActions({ article }: { article: NewsArticle }) {
     </div>
   );
 }
+
 
 function RejectDialog({
   open,
