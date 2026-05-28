@@ -1,0 +1,16 @@
+*Mada Graphite — 每日工程摘要*
+*涵蓋期間：* 2026-05-27 17:02 UTC → 2026-05-28 17:02 UTC
+
+*資料來源：* `origin/main` 共 **14 commits**、**1 個 merged PR**（[#16](https://github.com/EricChang1015/GalloisGraphite-/pull/16)，2026-05-28T15:03:44Z）。
+
+• *新聞聚合上線（PR #16）* — Admin 手動觸發 Poe LLM 抓取產業新聞 → 預覽匯入 → pending/approve/reject 工作流；`029_news_aggregation.sql` 新增 `news.status`、`news_translations`、`news_fetch_batches` 與 URL/title hash 去重（rejected 稿件 hash 保留以防重複抓取）。公開 `/news` 依使用者 locale 讀翻譯列，英文 fallback。`4a69245` 修正：文章頁以 URL slug 鎖定 locale，語言切換器才會真正換內容。
+• *公開行銷頁 i18n 擴充* — `11189de`（39 檔、`+2209/-1111`）：`about` / `products` / `sustainability` / `geopolitics` 與首頁區塊接入 `next-intl`；新增訪客 `LocaleSwitcher`（`profiles.locale` + cookie `mg-locale`）。合約 PDF、email、server-action 錯誤訊息仍英文（`docs/I18N_PLAN.md`）。
+• *i18n 自動化煙測* — `e49ca50` 新增 `scripts/smoke-i18n.mjs`（`npm run qa:i18n`）；`45f8dda` 修正 Node 22 下勿深層 import `@supabase/ssr` 導致腳本失敗。
+• *首頁效能與依賴整理* — `688242c` 預先產生 supply map SVG、移除 `recharts`；`ee2d185` / `66f5274` 移除未使用的 `openai`、`date-fns`，shadcn CLI 移至 devDependencies；`bcf7d30` 修正 `gen-world-map` 不再依賴 `--experimental-strip-types`。
+• *路由與文件* — `436a84b`：`src/proxy.ts` 將 `/settings` 納入需登入的 app 路由；`da487dd` / `48dea38` 同步 ARCHITECTURE、PRD、I18N_PLAN 等與 migrations 001–029 現況。
+• *Agent 工作流技能庫* — `628af7b` 新增 `.cursor/skills/`（graphite-qa、browser-testing、security-and-hardening 等）與 `AGENTS.md` 技能索引，供 Cloud/Cursor agent 依任務選 workflow。
+
+*Watchlist*
+• **Migration 029 部署門檻**：未執行 `npm run db:migrate` 的環境，Admin 新聞抓取與公開多語文章頁會因缺少 `news_translations` / `news.status` 而失敗；合併後需跑 migrate + `npm run db:types`。
+• **新聞 LLM 路徑營運風險**：抓取/翻譯依 Poe API（`src/lib/news/fetcher.ts`、`translator.ts`），僅 admin 可觸發且有 `audit_logs`，但尚無專用 `smoke-news-*.mjs`；PR #16 以手動 E2E 驗證。開放中的 [#17](https://github.com/EricChang1015/GalloisGraphite-/pull/17) 為直向友善 Admin 新聞 UI，尚未合併 `main`。
+• **大面積 i18n + 移除 recharts**：公開頁與 `SupplyMap` / `SustainabilityDashboard` 視覺與文案變更廣，建議部署後以 `npm run qa:i18n` 與 `npm run qa:check-dev` 做 en/zh-CN 回歸。
