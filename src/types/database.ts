@@ -483,14 +483,25 @@ export type Database = {
           content_html: string | null
           cover_image_url: string | null
           created_at: string
+          fetch_batch_id: string | null
+          fetched_at: string | null
           id: string
           image_url: string | null
           is_published: boolean
+          language: string
           published_at: string | null
+          rejected_reason: string | null
+          relevance_score: number | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           slug: string
+          source_name: string | null
           source_url: string | null
+          status: Database["public"]["Enums"]["news_status"]
           summary: string | null
           title: string
+          title_hash: string | null
+          url_hash: string | null
         }
         Insert: {
           author_id?: string | null
@@ -498,14 +509,25 @@ export type Database = {
           content_html?: string | null
           cover_image_url?: string | null
           created_at?: string
+          fetch_batch_id?: string | null
+          fetched_at?: string | null
           id?: string
           image_url?: string | null
           is_published?: boolean
+          language?: string
           published_at?: string | null
+          rejected_reason?: string | null
+          relevance_score?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           slug: string
+          source_name?: string | null
           source_url?: string | null
+          status?: Database["public"]["Enums"]["news_status"]
           summary?: string | null
           title: string
+          title_hash?: string | null
+          url_hash?: string | null
         }
         Update: {
           author_id?: string | null
@@ -513,19 +535,138 @@ export type Database = {
           content_html?: string | null
           cover_image_url?: string | null
           created_at?: string
+          fetch_batch_id?: string | null
+          fetched_at?: string | null
           id?: string
           image_url?: string | null
           is_published?: boolean
+          language?: string
           published_at?: string | null
+          rejected_reason?: string | null
+          relevance_score?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           slug?: string
+          source_name?: string | null
           source_url?: string | null
+          status?: Database["public"]["Enums"]["news_status"]
           summary?: string | null
           title?: string
+          title_hash?: string | null
+          url_hash?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "news_author_id_fkey"
             columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_fetch_batches: {
+        Row: {
+          candidate_count: number
+          completion_tokens: number | null
+          created_at: string
+          duplicate_count: number
+          error: string | null
+          id: string
+          imported_count: number
+          model: string | null
+          prompt_tokens: number | null
+          triggered_by: string | null
+        }
+        Insert: {
+          candidate_count?: number
+          completion_tokens?: number | null
+          created_at?: string
+          duplicate_count?: number
+          error?: string | null
+          id?: string
+          imported_count?: number
+          model?: string | null
+          prompt_tokens?: number | null
+          triggered_by?: string | null
+        }
+        Update: {
+          candidate_count?: number
+          completion_tokens?: number | null
+          created_at?: string
+          duplicate_count?: number
+          error?: string | null
+          id?: string
+          imported_count?: number
+          model?: string | null
+          prompt_tokens?: number | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_fetch_batches_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_translations: {
+        Row: {
+          content_html: string | null
+          id: string
+          is_auto: boolean
+          locale: string
+          news_id: string
+          slug: string
+          summary: string | null
+          title: string
+          translated_at: string
+          translator_id: string | null
+        }
+        Insert: {
+          content_html?: string | null
+          id?: string
+          is_auto?: boolean
+          locale: string
+          news_id: string
+          slug: string
+          summary?: string | null
+          title: string
+          translated_at?: string
+          translator_id?: string | null
+        }
+        Update: {
+          content_html?: string | null
+          id?: string
+          is_auto?: boolean
+          locale?: string
+          news_id?: string
+          slug?: string
+          summary?: string | null
+          title?: string
+          translated_at?: string
+          translator_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_translations_news_id_fkey"
+            columns: ["news_id"]
+            isOneToOne: false
+            referencedRelation: "news"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_translations_translator_id_fkey"
+            columns: ["translator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1235,6 +1376,7 @@ export type Database = {
         | "expired"
         | "converted"
       listing_status: "active" | "paused" | "sold_out"
+      news_status: "draft" | "pending" | "approved" | "published" | "rejected"
       order_status:
         | "quotation_pending"
         | "draft"
@@ -1448,6 +1590,7 @@ export const Constants = {
         "converted",
       ],
       listing_status: ["active", "paused", "sold_out"],
+      news_status: ["draft", "pending", "approved", "published", "rejected"],
       order_status: [
         "quotation_pending",
         "draft",
