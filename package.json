@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "npm run gen:world-map && next build",
-    "gen:world-map": "node --experimental-strip-types --no-warnings scripts/gen-world-map.mjs",
+    "gen:world-map": "node scripts/gen-world-map.mjs",
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "node scripts/apply-migrations.mjs",

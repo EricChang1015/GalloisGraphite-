@@ -38,7 +38,7 @@ const ADVANTAGE_ICONS = [
 //      East lon → positive,  West lon → negative
 //      North lat → positive, South lat → negative
 //
-// 2. Append one entry to `src/lib/maps/supply-map-points.ts`, then run:
+// 2. Append one entry to `src/lib/maps/supply-map-points.json`, then run:
 //      npm run gen:world-map
 //
 //      { id: "sgp", lon: 103.85, lat: 1.29, label: "Singapore", transitDays: "~12 days" }
