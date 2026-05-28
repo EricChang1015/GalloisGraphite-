@@ -3,25 +3,33 @@ import Image from "next/image";
 import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
+import { getLocale } from "@/i18n/get-locale";
+import { DEFAULT_LOCALE } from "@/i18n/config";
 
 export const metadata: Metadata = {
-  title: "News — Mada Graphite",
+  title: "News — [REDACTED]",
   description:
-    "Latest graphite industry news, market updates and company announcements from Mada Graphite.",
+    "Latest graphite industry news, market updates and company announcements from [REDACTED].",
 };
 
+// Articles can be approved at any time, so we keep this short.
 export const revalidate = 300; // ISR: re-fetch every 5 minutes
+export const dynamic = "force-dynamic";
+
+type ArticleRow = {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string | null;
+  cover_image_url: string | null;
+  published_at: string | null;
+  created_at: string;
+  translations: { locale: string; slug: string; title: string; summary: string | null }[];
+};
 
 export default async function NewsPage() {
-  let list: {
-    id: string;
-    title: string;
-    slug: string;
-    summary: string | null;
-    cover_image_url: string | null;
-    published_at: string | null;
-    created_at: string;
-  }[] = [];
+  const locale = await getLocale();
+  let list: ArticleRow[] = [];
   let loadError = false;
 
   try {
@@ -30,11 +38,12 @@ export default async function NewsPage() {
     const { data: articles, error } = await supabase
       .from("news")
       .select(
-        "id, title, slug, summary, cover_image_url, published_at, created_at"
+        `id, title, slug, summary, cover_image_url, published_at, created_at,
+         translations:news_translations(locale, slug, title, summary)`
       )
-      .eq("is_published", true)
+      .eq("status", "published")
       .order("published_at", { ascending: false })
-      .returns<typeof list>();
+      .returns<ArticleRow[]>();
 
     if (error) {
       loadError = true;
@@ -44,6 +53,22 @@ export default async function NewsPage() {
   } catch {
     loadError = true;
   }
+
+  // Resolve per-article display fields based on user locale (fallback en).
+  const resolved = list.map((a) => {
+    const t = a.translations?.find((tr) => tr.locale === locale);
+    return {
+      id: a.id,
+      slug: t?.slug ?? a.slug,
+      title: t?.title ?? a.title,
+      summary: t?.summary ?? a.summary,
+      cover_image_url: a.cover_image_url,
+      published_at: a.published_at,
+      created_at: a.created_at,
+    };
+  });
+
+  const dateLocale = locale === "zh-CN" ? "zh-CN" : "en-US";
 
   return (
     <div className="bg-background text-foreground min-h-screen">
@@ -55,13 +80,18 @@ export default async function NewsPage() {
         <h1 className="text-4xl font-semibold">News</h1>
         <p className="text-muted-foreground text-sm max-w-xl">
           Latest graphite industry news, market intelligence and company
-          announcements, curated by the Mada Graphite team.
+          announcements, curated by the [REDACTED] team.
         </p>
+        {locale !== DEFAULT_LOCALE && (
+          <p className="text-[11px] text-muted-foreground/70">
+            Articles without a {locale} translation are shown in English.
+          </p>
+        )}
       </section>
 
       {/* Articles */}
       <section className="mx-auto max-w-5xl px-6 pb-20">
-        {list.length === 0 ? (
+        {resolved.length === 0 ? (
           <div className="rounded-xl border border-border border-dashed p-20 text-center space-y-2">
             <p className="text-muted-foreground">
               {loadError
@@ -76,7 +106,7 @@ export default async function NewsPage() {
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {list.map((article) => (
+            {resolved.map((article) => (
               <Link
                 key={article.id}
                 href={`/news/${article.slug}`}
@@ -95,7 +125,7 @@ export default async function NewsPage() {
                 ) : (
                   <div className="aspect-video bg-muted flex items-center justify-center">
                     <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                      Mada Graphite
+                      [REDACTED]
                     </span>
                   </div>
                 )}
@@ -110,7 +140,7 @@ export default async function NewsPage() {
                     <span className="text-xs text-muted-foreground">
                       {new Date(
                         article.published_at ?? article.created_at
-                      ).toLocaleDateString("en-US", {
+                      ).toLocaleDateString(dateLocale, {
                         year: "numeric",
                         month: "short",
                         day: "numeric",

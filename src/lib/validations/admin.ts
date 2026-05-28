@@ -40,6 +40,44 @@ export const NewsInputSchema = z.object({
   is_published: z.boolean().default(false),
 });
 
+// ---------------------------------------------------------------------------
+// News aggregation (admin-triggered fetch + review + translate)
+// ---------------------------------------------------------------------------
+
+export const FetchNewsCandidatesSchema = z.object({
+  limit: z.number().int().min(3).max(25).optional(),
+  lookback_days: z.number().int().min(1).max(30).optional(),
+  topic_hints: z.array(z.string().min(1).max(60)).max(6).optional(),
+});
+
+export const NewsCandidateInputSchema = z.object({
+  title: z.string().min(8).max(300),
+  summary: z.string().min(20).max(2000),
+  source_url: z.string().url(),
+  source_name: z.string().min(1).max(120).optional().nullable(),
+  published_at: z.string().min(4).max(40).optional().nullable(),
+  relevance_score: z.number().min(0).max(1).optional().nullable(),
+});
+
+export const ImportNewsCandidatesSchema = z.object({
+  batch_id: z.string().uuid(),
+  candidates: z.array(NewsCandidateInputSchema).min(1).max(30),
+});
+
+export const RejectNewsArticleSchema = z.object({
+  news_id: z.string().uuid(),
+  reason: z.string().max(500).optional().nullable(),
+});
+
+export const ApproveNewsArticleSchema = z.object({
+  news_id: z.string().uuid(),
+});
+
+export const TranslateNewsArticleSchema = z.object({
+  news_id: z.string().uuid(),
+  locale: z.string().min(2).max(10),
+});
+
 export const FreezeUserSchema = z.object({
   user_id: z.string().uuid(),
   reason: z.string().min(1),

@@ -6,60 +6,113 @@ import { createServerClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ArrowLeftIcon } from "lucide-react";
+import { getLocale } from "@/i18n/get-locale";
+import { isSupportedLocale } from "@/i18n/config";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
+type ArticleRow = {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string | null;
+  content_html: string | null;
+  cover_image_url: string | null;
+  source_url: string | null;
+  source_name: string | null;
+  published_at: string | null;
+  created_at: string;
+  translations: {
+    locale: string;
+    slug: string;
+    title: string;
+    summary: string | null;
+    content_html: string | null;
+  }[];
+};
+
+/**
+ * Resolve a slug to an article. The slug might be either the English (master)
+ * slug stored on `news.slug`, or a translated slug from
+ * `news_translations.slug` (any locale).
+ */
+async function findArticleBySlug(slug: string): Promise<ArticleRow | null> {
+  const supabase = await createServerClient();
+  const baseSelect = `id, title, slug, summary, content_html, cover_image_url, source_url, source_name, published_at, created_at,
+    translations:news_translations(locale, slug, title, summary, content_html)`;
+
+  // Try master slug first
+  const { data: byMaster } = await supabase
+    .from("news")
+    .select(baseSelect)
+    .eq("status", "published")
+    .eq("slug", slug)
+    .maybeSingle<ArticleRow>();
+  if (byMaster) return byMaster;
+
+  // Fall back to translation slug lookup
+  const { data: tr } = await supabase
+    .from("news_translations")
+    .select("news_id")
+    .eq("slug", slug)
+    .limit(1)
+    .maybeSingle<{ news_id: string }>();
+  if (!tr) return null;
+
+  const { data: byId } = await supabase
+    .from("news")
+    .select(baseSelect)
+    .eq("status", "published")
+    .eq("id", tr.news_id)
+    .maybeSingle<ArticleRow>();
+  return byId;
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createServerClient();
-  const { data } = await supabase
-    .from("news")
-    .select("title, summary")
-    .eq("slug", slug)
-    .eq("is_published", true)
-    .single<{ title: string; summary: string | null }>();
+  const article = await findArticleBySlug(slug);
+  if (!article) return { title: "Article not found" };
 
-  if (!data) return { title: "Article not found" };
+  const locale = await getLocale();
+  const translation = article.translations?.find((t) => t.locale === locale);
+  const title = translation?.title ?? article.title;
+  const summary = translation?.summary ?? article.summary;
   return {
-    title: `${data.title} — Mada Graphite`,
-    description: data.summary ?? undefined,
+    title: `${title} — [REDACTED]`,
+    description: summary ?? undefined,
   };
 }
 
 export default async function NewsArticlePage({ params }: PageProps) {
   const { slug } = await params;
-  const supabase = await createServerClient();
-
-  const { data: article } = await supabase
-    .from("news")
-    .select(
-      "id, title, slug, summary, content_html, cover_image_url, source_url, published_at, created_at"
-    )
-    .eq("slug", slug)
-    .eq("is_published", true)
-    .single<{
-      id: string;
-      title: string;
-      slug: string;
-      summary: string | null;
-      content_html: string | null;
-      cover_image_url: string | null;
-      source_url: string | null;
-      published_at: string | null;
-      created_at: string;
-    }>();
-
+  const article = await findArticleBySlug(slug);
   if (!article) notFound();
 
+  const locale = await getLocale();
+  const translation = article.translations?.find((t) => t.locale === locale);
+
+  const display = {
+    title: translation?.title ?? article.title,
+    summary: translation?.summary ?? article.summary,
+    content_html: translation?.content_html ?? article.content_html,
+  };
+
+  const otherLocales = (article.translations ?? [])
+    .filter((t) => t.locale !== locale && isSupportedLocale(t.locale))
+    .map((t) => ({ locale: t.locale, slug: t.slug }));
+
+  const dateLocale = locale === "zh-CN" ? "zh-CN" : "en-US";
   const publishDate = new Date(
     article.published_at ?? article.created_at
-  ).toLocaleDateString("en-US", {
+  ).toLocaleDateString(dateLocale, {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
+  const isFallback = !translation && locale !== "en";
 
   return (
     <div className="bg-background text-foreground min-h-screen">
@@ -80,14 +133,34 @@ export default async function NewsArticlePage({ params }: PageProps) {
         <header className="space-y-4">
           <p className="text-xs text-muted-foreground uppercase tracking-wider">
             {publishDate}
+            {isFallback && (
+              <span className="ml-2 italic">
+                · English (no {locale} translation yet)
+              </span>
+            )}
           </p>
           <h1 className="text-3xl sm:text-4xl font-semibold leading-tight">
-            {article.title}
+            {display.title}
           </h1>
-          {article.summary && (
+          {display.summary && (
             <p className="text-muted-foreground text-base leading-relaxed border-l-2 border-[color:var(--gold)] pl-4">
-              {article.summary}
+              {display.summary}
             </p>
+          )}
+
+          {otherLocales.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground">Also available:</span>
+              {otherLocales.map((o) => (
+                <Link
+                  key={o.locale}
+                  href={`/news/${o.slug}`}
+                  className="rounded-md border border-border px-2 py-0.5 hover:border-[color:var(--gold)]/50 font-mono"
+                >
+                  {o.locale}
+                </Link>
+              ))}
+            </div>
           )}
         </header>
 
@@ -96,7 +169,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
           <div className="relative aspect-video rounded-xl overflow-hidden border border-border">
             <Image
               src={article.cover_image_url}
-              alt={article.title}
+              alt={display.title}
               fill
               className="object-cover"
               unoptimized
@@ -105,10 +178,10 @@ export default async function NewsArticlePage({ params }: PageProps) {
         )}
 
         {/* Content */}
-        {article.content_html ? (
+        {display.content_html ? (
           <div
             className="prose prose-sm max-w-none dark:prose-invert prose-headings:text-foreground prose-p:text-foreground/85 prose-a:text-[color:var(--gold)] prose-strong:text-foreground"
-            dangerouslySetInnerHTML={{ __html: article.content_html }}
+            dangerouslySetInnerHTML={{ __html: display.content_html }}
           />
         ) : (
           <p className="text-muted-foreground italic">
@@ -127,8 +200,12 @@ export default async function NewsArticlePage({ params }: PageProps) {
                 rel="noopener noreferrer"
                 className="text-[color:var(--gold)] hover:underline"
               >
-                {article.source_url}
+                {article.source_name ?? article.source_url}
               </a>
+            </p>
+            <p className="text-[11px] text-muted-foreground/70 mt-1">
+              Summaries on this page may be AI-generated. Always follow the
+              source link above for the original reporting.
             </p>
           </div>
         )}
