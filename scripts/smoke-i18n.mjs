@@ -9,10 +9,12 @@ import { chromium } from "playwright";
 import {
   assertServerUp,
   createAuthenticatedContext,
+  loadEnvLocal,
 } from "./lib/e2e-auth.mjs";
 
 const BASE = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
 const BUYER = "eric.chang.1015+buyer@gmail.com";
+const BUYER_ID = "c67b3042-dbac-42a1-9a46-e093faea62dc";
 const PASS = "a1234567";
 
 let pass = 0;
@@ -33,6 +35,28 @@ async function dismissAi(page) {
   if (await close.isVisible({ timeout: 1500 }).catch(() => false)) {
     await close.click().catch(() => {});
   }
+}
+
+async function fetchLatestBuyerOrderId() {
+  const env = loadEnvLocal();
+  const token = env.SUPABASE_ACCESS_TOKEN;
+  const ref = new URL(env.NEXT_PUBLIC_SUPABASE_URL).hostname.split(".")[0];
+  const res = await fetch(
+    `https://api.supabase.com/v1/projects/${ref}/database/query`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        query: `select id from public.orders where buyer_id = '${BUYER_ID}' order by created_at desc limit 1`,
+      }),
+    }
+  );
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return rows[0]?.id ?? null;
 }
 
 async function main() {
@@ -142,12 +166,15 @@ async function main() {
     await page.goto(`${BASE}/orders`, { waitUntil: "domcontentloaded" });
     await dismissAi(page);
     const firstOrder = page.locator('a[href^="/orders/"]').first();
-    const hasOrder = await firstOrder.isVisible({ timeout: 8000 }).catch(() => false);
-    if (!hasOrder) {
+    let orderPath = await firstOrder.getAttribute("href").catch(() => null);
+    if (!orderPath) {
+      const orderId = await fetchLatestBuyerOrderId();
+      orderPath = orderId ? `/orders/${orderId}` : null;
+    }
+    if (!orderPath) {
       check(false, "step 5: buyer has at least one order for contract tab check");
     } else {
-      const href = await firstOrder.getAttribute("href");
-      await page.goto(`${BASE}${href}?tab=contract`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${BASE}${orderPath}?tab=contract`, { waitUntil: "domcontentloaded" });
       await dismissAi(page);
       await page.waitForTimeout(2000);
       const html = await page.content();

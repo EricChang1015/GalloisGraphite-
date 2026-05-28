@@ -5,9 +5,46 @@
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createChunks } from "@supabase/ssr/dist/module/utils/chunker.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/** Mirrors @supabase/ssr chunker — inlined to avoid deep CJS/ESM import issues in Node scripts. */
+const MAX_CHUNK_SIZE = 3180;
+
+function createChunks(key, value, chunkSize = MAX_CHUNK_SIZE) {
+  let encodedValue = encodeURIComponent(value);
+  if (encodedValue.length <= chunkSize) {
+    return [{ name: key, value }];
+  }
+  const chunks = [];
+  while (encodedValue.length > 0) {
+    let encodedChunkHead = encodedValue.slice(0, chunkSize);
+    const lastEscapePos = encodedChunkHead.lastIndexOf("%");
+    if (lastEscapePos > chunkSize - 3) {
+      encodedChunkHead = encodedChunkHead.slice(0, lastEscapePos);
+    }
+    let valueHead = "";
+    while (encodedChunkHead.length > 0) {
+      try {
+        valueHead = decodeURIComponent(encodedChunkHead);
+        break;
+      } catch (error) {
+        if (
+          error instanceof URIError &&
+          encodedChunkHead.at(-3) === "%" &&
+          encodedChunkHead.length > 3
+        ) {
+          encodedChunkHead = encodedChunkHead.slice(0, encodedChunkHead.length - 3);
+        } else {
+          throw error;
+        }
+      }
+    }
+    chunks.push(valueHead);
+    encodedValue = encodedValue.slice(encodedChunkHead.length);
+  }
+  return chunks.map((chunkValue, i) => ({ name: `${key}.${i}`, value: chunkValue }));
+}
 
 export function loadEnvLocal() {
   return Object.fromEntries(
