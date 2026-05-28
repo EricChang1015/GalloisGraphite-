@@ -17,7 +17,6 @@ B2B graphite trading platform connecting global buyers with Madagascar sellers.
   (POE supports Claude / GPT / Gemini / Llama under one key; switch model with POE_MODEL env var)
 - AWS SES SMTP (nodemailer) for transactional email — `src/lib/email/smtp.ts`
 - lucide-react for icons
-- date-fns for date manipulation
 - sonner for toast notifications
 
 ## Code Style
