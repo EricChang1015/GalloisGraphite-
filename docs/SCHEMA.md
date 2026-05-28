@@ -38,7 +38,7 @@
 | `025_listings_delete_policy.sql` | **Listing DELETE RLS**：補 `listings_owner_delete` policy（先前 policy 名稱誤導，seller 無法真正刪除 listing） |
 | `026_waive_schedules_on_cancelled_orders.sql` | **取消訂單付款清理**：`orders.status='cancelled'` 時將未結清 `payment_schedules` 改 `waived`、pending `payments` 自動 `rejected` |
 | `027_quotations_created_by.sql` | **報價提案人**：`quotations.created_by` NOT NULL FK profiles；backfill 後 server/UI 用此欄判定「不能對自己的 offer 動作」與 Round 標籤 |
-| `028_profile_locale.sql` | **UI 語言偏好**：`profiles.locale text not null default 'en'` + CHECK (`en`, `zh-CN`)；解析順序見 `src/i18n/get-locale.ts`（cookie `mg-locale` → profile → Accept-Language → `en`）。合約 / email / SMS 不受此欄影響 |
+| `028_profile_locale.sql` | **UI 語言偏好**：`profiles.locale text not null default 'en'` + CHECK (`en`, `zh-CN`)；解析順序見 `src/i18n/get-locale.ts`（cookie `mg-locale` → profile → Accept-Language → `en`）。登入後同步 DB；訪客僅 cookie。合約 / email / SMS 不受此欄影響 |
 
 > ⚠️ **注意**：007/009 因 PostgreSQL 限制（`alter type ... add value` 不可在同一 transaction 內使用新值）必須拆成兩個檔案，且 enum 必須在使用該值的 table migration 之前執行。
 >
@@ -67,7 +67,7 @@
 | kyc_level | int | 0=email verified, 1=phone verified, 2=docs verified, 3=premium（admin 指派）；見 `src/lib/kyc/types.ts` `KYC_LEVEL_LABELS` |
 | kyc_docs | jsonb | 上傳憑證 URL 列表 |
 | avatar_url | text | Google OAuth 頭像或 Storage 上傳的公開 URL（`021_avatars.sql`） |
-| locale | text NOT NULL DEFAULT `'en'` | UI 語言偏好（`028_profile_locale.sql`）；CHECK 限 `'en'` / `'zh-CN'`；由 `/settings` LanguageSelector 更新 |
+| locale | text NOT NULL DEFAULT `'en'` | UI 語言偏好（`028_profile_locale.sql`）；CHECK 限 `'en'` / `'zh-CN'`；登入後由 `/settings` LanguageSelector 更新 DB + cookie；訪客靠 Navbar `setLocaleCookieOnly` 僅寫 cookie |
 | created_at / updated_at | timestamptz | |
 
 設計理由:把 auth 與業務分離,RLS 易控制;super_admin 一律手動在 SQL 設定。
@@ -511,9 +511,12 @@ AI 助手每個 Q&A turn 的 server-side audit trail。append-only。
 | product_categories | public（active 才公開） | admin | admin | admin |
 | listings | active 公開 / owner / admin | seller(role=seller) / admin | owner / admin | owner / admin |
 | inquiries | parties / admin | buyer | parties / admin | -- |
+| quotations | parties / admin | seller 或 buyer | parties / admin | -- |
 | orders | parties / admin | server action（service_role） | server action / admin | -- |
 | contracts | parties / admin | server action | server action | -- |
 | payments | parties / admin | buyer | **seller (of order) / admin**（015） | -- |
+| order_documents | parties / admin | parties + admin | uploader (1h window) / admin | uploader (1h, unverified) / admin |
+| payment_schedules | parties / admin | server action | server action / seller (verify) / admin | -- |
 | chat_rooms | members / admin | (server action) | -- | -- |
 | chat_members | self / admin | (server action) | -- | -- |
 | messages | room members / admin | room members | sender(短時間內) | -- |

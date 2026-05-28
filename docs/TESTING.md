@@ -297,7 +297,7 @@ E2E_BASE_URL=http://127.0.0.1:3000 npm run qa:kyc:e2e
 | # | 動作 | 預期（UI） | DB 斷言（可選） |
 |---|---|---|---|
 | A1 | Seller 登入 → `/listings/new` | 表單可填 | — |
-| A2 | Category `MADA1`、qty 50 MT、price 4500、CFR、origin Tamatave | zod 通過 | — |
+| A2 | Category `Flake Graphite +80 Mesh`、qty 50 MT、price 4500、CFR、origin Tamatave | zod 通過 | — |
 | A3 | Submit | 跳轉 `/listings`；`/market` 可見 | `listings.status='active'` |
 
 ### Phase B — 詢價與議價（Buyer ↔ Seller）
@@ -523,7 +523,8 @@ E2E_BASE_URL=http://127.0.0.1:3000 node scripts/e2e-full-trading.mjs
 | 2 | 改 `mg-locale=zh-CN`，重新整理 `/dashboard` | 簡體中文 UI |
 | 3 | `/settings` → 語言選擇器切換 | toast「语言已更新」；cookie + DB 同步 |
 | 4 | 走訪 `/market`、`/inquiries`、`/orders`、`/messages`、`/settings/kyc` | 各頁主要 chrome 隨語系切換 |
+| 4b | 登出後造訪 `/`、`/about`、`/products`（cookie `mg-locale=zh-CN`） | 公開行銷頁 chrome 為簡體中文 |
 | 5 | `/orders/<id>?tab=contract`（zh-CN UI） | 合同 **HTML 正文仍為英文**（SALES CONTRACT 等） |
 | 6 | `npm run qa:check-dev` | exit 0（若 log 累積 Auth rate-limit 噪音，先 tail 或清空 `.next/dev/logs/next-development.log`） |
 
-**已知仍英文**（非 bug）：`PaymentScheduleTable` 部分按鈕、`ContractPreview` 下載/列印標籤、admin 後台、公開行銷頁。
+**已知仍英文**（非 bug）：`PaymentScheduleTable` 部分按鈕、`ContractPreview` 下載/列印標籤、admin 後台、`/news/**`、`/chat/**`。

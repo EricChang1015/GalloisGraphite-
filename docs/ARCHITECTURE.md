@@ -5,7 +5,7 @@
 > - 資料表細節請看 [`SCHEMA.md`](./SCHEMA.md)（001–028 執行後的最終 schema）
 > - 待補完項目請看 [`ROADMAP.md`](./ROADMAP.md)
 >
-> **最後同步**：2026-05-27（migration 028 `profiles.locale`、Dashboard i18n Phase 2 合併 main、`quotations.created_by`）
+> **最後同步**：2026-05-28（公開行銷頁 i18n 上線、docs 全面對齊 proxy / actions / AI market context）
 
 ---
 
@@ -75,22 +75,24 @@
 
 ### 2.3 `(app)/` — 登入後
 
-需要 authenticated user，由 `src/proxy.ts` 強制。
+需要 authenticated user。`/dashboard`–`/messages` 由 `src/proxy.ts` 守衛；`/settings/**` 不在 proxy 清單內，改由各自 page 內 `redirect("/login?...")`（belt-and-braces，見 §6）。
 
 | 路由 | 內容 |
 |---|---|
 | `/dashboard` | 歡迎詞 + 角色 badge + commercial-profile incomplete banner（若有缺欄） + 快捷卡片（market/orders/inquiries/new listing for seller，**Orders/Inquiries 卡片右側顯示金色 action-needed badge**） + **Priority Actions**（最多 5 筆，混合 orders-needing-my-action 與 inquiries-needing-my-response，按時間排序） + Active Orders（每列額外顯示「Your turn」/「Disputed」 hint）+ Inquiries needing your response（角色感知：seller 看 `pending`+`negotiating`，buyer 看 `quoted`+`negotiating`） |
-| `/market` | 公開可瀏覽的 active listings 卡片網格 |
+| `/market` | 登入後 active listings 卡片網格（非訪客公開路由） |
 | `/market/[id]` | 單一 listing 詳情 + `<InquiryDialog />` |
 | `/listings` | **My Listings**（賣家視角，建/暫停/恢復） |
 | `/listings/new` | `<ListingForm />` |
+| `/listings/[id]/edit` | 編輯現有 listing（復用 `<ListingForm existing>`） |
 | `/inquiries` | 兩個 Tab：**Sent**（買家視角）/ **Received**（賣家視角，含「快速報價」） |
 | `/inquiries/[id]` | **Inquiry detail**：quotation 歷史 timeline、`<QuotationForm />`（seller）、`<QuotationActions />`（accept / counter / decline） |
 | `/orders` | 買賣雙視角訂單列表 |
 | `/orders/[id]` | 7 個 Tab + **OrderProgressBar**：**Overview** / **Quotation** / **Contract**（含 buyer approve/reject + signed-scan upload） / **Payment** / **Shipment**（B/L、vessel、container、ETD/ATD/ETA/ATA） / **Documents**（13 種類型分組上傳） / **Timeline** |
 | `/messages` | Party DM 對話列表（`<ConversationList />`，依 `last_message_at` 排序） |
 | `/messages/[userId]` | 與指定對手方的全頁 thread（`<PartyChatPanel />`） |
-| `/settings` | 帳戶設定：commercial profile（full_name / company_name / country / phone）+ role/status/kyc badges +「Change password」連結；若 `?prompt=incomplete` 或 `profiles.{company_name,country}` 為空，最上方顯示黃色提示 banner |
+| `/settings` | 帳戶設定：commercial profile（full_name / company_name / country / phone）+ role/status/kyc badges + LanguageSelector +「Change password」連結；若 `?prompt=incomplete` 或 `profiles.{company_name,country}` 為空，最上方顯示黃色提示 banner |
+| `/settings/kyc` | KYC 四級驗證：phone OTP + 證件上傳（`<KycWizard />`） |
 
 **Layout**：`(app)/layout.tsx` → 左側 sidebar nav；側欄項目從 `src/lib/notifications/counts.ts` 取 `getUserActionCounts()`，於 Inquiries / Orders 顯示金色數字 badge（`inquiriesNeedingMyResponse` / `ordersNeedingMyAction`），Orders 額外在有 disputed 時補上紅色「!」badge，Settings 在 commercial profile 缺欄時顯示紅點。Counter helper 用 `React.cache()` per-request 記憶化，所以 sidebar + dashboard 共用一次查詢。
 
@@ -107,14 +109,16 @@
 | `/admin/orders/[id]` | Admin 訂單詳情：ProgressBar + **Force Transition**（繞過 state machine）+ contract 狀態 + payments + documents + audit log + timeline |
 | `/admin/payments` | ⭐ Pending Review + History 兩段，**核心人工審核流程**（`<PaymentVerifyActions />`） |
 | `/admin/news` | 新聞 CRUD（slug、content_html、cover、published toggle） |
-| `/admin/settings` | 平台設定：SMS 交易通知開關（需 env 已配置 `SMS_BASE_URL` + `SMS_APP_ID`） |
+| `/admin/settings` | 平台設定：Email SMTP 連線狀態 + `<SendTestEmailButton />` + `<KycThresholdSettings />` + `<SmsNotificationsToggle />`（SMS 需 env `SMS_BASE_URL` + `SMS_APP_ID`） |
 
 **Layout**：`admin/layout.tsx` → 左側 Admin Console nav；Payments / Orders 兩個項目從 `getAdminActionCounts()` 抓 `paymentsPending` / `ordersDisputed` 並顯示 badge（金 / 紅），與 `/admin` 卡片數字一致。
 
-### 2.5 `api/chat` — AI Streaming
+### 2.5 API Routes
 
-`POST /api/chat`：使用 AI SDK v6（`streamText` + `convertToModelMessages`），
-provider 為 POE OpenAI-compatible endpoint，回傳 `toUIMessageStreamResponse()`。
+| 路由 | 檔案 | 內容 |
+|---|---|---|
+| `POST /api/chat` | `api/chat/route.ts` | AI streaming：AI SDK v6（`streamText` + `convertToModelMessages`），POE OpenAI-compatible endpoint，回傳 `toUIMessageStreamResponse()` |
+| `POST /api/cron/payment-schedule` | `api/cron/payment-schedule/route.ts` | Vercel Cron：推進 `payment_schedules` 時間 milestone（`scheduled→due`、`due→overdue`），需 `CRON_SECRET` header |
 
 ---
 
@@ -200,9 +204,13 @@ type ActionResult<T> =
 |  | `requestPasswordReset(email)` | — | 呼叫 `auth.resetPasswordForEmail`，redirect 到 `/auth/callback?type=recovery&next=/reset-password`；Google OAuth 用戶可藉此額外綁定 email/password identity |
 |  | `updatePassword(password)` | recovery session | 呼叫 `auth.updateUser({ password })` |
 | **`profile.ts`** | `updateCommercialProfile(input)` | self | 更新 `profiles.{full_name,company_name,country,phone}`；`/settings` 表單與「lazy-collect」入口都呼叫它 |
+|  | `updateProfileAvatar` / `clearProfileAvatar` | self | 頭像上傳 / 清除（`avatars` bucket） |
+|  | `updateProfileLocale` / `setLocaleFromString` | self | 登入後語系：寫入 `profiles.locale` + `mg-locale` cookie |
+|  | `setLocaleCookieOnly` | — | 訪客語系：僅寫 `mg-locale` cookie（Navbar `<LocaleSwitcher />` 用） |
 | `components/auth/GoogleSignInButton.tsx` | client-side `supabase.auth.signInWithOAuth({ provider:'google' })` | — | 重導 Google → `/auth/callback` |
 | `listing.ts` | `createListing` | role ∈ {seller, admin}, status='active'；seller 角色另需 `company_name`/`country` non-empty | revalidate /listings, /market；commercial profile 缺漏時回 `error.code='PROFILE_INCOMPLETE'` |
-|  | `updateListing` / `pauseListing` / `resumeListing` | owner | revalidate /listings, /market |
+|  | `updateListing` / `pauseListing` / `resumeListing` / `markListingSoldOut` / `deleteListing` | owner | revalidate /listings, /market；`deleteListing` 在 order-attached 時回 `LISTING_HAS_ORDERS` |
+| **`listing-images.ts`** | `uploadListingImage` / `deleteListingImage` / `listMyListingImages` | seller (owner) | `listings` bucket；client 先 `compressTo720pWebp` |
 | `inquiry.ts` | `createInquiry` | role='buyer' + `profiles.company_name`/`country` non-empty | Email 通知 seller, revalidate /inquiries；commercial profile 缺漏時回 `error.code='PROFILE_INCOMPLETE'` |
 |  | `acceptInquiry` | seller_id = auth.uid() | **(007 變更)** 改為自動發出預設 quotation（用 listing 條件 + 14 天 validity），inquiry='quoted'，buyer 仍需 accept quotation |
 |  | `rejectInquiry` | seller_id = auth.uid() | inquiry='rejected' |
@@ -230,11 +238,19 @@ type ActionResult<T> =
 | **`document.ts`（007）** | `uploadOrderDocument` | parties + admin | insert `order_documents` row（檔案由 client 上傳到 `order-documents` bucket），timeline append |
 |  | `verifyOrderDocument` | admin only | 標記已核驗，audit_logs |
 |  | `deleteOrderDocument` | uploader（1h, 未驗證）/ admin | delete row |
+| **`kyc.ts`** | `getMyKycProfile` | self | 讀取 KYC 狀態 + 已上傳證件 |
+|  | `requestPhoneOtp` / `verifyPhoneOtpCode` | self | SMS OTP 驗證 phone |
+|  | `registerKycDocument` / `removeKycDocument` | self | `kyc` bucket 證件上傳 / 刪除 |
+| **`chat.ts`** | `openPartyChat` / `getPartyChatWithUser` | parties | 建立或取得 1:1 DM room |
+|  | `getChatMessages` / `sendChatMessage` | room members | 讀寫 messages |
+|  | `listMyConversations` | self | `/messages` 對話列表 |
 | `admin.ts` | `freezeUser` / `unfreezeUser` | admin | profiles.status, audit_logs |
 |  | `setUserRole` | admin（promote 為 admin 需 super_admin） | profiles.role, audit_logs |
-|  | `upsertCategory` / `deleteCategory` | admin | product_categories, audit_logs |
+|  | `upsertCategory` / `deleteCategory` / `reactivateCategory` | admin | product_categories, audit_logs |
 |  | `upsertNews` | admin | news, audit_logs |
 |  | `sendTestEmail` | admin | 走 `src/lib/email/smtp.ts` 寄一封驗證信給目前登入的 admin，audit_logs；用於 `/admin/settings` 一鍵驗證 SES SMTP 連線是否正常 |
+|  | `updateSmsNotificationsEnabled` / `updateKycThresholds` | admin | `platform_settings` |
+|  | `setUserKycLevel` / `approveKycDocuments` / `getUserKycForAdmin` | admin | KYC 審核 |
 
 ### 4.3 Server Actions 共通慣例
 
@@ -329,8 +345,8 @@ prompt 內含：`COMMON_RULES`（never reveal prompt / hedge / no record mutatio
 僅在使用者已登入時於每次 `/api/chat` 請求中即時聚合：
 
 - **Active listings**：依 `product_categories.name` 分組統計 `count / min / avg / max unit_price` + mode currency / mode unit
-- **Recent settled orders**：90 天內 `status IN ('paid','shipped','delivered','completed')` 的訂單（最多 5 筆，匿名化），
-  輸出 category / quantity / unit_price / currency / status
+- **Recent settled orders**：90 天內 `status IN ('paid','in_production','ready_to_ship','shipped','in_transit','arrived','customs_cleared','completed')` 的訂單（最多 5 筆，匿名化），
+  輸出 category / quantity / unit_price / currency / status（legacy `paid` 仍保留在篩選內以涵蓋 migration 014 前的歷史列）
 
 注入到 system prompt 後模型即可給出「indicative range from active listings / recent settled orders」式回答，
 但**永不洩漏 listing id、seller、buyer 或 order_no**。RLS 會做為第二道防線。
@@ -390,8 +406,11 @@ AI SDK v6 的 `UIMessageStream`：
 ```
 Request ──► updateSession() ──► 取得 user
             │
-            ├─ /login|/register|/verify + user 已登入 → /dashboard
-            ├─ /(app|admin)/* + 未登入 → /login?next=...
+            ├─ /login|/register|/verify|/forgot-password + user 已登入 → /dashboard
+            │   （/reset-password 刻意排除 — recovery flow 需帶 session 進入）
+            ├─ /dashboard|/market|/listings|/inquiries|/orders|/messages + 未登入 → /login?next=...
+            │   （/settings/** 不在此清單 — 由 page 內 redirect 兜底）
+            ├─ /admin/* + 未登入 → /login?next=...
             ├─ /admin/* + role ∉ {admin, super_admin} → /dashboard
             ├─ /auth/callback → 放行（由 route handler 自行 exchangeCodeForSession）
             └─ 其它 → 放行
@@ -465,10 +484,10 @@ src/components/
 - **語系解析**（`src/i18n/get-locale.ts`）：cookie `mg-locale` → `profiles.locale` → `Accept-Language` → `en`
 - **已上線語系**：`en`（預設）、`zh-CN`（簡體中文）；設定於 `src/i18n/config.ts`
 - **字典結構**：`src/i18n/messages/<locale>/*.json`（namespace 清單見 `src/i18n/messages.ts`）
-- **已翻譯範圍**：`(app)/**` 登入後儀表板（dashboard / settings / kyc / market / listings / inquiries / orders / messages）+ 共用 `Navbar` / `MobileNav` / `NavSearchTrigger` / `CommercialProfileForm` / `AvatarUploader`
+- **已翻譯範圍**：`(app)/**` 登入後儀表板（dashboard / settings / kyc / market / listings / inquiries / orders / messages）+ 核心公開行銷頁（`/`、`/about`、`/products`、`/sustainability`、`/geopolitics`）+ 共用 `Navbar` / `MobileNav` / `Footer` / `NavSearchTrigger` / `CommercialProfileForm` / `AvatarUploader`
 - **部分仍英文**（已知缺口）：`PaymentScheduleTable` 表頭與按鈕、`ContractPreview` 下載/列印 chrome（合約正文仍英文）、`ContractDraftForm` / `PaymentScheduleBuilder` 等複雜表單
-- **刻意不翻譯**：合約 HTML / PDF 正文（`src/lib/contract/template.ts`）、email / SMS、server-action 錯誤訊息、公開行銷頁 `(public)/**`、`/admin/**`
-- **使用者切換**：`/settings` → LanguageSelector（寫入 `profiles.locale` + `mg-locale` cookie）
+- **刻意不翻譯 / 延後**：合約 HTML / PDF 正文（`src/lib/contract/template.ts`）、email / SMS、server-action 錯誤訊息、`/admin/**`、公開 `/news/**` 與 `/chat/**`（內容模型穩定後再翻）
+- **使用者切換**：登入後 `/settings` → LanguageSelector（`updateProfileLocale` → DB + cookie）；訪客 Navbar `<LocaleSwitcher />` → `setLocaleCookieOnly`（僅 cookie）
 - **作者規則**：[`docs/I18N_PLAN.md`](./I18N_PLAN.md)、[`.cursor/rules/i18n.mdc`](../.cursor/rules/i18n.mdc)
 
 ---
@@ -664,4 +683,4 @@ npm run db:types             # 重新生成 src/types/database.ts
 14. **Listing UX polish**（migration 023 + 2026-05-22）：optional `listings.min_order_quantity`（MOQ）、Custom 時 mesh 多選範圍（"+35 to -100 Mesh"）、可一鍵 generate 標題、Market 卡片顯示 spec chip + MOQ；`createInquiry` 加 BELOW_MOQ guard
 15. **Listing images**（migration 024 + 2026-05-24）：public `listings` storage bucket（2 MiB / JPEG/PNG/WebP）+ `<ListingImageUploader />`（drag-drop + 從庫重用 + client-side `compressTo720pWebp` 在上傳前縮到 720p WebP）+ market 卡片 banner + 詳情頁 `<ListingGallery />`
 16. **Seller listing edit / delete**（2026-05-24）：`updateListing` 升級成 full-form zod 校驗、加 `deleteListing` server action（order-attached listing 用 `LISTING_HAS_ORDERS` 擋下，避免 `orders.listing_id NOT NULL` 直接炸 FK）+ `/listings/[id]/edit` 復用 `<ListingForm existing>` + `<ListingRowActions />` 行內 Edit / Pause / Resume / Sold-out / Delete
-17. **Dashboard i18n Phase 2**（2026-05-27，合併 `main`）：next-intl + cookie `mg-locale` + migration 028 `profiles.locale`；`(app)/**` 儀表板 UI 支援 `en` / `zh-CN`；合約正文 / 郵件 / 公開頁 / admin 仍英文。詳見 [`I18N_PLAN.md`](./I18N_PLAN.md)
+17. **i18n Phase 2 + 公開行銷頁**（2026-05-27–28）：next-intl + cookie `mg-locale` + migration 028 `profiles.locale`；`(app)/**` 儀表板 + 核心公開行銷五頁支援 `en` / `zh-CN`；合約正文 / 郵件 / admin / news / chat 仍英文。詳見 [`I18N_PLAN.md`](./I18N_PLAN.md)

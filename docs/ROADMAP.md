@@ -320,10 +320,10 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - 重新評估：以 listings 內部成交價聚合 + Benchmark Mineral Intelligence 公開指數
 
 ### B3. 多語系
-- ✅ **Dashboard Phase 2 已完成**（2026-05-27，合併 `main`）：next-intl + cookie `mg-locale` + migration 028；`(app)/**` 儀表板 + Navbar/MobileNav 已翻譯 `en` / `zh-CN`
+- ✅ **Phase 2 已完成**（2026-05-27–28）：next-intl + cookie `mg-locale` + migration 028；`(app)/**` 儀表板 + Navbar/MobileNav/Footer + 核心公開行銷五頁（`/`、`/about`、`/products`、`/sustainability`、`/geopolitics`）已翻譯 `en` / `zh-CN`
 - 合約 HTML / PDF **正文**強制英文（業務決策）；`ContractPreview` 下載/列印 chrome 亦英文
 - 已知部分缺口：`PaymentScheduleTable` 表頭/按鈕、`ContractDraftForm` 等（見 [`I18N_PLAN.md` §7](./I18N_PLAN.md#7-phase-2-completion--remaining-gaps)）
-- 待補：公開行銷頁 `(public)/**`、`/admin/**`、zh-TW / ja / fr / de 字典
+- 待補：`/admin/**`、`/news/**`、`/chat/**`、zh-TW / ja / fr / de 字典
 - 詳見 [`I18N_PLAN.md`](./I18N_PLAN.md) 與 [`.cursor/rules/i18n.mdc`](../.cursor/rules/i18n.mdc)
 
 ### B4. PDF 真渲染（取代 `window.print()`）
@@ -344,7 +344,7 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - 補 `payouts` 表：admin 標註已付款給賣家（含 tx_hash / 銀行憑證）
 
 ### B8. 多語客服 + Discord/Slack 通知
-- 整合 Resend → Slack webhook，inquiry/payment 即時通知 sales team
+- 整合 AWS SES（或 Slack webhook）→ inquiry/payment 即時通知 sales team
 
 ---
 
@@ -379,5 +379,5 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - [x] A15 Listing images — migration 024 `listings` bucket（720p WebP / 2 MiB cap / owner-scoped RLS）+ `<ListingImageUploader />`（drag-drop + reuse-library + client compress）+ market card banner + detail gallery（2026-05-24）
 - [x] A16 Seller listing edit / delete — `updateListing` 走完整 zod 校驗 + `deleteListing`（FK-aware，order-attached 擋下）+ `/listings/[id]/edit` + `<ListingRowActions />` 行內 Edit/Pause/Resume/Sold-out/Delete（2026-05-24）
 - [x] 公開頁 SEO meta（title/description/og）齊全
-- [x] 所有路由都有 `loading.tsx` 與 `error.tsx` 雛形（多數已完成）
+- [x] Route group 層級 `loading.tsx`（4 個：`(public)` / `(app)` / `(auth)` / `admin`）與 `error.tsx`（2 個：`(app)` / `admin`）已建立；per-route 覆蓋仍不完整
 - [x] 沒有 console.error / TS error / lint error（`npm run build` 在每個 commit 前都跑過）

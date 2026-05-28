@@ -36,7 +36,7 @@ supabase/migrations/NNN_snake_case_purpose.sql
   during a rebase, rename one with `git mv` to the next free prefix and
   update any cross-references inside the SQL comment headers.
 
-Current ceiling: `027_quotations_created_by.sql` (applied 2026-05-27). Next file → `028_*.sql`.
+Current ceiling: `028_profile_locale.sql` (applied 2026-05-27). Next file → `029_*.sql`.
 
 ## Idempotency (REQUIRED)
 

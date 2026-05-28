@@ -1,6 +1,6 @@
 # i18n Plan — Mada Graphite
 
-Last updated: 2026-05-27.
+Last updated: 2026-05-28.
 Authoring rules: [`.cursor/rules/i18n.mdc`](../.cursor/rules/i18n.mdc).
 Database column: `profiles.locale` (migration 028).
 
@@ -141,14 +141,16 @@ regardless of UI locale.
 
 ## 5. Settings UI
 
-`/settings` now shows a Language section with a `<Select>` populated from
-`SUPPORTED_LOCALES`. Changing the value calls `setLocaleFromString`
-server action (`src/actions/profile.ts`) which:
+`/settings` shows a Language section with a `<Select>` populated from
+`SUPPORTED_LOCALES`. Two code paths:
 
-1. Updates `profiles.locale`.
-2. Writes the `mg-locale` cookie (1-year max-age).
-3. `revalidatePath('/', 'layout')` so the new dictionary loads on the
-   next render.
+| 情境 | 元件 | Server action | 行為 |
+|---|---|---|---|
+| 已登入 | `/settings` → `<LanguageSelector />` | `setLocaleFromString` → `updateProfileLocale` | 寫入 `profiles.locale` + `mg-locale` cookie |
+| 訪客 | Navbar / MobileNav → `<LocaleSwitcher />` | `setLocaleCookieOnly` | 僅寫 `mg-locale` cookie（不碰 DB） |
+
+Both paths call `revalidatePath('/', 'layout')` so the new dictionary loads on
+the next render.
 
 The selector reads the current value from `useLocale()` so the displayed
 state always matches the resolved locale.
