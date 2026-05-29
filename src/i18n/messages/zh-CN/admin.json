@@ -26,7 +26,8 @@
     },
     "badges": {
       "paymentsPending": "待审核付款",
-      "disputedOrders": "争议订单"
+      "disputedOrders": "争议订单",
+      "usersNeedsAction": "用户待处理"
     }
   },
   "error": {
@@ -51,6 +52,8 @@
       "disputedSub": "开启调解：查看时间线，必要时可强制变更状态。",
       "paymentsTitle": "{count, plural, other {# 笔付款待审核}}",
       "paymentsSub": "审核付款凭证后，订单将自动推进为已付款。",
+      "usersTitle": "{count, plural, other {# 位用户待处理}}",
+      "usersSub": "KYC 文件、待验证账户或资料不完整。",
       "badgeDisputed": "争议",
       "badgeReview": "审核"
     },
@@ -78,6 +81,32 @@
       "frozen": "用户已冻结。",
       "reactivated": "用户已恢复。",
       "roleUpdated": "角色已更新为 {role}。"
+    },
+    "filters": {
+      "searchPlaceholder": "搜索姓名、邮箱、公司、国家/地区…",
+      "needsAction": "待处理",
+      "clearFilters": "清除筛选",
+      "noResults": "没有符合当前筛选条件的用户。",
+      "summary": "显示 {shown} / {total} 位用户 · {needsAction} 位待处理",
+      "statusAll": "全部状态",
+      "roleAll": "全部角色",
+      "kycAll": "全部 KYC",
+      "kycPendingDocs": "文件待审核",
+      "sort": {
+        "attention": "待处理优先",
+        "joinedDesc": "最新注册",
+        "joinedAsc": "最早注册",
+        "nameAsc": "姓名 A–Z",
+        "companyAsc": "公司 A–Z"
+      },
+      "attention": {
+        "badge": "待处理",
+        "reason": {
+          "kycPending": "KYC 文件待审核",
+          "statusPending": "账户待邮箱验证",
+          "profileIncomplete": "资料缺少公司或国家/地区"
+        }
+      }
     },
     "kyc": {
       "button": "KYC",

@@ -24,6 +24,17 @@ export default async function AdminLayout({
   ];
 
   const badgeFor = (href: string): React.ReactNode => {
+    if (href === "/admin/users" && counts.usersNeedsAction > 0) {
+      return (
+        <Badge
+          variant="outline"
+          className="ml-auto h-5 min-w-5 px-1.5 border-[color:var(--gold)]/40 text-[color:var(--gold)]"
+          title={t("layout.badges.usersNeedsAction")}
+        >
+          {counts.usersNeedsAction}
+        </Badge>
+      );
+    }
     if (href === "/admin/payments" && counts.paymentsPending > 0) {
       return (
         <Badge

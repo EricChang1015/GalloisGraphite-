@@ -26,7 +26,8 @@
     },
     "badges": {
       "paymentsPending": "Payments awaiting review",
-      "disputedOrders": "Disputed orders"
+      "disputedOrders": "Disputed orders",
+      "usersNeedsAction": "Users needing review"
     }
   },
   "error": {
@@ -51,6 +52,8 @@
       "disputedSub": "Open mediation: review timeline + force-transition if needed.",
       "paymentsTitle": "{count, plural, one {# payment awaiting review} other {# payments awaiting review}}",
       "paymentsSub": "Verifying a proof automatically advances the order to paid.",
+      "usersTitle": "{count, plural, one {# user needs review} other {# users need review}}",
+      "usersSub": "KYC documents, pending accounts, or incomplete profiles.",
       "badgeDisputed": "Disputed",
       "badgeReview": "Review"
     },
@@ -78,6 +81,32 @@
       "frozen": "User frozen.",
       "reactivated": "User reactivated.",
       "roleUpdated": "Role updated to {role}."
+    },
+    "filters": {
+      "searchPlaceholder": "Search name, email, company, country…",
+      "needsAction": "Needs action",
+      "clearFilters": "Clear filters",
+      "noResults": "No users match the current filters.",
+      "summary": "{shown} of {total} users · {needsAction} need action",
+      "statusAll": "All statuses",
+      "roleAll": "All roles",
+      "kycAll": "All KYC",
+      "kycPendingDocs": "Docs pending review",
+      "sort": {
+        "attention": "Needs action first",
+        "joinedDesc": "Newest joined",
+        "joinedAsc": "Oldest joined",
+        "nameAsc": "Name A–Z",
+        "companyAsc": "Company A–Z"
+      },
+      "attention": {
+        "badge": "Action needed",
+        "reason": {
+          "kycPending": "KYC documents pending review",
+          "statusPending": "Account pending email verification",
+          "profileIncomplete": "Profile missing company or country"
+        }
+      }
     },
     "kyc": {
       "button": "KYC",

@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { countNeedsAction, enrichUserRow, type AdminUserRaw } from "@/lib/admin/user-list";
 import { findCommercialProfileGaps } from "@/lib/auth/commercial";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
@@ -315,11 +316,12 @@ export const getUserActionCounts = cache(
 export type AdminActionCounts = {
   paymentsPending: number;
   ordersDisputed: number;
+  usersNeedsAction: number;
 };
 
 export const getAdminActionCounts = cache(async (): Promise<AdminActionCounts> => {
   const admin = createAdminClient();
-  const [paymentsRes, disputedRes] = await Promise.all([
+  const [paymentsRes, disputedRes, profilesRes] = await Promise.all([
     admin
       .from("payments")
       .select("id", { count: "exact", head: true })
@@ -328,9 +330,19 @@ export const getAdminActionCounts = cache(async (): Promise<AdminActionCounts> =
       .from("orders")
       .select("id", { count: "exact", head: true })
       .eq("status", "disputed"),
+    admin
+      .from("profiles")
+      .select("id, email, full_name, company_name, country, role, status, kyc_level, kyc_docs, phone_verified_at, created_at")
+      .returns<AdminUserRaw[]>(),
   ]);
+
+  const usersNeedsAction = countNeedsAction(
+    (profilesRes.data ?? []).map(enrichUserRow)
+  );
+
   return {
     paymentsPending: paymentsRes.count ?? 0,
     ordersDisputed: disputedRes.count ?? 0,
+    usersNeedsAction,
   };
 });

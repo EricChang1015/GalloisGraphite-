@@ -35,10 +35,13 @@ export default async function AdminDashboard() {
       label: t("dashboard.stats.totalUsers"),
       value: usersRes.count ?? 0,
       icon: UsersIcon,
-      href: "/admin/users",
+      href:
+        counts.usersNeedsAction > 0
+          ? "/admin/users?attention=needs_action&sort=attention"
+          : "/admin/users",
       color: "text-blue-400",
-      alert: false as const,
-      alertTone: "info" as const,
+      alert: counts.usersNeedsAction > 0,
+      alertTone: "warning" as const,
     },
     {
       label: t("dashboard.stats.totalOrders"),
@@ -94,6 +97,15 @@ export default async function AdminDashboard() {
       href: "/admin/payments",
       title: t("dashboard.priority.paymentsTitle", { count: counts.paymentsPending }),
       sub: t("dashboard.priority.paymentsSub"),
+      tone: "gold",
+    });
+  }
+  if (counts.usersNeedsAction > 0) {
+    priorities.push({
+      key: "users",
+      href: "/admin/users?attention=needs_action&sort=attention",
+      title: t("dashboard.priority.usersTitle", { count: counts.usersNeedsAction }),
+      sub: t("dashboard.priority.usersSub"),
       tone: "gold",
     });
   }
