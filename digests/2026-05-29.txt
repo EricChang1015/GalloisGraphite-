@@ -1,0 +1,14 @@
+*Mada Graphite — 每日工程摘要*
+*涵蓋期間：* 2026-05-28 17:02 UTC → 2026-05-29 17:02 UTC
+
+*資料來源：* `origin/main` 共 **4 commits**、**1 個 merged PR**（[#17](https://github.com/EricChang1015/GalloisGraphite-/pull/17)，2026-05-29T03:33:32Z）；視窗內 `35` 檔、`+2289/-553` 行（`git log` / `git diff` 統計）。
+
+• *新聞後台分支合併 + 直向友善 UI（PR #17）* — `db9ba26` 將 `cursor/news-aggregation-admin-2fbc` 併入 `main`（含 `029_news_aggregation.sql`、Admin Poe 抓取/審核工作流、`news_translations`）；[#17](https://github.com/EricChang1015/GalloisGraphite-/pull/17) 為 `/admin/news` 新增直向卡片列表、可橫捲狀態分頁與全寬操作鈕（`NewsArticleViews.tsx`、`NewsAdminTabs.tsx`），方便手機審稿。
+• *Admin 控制台 i18n（en + zh-CN）* — `0447ca2`（26 檔、`+1414/-452`）：新增 `admin.json` 命名空間並將 `/admin/**` 與相關元件改為 `next-intl`；`enums.json` 補齊後台用狀態/角色標籤。合約 HTML、email、server-action 錯誤訊息仍英文（`.cursor/rules/i18n.mdc`）。
+• *使用者管理：篩選與待辦優先排序* — `7eb81d4`：`/admin/users` 新增搜尋、角色/狀態/KYC 待審、預設「需關注」排序（`user-list.ts` 依 KYC 待審文件、`status=pending`、資料不全計分）；`AdminUsersToolbar.tsx` + URL query 同步；側欄待審 KYC 計數改為與列表一致（`notifications/counts.ts`）。
+• *開發工具：終止殘留 dev server* — `7b86665` 新增 `npm run stop` / `scripts/stop-server.mjs`，並更新 `AGENTS.md`、browser-testing skill，避免 port 3000 殘留導致煙測與 DB 連線混淆。
+
+*Watchlist*
+• **Migration 029**：若環境尚未跑過昨日 PR #16 的 schema，合併後仍需 `npm run db:migrate` + `npm run db:types`；否則 Admin 新聞與多語公開頁會缺 `news.status` / `news_translations`。
+• **Admin i18n 回歸面**：單次大面積字串替換（含訂單詳情、付款覆審、KYC 對話框）；尚無專用 admin locale 煙測，建議以 `mg-locale=zh-CN` 走一輪 KYC/新聞/付款關鍵路徑並跑 `npm run qa:check-dev`。
+• **使用者列表擴展性**：篩選/排序在伺服器取回全量 `profiles` 後於記憶體處理（`filterUsers` / `sortUsers`）；使用者數成長後可能需分頁或 DB 端篩選。
