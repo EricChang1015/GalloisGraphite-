@@ -2,13 +2,13 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { updateKycThresholds } from "@/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { KYC_LEVEL_LABELS } from "@/lib/kyc/types";
 
 interface Props {
   inquiryMinLevel: number;
@@ -20,6 +20,8 @@ export function KycThresholdSettings({
   listingMinLevel,
 }: Props) {
   const router = useRouter();
+  const t = useTranslations("admin");
+  const tEnums = useTranslations("enums");
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -37,21 +39,17 @@ export function KycThresholdSettings({
         toast.error(result.error.message);
         return;
       }
-      toast.success("KYC thresholds updated.");
+      toast.success(t("settings.kycGates.updated"));
       router.refresh();
     });
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Minimum <code className="text-xs">profiles.kyc_level</code> required
-        for each action. Set both to <strong>0</strong> during tuning so all
-        active users can trade; raise to 1+ when you want documents on file.
-      </p>
+      <p className="text-sm text-muted-foreground">{t("settings.kycGates.intro")}</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="inquiryMinLevel">Submit inquiry (buyers)</Label>
+          <Label htmlFor="inquiryMinLevel">{t("settings.kycGates.inquiry")}</Label>
           <Input
             id="inquiryMinLevel"
             name="inquiryMinLevel"
@@ -63,7 +61,7 @@ export function KycThresholdSettings({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="listingMinLevel">Create listing (sellers)</Label>
+          <Label htmlFor="listingMinLevel">{t("settings.kycGates.listing")}</Label>
           <Input
             id="listingMinLevel"
             name="listingMinLevel"
@@ -76,14 +74,17 @@ export function KycThresholdSettings({
         </div>
       </div>
       <ul className="text-xs text-muted-foreground space-y-1">
-        {Object.entries(KYC_LEVEL_LABELS).map(([level, label]) => (
+        {([0, 1, 2, 3] as const).map((level) => (
           <li key={level}>
-            Level {level}: {label}
+            {t("settings.kycGates.levelLine", {
+              level,
+              label: tEnums(`kyc.level.${level}`),
+            })}
           </li>
         ))}
       </ul>
       <Button type="submit" disabled={isPending}>
-        Save KYC thresholds
+        {t("settings.kycGates.save")}
       </Button>
     </form>
   );

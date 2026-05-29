@@ -5,21 +5,23 @@ import {
   CreditCardIcon,
   AlertOctagonIcon,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminActionCounts } from "@/lib/notifications/counts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-export const metadata = { title: "Admin Dashboard — Mada Graphite" };
+export async function generateMetadata() {
+  const t = await getTranslations("admin");
+  return { title: `${t("meta.dashboard")} — Mada Graphite` };
+}
 
-// The dashboard renders live action-required counters; never serve a stale
-// static copy. Verifying a payment from /admin/payments revalidates /admin,
-// but we also need to make sure the very first load isn't cached.
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function AdminDashboard() {
+  const t = await getTranslations("admin");
   const admin = createAdminClient();
 
   const [usersRes, ordersRes, counts] = await Promise.all([
@@ -30,7 +32,7 @@ export default async function AdminDashboard() {
 
   const stats = [
     {
-      label: "Total Users",
+      label: t("dashboard.stats.totalUsers"),
       value: usersRes.count ?? 0,
       icon: UsersIcon,
       href: "/admin/users",
@@ -39,7 +41,7 @@ export default async function AdminDashboard() {
       alertTone: "info" as const,
     },
     {
-      label: "Total Orders",
+      label: t("dashboard.stats.totalOrders"),
       value: ordersRes.count ?? 0,
       icon: PackageIcon,
       href: "/admin/orders",
@@ -48,7 +50,7 @@ export default async function AdminDashboard() {
       alertTone: "info" as const,
     },
     {
-      label: "Disputed Orders",
+      label: t("dashboard.stats.disputedOrders"),
       value: counts.ordersDisputed,
       icon: AlertOctagonIcon,
       href: "/admin/orders?status=disputed",
@@ -57,7 +59,7 @@ export default async function AdminDashboard() {
       alertTone: "destructive" as const,
     },
     {
-      label: "Payments Pending",
+      label: t("dashboard.stats.paymentsPending"),
       value: counts.paymentsPending,
       icon: CreditCardIcon,
       href: "/admin/payments",
@@ -81,8 +83,8 @@ export default async function AdminDashboard() {
     priorities.push({
       key: "disputed",
       href: "/admin/orders?status=disputed",
-      title: `${counts.ordersDisputed} disputed order${counts.ordersDisputed === 1 ? "" : "s"}`,
-      sub: "Open mediation: review timeline + force-transition if needed.",
+      title: t("dashboard.priority.disputedTitle", { count: counts.ordersDisputed }),
+      sub: t("dashboard.priority.disputedSub"),
       tone: "red",
     });
   }
@@ -90,8 +92,8 @@ export default async function AdminDashboard() {
     priorities.push({
       key: "payments",
       href: "/admin/payments",
-      title: `${counts.paymentsPending} payment${counts.paymentsPending === 1 ? "" : "s"} awaiting review`,
-      sub: "Verifying a proof automatically advances the order to paid.",
+      title: t("dashboard.priority.paymentsTitle", { count: counts.paymentsPending }),
+      sub: t("dashboard.priority.paymentsSub"),
       tone: "gold",
     });
   }
@@ -99,10 +101,8 @@ export default async function AdminDashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Platform overview and the items waiting on the admin team.
-        </p>
+        <h1 className="text-2xl font-semibold">{t("dashboard.title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("dashboard.subtitle")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -133,9 +133,7 @@ export default async function AdminDashboard() {
                             : "text-xs border-[color:var(--gold)]/40 text-[color:var(--gold)]"
                         }
                       >
-                        {stat.alertTone === "destructive"
-                          ? "Action needed"
-                          : "Action needed"}
+                        {t("dashboard.actionNeeded")}
                       </Badge>
                     )}
                   </div>
@@ -151,10 +149,10 @@ export default async function AdminDashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <span className="text-[color:var(--gold)]">⭐</span>
-              Priority Actions
+              {t("dashboard.priority.title")}
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              Items waiting on the admin team.
+              {t("dashboard.priority.subtitle")}
             </p>
           </CardHeader>
           <CardContent>
@@ -177,7 +175,9 @@ export default async function AdminDashboard() {
                         : "shrink-0 border-[color:var(--gold)]/40 text-[color:var(--gold)]"
                     }
                   >
-                    {p.tone === "red" ? "Disputed" : "Review"}
+                    {p.tone === "red"
+                      ? t("dashboard.priority.badgeDisputed")
+                      : t("dashboard.priority.badgeReview")}
                   </Badge>
                 </Link>
               ))}
@@ -186,22 +186,25 @@ export default async function AdminDashboard() {
         </Card>
       ) : (
         <div className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground mb-1">All caught up</p>
+          <p className="font-medium text-foreground mb-1">{t("dashboard.caughtUp.title")}</p>
           <p>
-            No disputed orders and no pending payments to review. Use the
-            sidebar to manage{" "}
-            <Link href="/admin/users" className="text-primary underline">
-              users
-            </Link>
-            ,{" "}
-            <Link href="/admin/categories" className="text-primary underline">
-              categories
-            </Link>
-            , or{" "}
-            <Link href="/admin/news" className="text-primary underline">
-              news
-            </Link>
-            .
+            {t.rich("dashboard.caughtUp.body", {
+              usersLink: (chunks) => (
+                <Link href="/admin/users" className="text-primary underline">
+                  {chunks}
+                </Link>
+              ),
+              categoriesLink: (chunks) => (
+                <Link href="/admin/categories" className="text-primary underline">
+                  {chunks}
+                </Link>
+              ),
+              newsLink: (chunks) => (
+                <Link href="/admin/news" className="text-primary underline">
+                  {chunks}
+                </Link>
+              ),
+            })}
           </p>
         </div>
       )}

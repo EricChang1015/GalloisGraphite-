@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,9 +16,14 @@ import { UserKycDialog } from "@/components/admin/UserKycDialog";
 import { parseKycDocs, summarizeKycDocs } from "@/lib/kyc/types";
 import type { Json } from "@/types/database";
 
-export const metadata = { title: "Admin · Users" };
+export async function generateMetadata() {
+  const t = await getTranslations("admin");
+  return { title: `${t("meta.users")} — Mada Graphite` };
+}
 
 export default async function AdminUsersPage() {
+  const t = await getTranslations("admin");
+  const tEnums = await getTranslations("enums");
   const admin = createAdminClient();
 
   const { data: users } = await admin
@@ -55,24 +62,22 @@ export default async function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Users</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage user roles and account status.
-        </p>
+        <h1 className="text-2xl font-semibold">{t("users.title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("users.subtitle")}</p>
       </div>
 
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead>Country</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>KYC</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>{t("users.table.user")}</TableHead>
+              <TableHead>{t("users.table.company")}</TableHead>
+              <TableHead>{t("users.table.country")}</TableHead>
+              <TableHead>{t("users.table.role")}</TableHead>
+              <TableHead>{t("users.table.status")}</TableHead>
+              <TableHead>{t("users.table.kyc")}</TableHead>
+              <TableHead>{t("users.table.joined")}</TableHead>
+              <TableHead>{t("users.table.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -86,12 +91,12 @@ export default async function AdminUsersPage() {
                 <TableCell className="text-sm text-muted-foreground">{u.country || "—"}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className={roleColor[u.role] ?? ""}>
-                    {u.role}
+                    {tEnums(`role.${u.role as "buyer" | "seller" | "admin" | "super_admin"}`)}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className={statusColor[u.status] ?? ""}>
-                    {u.status}
+                    {tEnums(`accountStatus.${u.status as "active" | "pending" | "frozen"}`)}
                   </Badge>
                 </TableCell>
                 <TableCell>

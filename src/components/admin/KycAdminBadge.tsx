@@ -1,9 +1,7 @@
+import { getTranslations } from "next-intl/server";
+
 import { Badge } from "@/components/ui/badge";
-import {
-  KYC_LEVEL_LABELS,
-  parseKycDocs,
-  summarizeKycDocs,
-} from "@/lib/kyc/types";
+import { parseKycDocs, summarizeKycDocs } from "@/lib/kyc/types";
 import type { Json } from "@/types/database";
 
 interface Props {
@@ -12,9 +10,14 @@ interface Props {
   phoneVerifiedAt: string | null;
 }
 
-export function KycAdminBadge({ kycLevel, kycDocs, phoneVerifiedAt }: Props) {
+export async function KycAdminBadge({ kycLevel, kycDocs, phoneVerifiedAt }: Props) {
+  const t = await getTranslations("admin");
+  const tEnums = await getTranslations("enums");
   const summary = summarizeKycDocs(parseKycDocs(kycDocs));
-  const label = KYC_LEVEL_LABELS[kycLevel] ?? `Level ${kycLevel}`;
+  const label =
+    kycLevel >= 0 && kycLevel <= 3
+      ? tEnums(`kyc.level.${kycLevel as 0 | 1 | 2 | 3}`)
+      : tEnums("kyc.levelLabel", { level: kycLevel });
 
   return (
     <div className="space-y-1">
@@ -25,17 +28,20 @@ export function KycAdminBadge({ kycLevel, kycDocs, phoneVerifiedAt }: Props) {
       <div className="flex flex-wrap gap-1">
         {phoneVerifiedAt ? (
           <Badge variant="outline" className="text-[10px] text-green-400 border-green-400/40">
-            Phone ✓
+            {t("users.kyc.phoneBadge")}
           </Badge>
         ) : null}
         {summary.pending > 0 ? (
           <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-400/40">
-            {summary.pending} doc{summary.pending > 1 ? "s" : ""} pending
+            {t("users.kyc.docsPending", { count: summary.pending })}
           </Badge>
         ) : null}
         {summary.total > 0 && summary.pending === 0 ? (
           <Badge variant="outline" className="text-[10px]">
-            {summary.approved}/{summary.total} docs
+            {t("users.kyc.docsApprovedCount", {
+              approved: summary.approved,
+              total: summary.total,
+            })}
           </Badge>
         ) : null}
       </div>

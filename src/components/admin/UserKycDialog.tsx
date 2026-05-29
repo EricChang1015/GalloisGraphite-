@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { FileCheck, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { KYC_LEVEL_LABELS, KYC_MAX_LEVEL } from "@/lib/kyc/types";
+import { KYC_MAX_LEVEL } from "@/lib/kyc/types";
 
 interface Props {
   userId: string;
@@ -50,6 +51,9 @@ export function UserKycDialog({
   pendingDocCount,
 }: Props) {
   const router = useRouter();
+  const t = useTranslations("admin");
+  const tEnums = useTranslations("enums");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [kycLevel, setKycLevel] = useState(String(currentKycLevel));
   const [documents, setDocuments] = useState<DocWithUrl[]>([]);
@@ -89,7 +93,7 @@ export function UserKycDialog({
         toast.error(result.error.message);
         return;
       }
-      toast.success("KYC level updated.");
+      toast.success(t("users.kyc.levelUpdated"));
       setOpen(false);
       router.refresh();
     });
@@ -105,7 +109,9 @@ export function UserKycDialog({
         toast.error(result.error.message);
         return;
       }
-      toast.success(`Documents approved. User is now level ${result.data?.kycLevel ?? 2}.`);
+      toast.success(
+        t("users.kyc.docsApproved", { level: result.data?.kycLevel ?? 2 })
+      );
       setOpen(false);
       router.refresh();
     });
@@ -126,22 +132,21 @@ export function UserKycDialog({
         }
       >
         <ShieldCheck className="size-3" />
-        KYC
+        {t("users.kyc.button")}
         {pendingDocCount > 0 ? ` (${pendingDocCount})` : ""}
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>KYC — {userLabel}</DialogTitle>
+          <DialogTitle>{t("users.kyc.dialogTitle", { user: userLabel })}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           {pendingCount > 0 ? (
             <div className="rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm">
               <p className="font-medium text-amber-200">
-                {pendingCount} document{pendingCount > 1 ? "s" : ""} awaiting review
+                {t("users.kyc.pendingBanner", { count: pendingCount })}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Approve to grant Level 2 (identity verified). Phone verification
-                is not required first.
+                {t("users.kyc.pendingHint")}
               </p>
               <Button
                 type="button"
@@ -151,26 +156,26 @@ export function UserKycDialog({
                 onClick={handleApproveDocs}
               >
                 <FileCheck className="size-3" />
-                Approve documents → Level 2
+                {t("users.kyc.approveDocs")}
               </Button>
             </div>
           ) : null}
 
           <div className="text-sm space-y-1 rounded-md border px-3 py-2">
             <p>
-              <span className="text-muted-foreground">Phone:</span>{" "}
+              <span className="text-muted-foreground">{t("users.kyc.phone")}</span>{" "}
               {phone ?? "—"}
             </p>
             <p>
-              <span className="text-muted-foreground">Phone verified:</span>{" "}
+              <span className="text-muted-foreground">{t("users.kyc.phoneVerified")}</span>{" "}
               {phoneVerifiedAt
                 ? new Date(phoneVerifiedAt).toLocaleString()
-                : "No"}
+                : t("users.kyc.phoneVerifiedNo")}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`kyc-level-${userId}`}>KYC level (admin override)</Label>
+            <Label htmlFor={`kyc-level-${userId}`}>{t("users.kyc.levelOverride")}</Label>
             <Select
               value={kycLevel}
               onValueChange={(v) => {
@@ -183,24 +188,20 @@ export function UserKycDialog({
               <SelectContent>
                 {Array.from({ length: KYC_MAX_LEVEL + 1 }, (_, n) => n).map((n) => (
                   <SelectItem key={n} value={String(n)}>
-                    {n} — {KYC_LEVEL_LABELS[n]}
+                    {n} — {tEnums(`kyc.level.${n as 0 | 1 | 2 | 3}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Level 3 is for trusted sellers (e.g. listing gate). Document
-              approval sets level 2; phone OTP sets level 1. All changes are
-              logged in audit_logs.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("users.kyc.levelHint")}</p>
           </div>
 
           <div className="space-y-2">
-            <Label>Uploaded documents</Label>
+            <Label>{t("users.kyc.uploadedDocs")}</Label>
             {loading ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
+              <p className="text-sm text-muted-foreground">{tCommon("actions.loading")}</p>
             ) : documents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No documents on file.</p>
+              <p className="text-sm text-muted-foreground">{t("users.kyc.noDocs")}</p>
             ) : (
               <ul className="space-y-2 text-sm">
                 {documents.map((doc) => (
@@ -219,10 +220,10 @@ export function UserKycDialog({
                         rel="noopener noreferrer"
                         className="text-xs text-primary underline underline-offset-4"
                       >
-                        View file
+                        {t("users.kyc.viewFile")}
                       </a>
                     ) : (
-                      <p className="text-xs text-amber-400">Signed URL unavailable</p>
+                      <p className="text-xs text-amber-400">{t("users.kyc.signedUrlUnavailable")}</p>
                     )}
                   </li>
                 ))}
@@ -231,7 +232,7 @@ export function UserKycDialog({
           </div>
 
           <Button type="button" onClick={handleSave} disabled={isPending}>
-            Save KYC level
+            {t("users.kyc.saveLevel")}
           </Button>
         </div>
       </DialogContent>

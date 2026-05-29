@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -79,6 +80,8 @@ export function NewsFormDialog({
   className?: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -99,7 +102,7 @@ export function NewsFormDialog({
     startTransition(async () => {
       const result = await upsertNews(values);
       if (result.error) { toast.error(result.error.message); return; }
-      toast.success(existing ? "Article updated." : "Article created.");
+      toast.success(existing ? t("news.form.updated") : t("news.form.created"));
       setOpen(false);
       router.refresh();
     });
@@ -117,14 +120,14 @@ export function NewsFormDialog({
         }
       >
         {existing ? (
-          <><PencilIcon className="w-3 h-3 mr-1" />Edit</>
+          <><PencilIcon className="w-3 h-3 mr-1" />{tCommon("actions.edit")}</>
         ) : (
-          <><PlusIcon className="w-4 h-4 mr-2" />Manual article</>
+          <><PlusIcon className="w-4 h-4 mr-2" />{t("news.manualArticle")}</>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[min(90vh,720px)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{existing ? "Edit Article" : "New Article"}</DialogTitle>
+          <DialogTitle>{existing ? t("news.form.editArticle") : t("news.form.newArticle")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
@@ -133,7 +136,7 @@ export function NewsFormDialog({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>{t("news.form.title")}</FormLabel>
                   <FormControl><Input {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -144,8 +147,8 @@ export function NewsFormDialog({
               name="slug"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Slug</FormLabel>
-                  <FormControl><Input placeholder="my-article-slug" {...field} /></FormControl>
+                  <FormLabel>{t("news.form.slug")}</FormLabel>
+                  <FormControl><Input placeholder={t("news.form.slugPlaceholder")} {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -155,7 +158,7 @@ export function NewsFormDialog({
               name="cover_image_url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Cover Image URL (optional)</FormLabel>
+                  <FormLabel>{t("news.form.coverUrl")}</FormLabel>
                   <FormControl><Input type="url" placeholder="https://..." {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -166,7 +169,7 @@ export function NewsFormDialog({
               name="summary"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Summary</FormLabel>
+                  <FormLabel>{t("news.form.summary")}</FormLabel>
                   <FormControl><Textarea rows={2} {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -177,7 +180,7 @@ export function NewsFormDialog({
               name="content_html"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Content (HTML)</FormLabel>
+                  <FormLabel>{t("news.form.contentHtml")}</FormLabel>
                   <FormControl><Textarea rows={8} className="font-mono text-xs" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -196,14 +199,14 @@ export function NewsFormDialog({
                       className="h-4 w-4"
                     />
                   </FormControl>
-                  <FormLabel className="!mt-0">Publish immediately</FormLabel>
+                  <FormLabel className="!mt-0">{t("news.form.publishImmediately")}</FormLabel>
                 </FormItem>
               )}
             />
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>{tCommon("actions.cancel")}</Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Saving…" : "Save"}
+                {isPending ? tCommon("actions.saving") : tCommon("actions.save")}
               </Button>
             </div>
           </form>
@@ -223,6 +226,8 @@ type CandidateState = FetchedCandidate & {
 
 export function FetchNewsButton({ className }: { className?: string }) {
   const router = useRouter();
+  const t = useTranslations("admin");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [isImporting, startImporting] = useTransition();
@@ -259,10 +264,13 @@ export function FetchNewsButton({ className }: { className?: string }) {
         }))
       );
       if (res.data.candidates.length === 0) {
-        toast.info("Model returned no candidates.");
+        toast.info(t("news.fetch.noCandidatesReturned"));
       } else {
         toast.success(
-          `Fetched ${res.data.fetched_count} candidates (${res.data.duplicate_count} duplicate).`
+          t("news.fetch.fetchedSummary", {
+            count: res.data.fetched_count,
+            duplicates: res.data.duplicate_count,
+          })
         );
       }
     } catch (err) {
@@ -290,7 +298,7 @@ export function FetchNewsButton({ className }: { className?: string }) {
     if (!batchId) return;
     const picked = candidates.filter((c) => c.selected);
     if (picked.length === 0) {
-      toast.error("Pick at least one candidate.");
+      toast.error(t("news.fetch.pickOne"));
       return;
     }
     startImporting(async () => {
@@ -310,7 +318,10 @@ export function FetchNewsButton({ className }: { className?: string }) {
         return;
       }
       toast.success(
-        `Imported ${res.data.inserted_count} (skipped ${res.data.skipped_count}).`
+        t("news.fetch.importedSummary", {
+          inserted: res.data.inserted_count,
+          skipped: res.data.skipped_count,
+        })
       );
       setOpen(false);
       setCandidates([]);
@@ -323,16 +334,16 @@ export function FetchNewsButton({ className }: { className?: string }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button size="sm" className={className} />}>
         <DownloadIcon className="w-4 h-4 mr-2" />
-        Fetch latest news
+        {t("news.fetchLatest")}
       </DialogTrigger>
       <DialogContent className="max-h-[min(92vh,800px)] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Fetch news candidates</DialogTitle>
+          <DialogTitle>{t("news.fetch.dialogTitle")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted-foreground">Lookback (days)</label>
+            <label className="text-xs text-muted-foreground">{t("news.fetch.lookback")}</label>
             <Input
               type="number"
               min={1}
@@ -343,7 +354,7 @@ export function FetchNewsButton({ className }: { className?: string }) {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted-foreground">Max items</label>
+            <label className="text-xs text-muted-foreground">{t("news.fetch.maxItems")}</label>
             <Input
               type="number"
               min={3}
@@ -355,15 +366,17 @@ export function FetchNewsButton({ className }: { className?: string }) {
           </div>
           <Button onClick={runFetch} disabled={isFetching} size="sm">
             {isFetching ? (
-              <><Loader2Icon className="w-4 h-4 mr-2 animate-spin" />Asking LLM…</>
+              <><Loader2Icon className="w-4 h-4 mr-2 animate-spin" />{t("news.fetch.askingLlm")}</>
             ) : (
-              <><DownloadIcon className="w-4 h-4 mr-2" />Fetch</>
+              <><DownloadIcon className="w-4 h-4 mr-2" />{t("news.fetch.fetch")}</>
             )}
           </Button>
           {meta && (
             <p className="text-xs text-muted-foreground ml-auto">
-              Model <span className="font-mono">{meta.model}</span> · tokens{" "}
-              {meta.promptTokens + meta.completionTokens}
+              {t("news.fetch.modelTokens", {
+                model: meta.model,
+                tokens: meta.promptTokens + meta.completionTokens,
+              })}
             </p>
           )}
         </div>
@@ -371,7 +384,7 @@ export function FetchNewsButton({ className }: { className?: string }) {
         <div className="max-h-[55vh] overflow-y-auto rounded-md border border-border divide-y divide-border">
           {candidates.length === 0 ? (
             <div className="p-10 text-center text-sm text-muted-foreground">
-              {isFetching ? "Searching the web…" : "No candidates yet. Click Fetch."}
+              {isFetching ? t("news.fetch.searching") : t("news.fetch.noCandidates")}
             </div>
           ) : (
             candidates.map((c, idx) => (
@@ -389,12 +402,14 @@ export function FetchNewsButton({ className }: { className?: string }) {
                     <h4 className="font-medium text-sm leading-snug">{c.title}</h4>
                     {c.duplicate && (
                       <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-400/40">
-                        Already in DB ({c.duplicate_of?.status ?? "?"})
+                        {t("news.fetch.duplicateBadge", {
+                          status: c.duplicate_of?.status ?? "?",
+                        })}
                       </Badge>
                     )}
                     {typeof c.relevance_score === "number" && (
                       <Badge variant="outline" className="text-[10px]">
-                        score {c.relevance_score.toFixed(2)}
+                        {t("news.fetch.scoreBadge", { score: c.relevance_score.toFixed(2) })}
                       </Badge>
                     )}
                   </div>
@@ -420,15 +435,15 @@ export function FetchNewsButton({ className }: { className?: string }) {
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => selectAll(true)} disabled={candidates.length === 0}>
-              Select all new
+              {t("news.fetch.selectAllNew")}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => selectAll(false, false)} disabled={candidates.length === 0}>
-              Clear
+              {t("news.fetch.clear")}
             </Button>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-              Cancel
+              {tCommon("actions.cancel")}
             </Button>
             <Button
               size="sm"
@@ -436,9 +451,9 @@ export function FetchNewsButton({ className }: { className?: string }) {
               disabled={isImporting || candidates.length === 0 || !batchId}
             >
               {isImporting ? (
-                <><Loader2Icon className="w-4 h-4 mr-2 animate-spin" />Importing…</>
+                <><Loader2Icon className="w-4 h-4 mr-2 animate-spin" />{t("news.fetch.importing")}</>
               ) : (
-                <>Import {candidates.filter((c) => c.selected).length} → Pending</>
+                <>{t("news.fetch.import", { count: candidates.filter((c) => c.selected).length })}</>
               )}
             </Button>
           </div>
@@ -460,6 +475,8 @@ export function NewsRowActions({
   compact?: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
+  const tCommon = useTranslations("common");
   const [isPending, startTransition] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [translateOpen, setTranslateOpen] = useState(false);
@@ -471,7 +488,7 @@ export function NewsRowActions({
     startTransition(async () => {
       const res = await approveNewsArticleAction({ news_id: article.id });
       if (res.error) { toast.error(res.error.message); return; }
-      toast.success("Published.");
+      toast.success(t("news.actions.published"));
       router.refresh();
     });
   }
@@ -480,7 +497,7 @@ export function NewsRowActions({
     startTransition(async () => {
       const res = await unpublishNewsArticleAction(article.id);
       if (res.error) { toast.error(res.error.message); return; }
-      toast.success("Moved back to pending.");
+      toast.success(t("news.actions.movedToPending"));
       router.refresh();
     });
   }
@@ -499,7 +516,7 @@ export function NewsRowActions({
           onClick={approve}
           disabled={isPending}
         >
-          <CheckIcon className="w-3 h-3 mr-1" />Approve
+          <CheckIcon className="w-3 h-3 mr-1" />{t("news.actions.approve")}
         </Button>
       )}
       {status === "pending" && (
@@ -513,7 +530,7 @@ export function NewsRowActions({
           onClick={() => setRejectOpen(true)}
           disabled={isPending}
         >
-          <XIcon className="w-3 h-3 mr-1" />Reject
+          <XIcon className="w-3 h-3 mr-1" />{t("news.actions.reject")}
         </Button>
       )}
       {status === "published" && (
@@ -524,7 +541,7 @@ export function NewsRowActions({
           onClick={unpublish}
           disabled={isPending}
         >
-          <ArchiveIcon className="w-3 h-3 mr-1" />Unpublish
+          <ArchiveIcon className="w-3 h-3 mr-1" />{t("news.actions.unpublish")}
         </Button>
       )}
       <Button
@@ -533,7 +550,7 @@ export function NewsRowActions({
         className={actionBtnClass}
         onClick={() => setTranslateOpen(true)}
       >
-        <LanguagesIcon className="w-3 h-3 mr-1" />Translate
+        <LanguagesIcon className="w-3 h-3 mr-1" />{t("news.actions.translate")}
       </Button>
       <NewsFormDialog
         className={compact ? "col-span-2 h-9 w-full justify-center text-xs" : undefined}
@@ -573,6 +590,8 @@ function RejectDialog({
   newsId: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
+  const tCommon = useTranslations("common");
   const [reason, setReason] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -583,7 +602,7 @@ function RejectDialog({
         reason: reason || null,
       });
       if (res.error) { toast.error(res.error.message); return; }
-      toast.success("Rejected. (Hash kept for future dedup.)");
+      toast.success(t("news.actions.rejectedToast"));
       onOpenChange(false);
       setReason("");
       router.refresh();
@@ -594,25 +613,21 @@ function RejectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reject article</DialogTitle>
+          <DialogTitle>{t("news.reject.title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">
-            The article will be hidden from the public site but kept in the
-            database so the same source URL / title is auto-skipped on future
-            fetches.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("news.reject.hint")}</p>
           <Textarea
-            placeholder="Reason (optional, e.g. off-topic, low quality, duplicate event)"
+            placeholder={t("news.reject.reasonPlaceholder")}
             rows={3}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>{tCommon("actions.cancel")}</Button>
           <Button variant="destructive" size="sm" onClick={submit} disabled={isPending}>
-            {isPending ? "Rejecting…" : "Reject"}
+            {isPending ? t("news.reject.rejecting") : t("news.actions.reject")}
           </Button>
         </div>
       </DialogContent>
@@ -630,6 +645,8 @@ function TranslateDialog({
   article: NewsArticle;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
+  const tCommon = useTranslations("common");
   const [pendingLocale, setPendingLocale] = useState<Locale | null>(null);
   const existingLocales = new Set((article.translations ?? []).map((t) => t.locale));
 
@@ -647,7 +664,7 @@ function TranslateDialog({
         toast.error(res.error?.message ?? "Translation failed.");
         return;
       }
-      toast.success(`Translated to ${locale}.`);
+      toast.success(t("news.translate.success", { locale }));
       router.refresh();
     } finally {
       setPendingLocale(null);
@@ -658,12 +675,9 @@ function TranslateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Translate article</DialogTitle>
+          <DialogTitle>{t("news.translate.title")}</DialogTitle>
         </DialogHeader>
-        <p className="text-xs text-muted-foreground mb-3">
-          Triggers one Poe call per language. Existing translations are
-          overwritten when you click again.
-        </p>
+        <p className="text-xs text-muted-foreground mb-3">{t("news.translate.hint")}</p>
         <div className="space-y-2">
           {translatable.map((loc) => {
             const have = existingLocales.has(loc);
@@ -674,7 +688,7 @@ function TranslateDialog({
                   <span className="font-mono text-xs">{loc}</span>
                   {have && (
                     <Badge variant="outline" className="text-[10px] text-green-400 border-green-400/40">
-                      done
+                      {t("news.translate.done")}
                     </Badge>
                   )}
                 </div>
@@ -686,11 +700,11 @@ function TranslateDialog({
                   disabled={busy || pendingLocale !== null}
                 >
                   {busy ? (
-                    <><Loader2Icon className="w-3 h-3 mr-1 animate-spin" />Translating…</>
+                    <><Loader2Icon className="w-3 h-3 mr-1 animate-spin" />{t("news.translate.translating")}</>
                   ) : have ? (
-                    "Retranslate"
+                    t("news.translate.retranslate")
                   ) : (
-                    "Translate"
+                    t("news.actions.translate")
                   )}
                 </Button>
               </div>
@@ -698,7 +712,7 @@ function TranslateDialog({
           })}
         </div>
         <div className="flex justify-end pt-2">
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>{tCommon("actions.close")}</Button>
         </div>
       </DialogContent>
     </Dialog>

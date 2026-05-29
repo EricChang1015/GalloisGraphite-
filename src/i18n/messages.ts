@@ -33,6 +33,7 @@ const NAMESPACES = [
   "orders",
   "enums",
   "errors",
+  "admin",
 ] as const;
 
 type Namespace = (typeof NAMESPACES)[number];

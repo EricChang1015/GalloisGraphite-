@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -44,15 +46,17 @@ function articlePayload(row: AdminNewsRow) {
   };
 }
 
-function NewsEmptyState() {
+async function NewsEmptyState() {
+  const t = await getTranslations("admin");
   return (
     <div className="rounded-md border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-      Nothing here yet.
+      {t("news.empty")}
     </div>
   );
 }
 
-export function NewsStatusBadge({ status }: { status: AdminNewsRow["status"] }) {
+export async function NewsStatusBadge({ status }: { status: AdminNewsRow["status"] }) {
+  const tEnums = await getTranslations("enums");
   const style: Record<AdminNewsRow["status"], string> = {
     draft: "text-muted-foreground",
     pending: "text-[color:var(--gold)] border-[color:var(--gold)]/40",
@@ -62,7 +66,7 @@ export function NewsStatusBadge({ status }: { status: AdminNewsRow["status"] }) 
   };
   return (
     <Badge variant="outline" className={style[status]}>
-      {status}
+      {tEnums(`news.status.${status}`)}
     </Badge>
   );
 }
@@ -73,9 +77,9 @@ function TranslationBadges({ translations }: { translations: AdminNewsRow["trans
       <Badge variant="outline" className="text-[10px] font-mono">
         en
       </Badge>
-      {(translations ?? []).map((t) => (
-        <Badge key={t.locale} variant="outline" className="text-[10px] font-mono">
-          {t.locale}
+      {(translations ?? []).map((tr) => (
+        <Badge key={tr.locale} variant="outline" className="text-[10px] font-mono">
+          {tr.locale}
         </Badge>
       ))}
     </div>
@@ -106,8 +110,8 @@ function SourceLink({ row }: { row: AdminNewsRow }) {
   );
 }
 
-/** Desktop / landscape table — hidden below md. */
-export function NewsArticleTable({ rows }: { rows: AdminNewsRow[] }) {
+export async function NewsArticleTable({ rows }: { rows: AdminNewsRow[] }) {
+  const t = await getTranslations("admin");
   if (rows.length === 0) return <NewsEmptyState />;
 
   return (
@@ -115,13 +119,13 @@ export function NewsArticleTable({ rows }: { rows: AdminNewsRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Title</TableHead>
-            <TableHead>Source</TableHead>
-            <TableHead>Score</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Translations</TableHead>
-            <TableHead>Fetched / Created</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>{t("news.table.title")}</TableHead>
+            <TableHead>{t("news.table.source")}</TableHead>
+            <TableHead>{t("news.table.score")}</TableHead>
+            <TableHead>{t("news.table.status")}</TableHead>
+            <TableHead>{t("news.table.translations")}</TableHead>
+            <TableHead>{t("news.table.fetchedCreated")}</TableHead>
+            <TableHead className="text-right">{t("news.table.actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -139,7 +143,7 @@ export function NewsArticleTable({ rows }: { rows: AdminNewsRow[] }) {
                 </div>
                 {row.rejected_reason && (
                   <div className="text-xs text-red-400 mt-1">
-                    Reason: {row.rejected_reason}
+                    {t("news.table.reason", { reason: row.rejected_reason })}
                   </div>
                 )}
               </TableCell>
@@ -169,8 +173,8 @@ export function NewsArticleTable({ rows }: { rows: AdminNewsRow[] }) {
   );
 }
 
-/** Portrait / mobile card stack — visible below md only. */
-export function NewsArticleCardList({ rows }: { rows: AdminNewsRow[] }) {
+export async function NewsArticleCardList({ rows }: { rows: AdminNewsRow[] }) {
+  const t = await getTranslations("admin");
   if (rows.length === 0) {
     return (
       <div className="md:hidden">
@@ -193,32 +197,34 @@ export function NewsArticleCardList({ rows }: { rows: AdminNewsRow[] }) {
             )}
             <p className="text-[10px] font-mono text-muted-foreground/70">/{row.slug}</p>
             {row.rejected_reason && (
-              <p className="text-xs text-red-400">Reason: {row.rejected_reason}</p>
+              <p className="text-xs text-red-400">
+                {t("news.table.reason", { reason: row.rejected_reason })}
+              </p>
             )}
           </CardHeader>
 
           <CardContent className="space-y-3 pt-0">
             <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
               <div>
-                <dt className="text-muted-foreground">Source</dt>
+                <dt className="text-muted-foreground">{t("news.table.source")}</dt>
                 <dd className="mt-0.5">
                   <SourceLink row={row} />
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Score</dt>
+                <dt className="text-muted-foreground">{t("news.table.score")}</dt>
                 <dd className="mt-0.5">
                   {row.relevance_score !== null ? row.relevance_score.toFixed(2) : "—"}
                 </dd>
               </div>
               <div className="col-span-2">
-                <dt className="text-muted-foreground">Translations</dt>
+                <dt className="text-muted-foreground">{t("news.table.translations")}</dt>
                 <dd className="mt-1">
                   <TranslationBadges translations={row.translations} />
                 </dd>
               </div>
               <div className="col-span-2">
-                <dt className="text-muted-foreground">Fetched / Created</dt>
+                <dt className="text-muted-foreground">{t("news.table.fetchedCreated")}</dt>
                 <dd className="mt-0.5 text-muted-foreground">
                   {new Date(row.fetched_at ?? row.created_at).toLocaleString()}
                 </dd>

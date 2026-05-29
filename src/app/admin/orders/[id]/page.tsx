@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,14 +12,8 @@ import {
   type OrderDocumentRow,
 } from "@/components/order/OrderDocumentsTab";
 import { AdminOrderActions } from "@/components/admin/AdminOrderActions";
+import { type OrderStatus } from "@/lib/order/stateMachine";
 import {
-  STATUS_LABEL,
-  type OrderStatus,
-} from "@/lib/order/stateMachine";
-import {
-  CATEGORY_LABEL,
-  MILESTONE_LABEL,
-  SCHEDULE_STATUS_LABEL,
   type PaymentCategory,
   type PaymentMilestone,
   type PaymentScheduleStatus,
@@ -31,11 +26,15 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
-  return { title: `Admin · Order ${id.slice(0, 8).toUpperCase()}` };
+  const t = await getTranslations("admin");
+  return { title: `${t("meta.orderDetail")} ${id.slice(0, 8).toUpperCase()} — Mada Graphite` };
 }
 
 export default async function AdminOrderDetailPage({ params }: PageProps) {
   const { id } = await params;
+  const t = await getTranslations("admin");
+  const tEnums = await getTranslations("enums");
+
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) notFound();
@@ -50,7 +49,6 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Use admin client to bypass RLS — admin sees everything
   const admin = createAdminClient();
 
   const { data: order } = await admin
@@ -92,9 +90,6 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         incoterm: string;
         product_categories: { name: string } | null;
       } | null;
-      // PostgREST returns this as a single object (not an array)
-      // because `contracts.order_id` has a UNIQUE constraint —
-      // see (app)/orders/[id]/page.tsx for the same fix.
       contracts: {
         id: string;
         contract_no: string;
@@ -159,19 +154,23 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
     }[]>();
 
   const contract = order.contracts ?? null;
+  const yes = "✓";
+  const no = "—";
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <p className="text-xs text-muted-foreground">
           <Link href="/admin/orders" className="hover:text-foreground">
-            All Orders
+            {t("orders.detail.breadcrumb")}
           </Link>{" "}
           / {order.order_no}
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold">{order.order_no}</h1>
-          <Badge variant="outline">{STATUS_LABEL[order.status]}</Badge>
+          <Badge variant="outline">
+            {tEnums(`order.status.${order.status}`)}
+          </Badge>
           {order.incoterm && (
             <Badge variant="outline" className="text-xs">
               {order.incoterm}
@@ -181,7 +180,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
             href={`/orders/${id}`}
             className="text-xs text-primary underline ml-auto"
           >
-            View as party
+            {t("orders.detail.viewAsParty")}
           </Link>
         </div>
       </div>
@@ -198,68 +197,103 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
 
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="rounded-lg border p-4 space-y-1 text-sm">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Buyer</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            {t("orders.detail.buyer")}
+          </p>
           <p className="font-medium">{order.buyer?.company_name ?? "—"}</p>
           <p className="text-xs text-muted-foreground">{order.buyer?.full_name}</p>
           <p className="text-xs text-muted-foreground">{order.buyer?.email}</p>
           <p className="text-xs text-muted-foreground">{order.buyer?.country}</p>
         </div>
         <div className="rounded-lg border p-4 space-y-1 text-sm">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Seller</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            {t("orders.detail.seller")}
+          </p>
           <p className="font-medium">{order.seller?.company_name ?? "—"}</p>
           <p className="text-xs text-muted-foreground">{order.seller?.full_name}</p>
           <p className="text-xs text-muted-foreground">{order.seller?.email}</p>
           <p className="text-xs text-muted-foreground">{order.seller?.country}</p>
         </div>
         <div className="rounded-lg border p-4 space-y-1 text-sm">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Order</p>
-          <p className="text-xs">Qty: <span className="font-medium">{order.quantity}</span></p>
-          <p className="text-xs">Total: <span className="font-medium">{order.total_amount} {order.currency}</span></p>
-          <p className="text-xs">Created: {new Date(order.created_at).toLocaleDateString()}</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            {t("orders.detail.order")}
+          </p>
+          <p className="text-xs">
+            {t("orders.detail.qty")}{" "}
+            <span className="font-medium">{order.quantity}</span>
+          </p>
+          <p className="text-xs">
+            {t("orders.detail.total")}{" "}
+            <span className="font-medium">
+              {order.total_amount} {order.currency}
+            </span>
+          </p>
+          <p className="text-xs">
+            {t("orders.detail.created")}{" "}
+            {new Date(order.created_at).toLocaleDateString()}
+          </p>
         </div>
       </div>
 
       <Separator />
 
-      {/* Contract revisions */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Contract</h2>
+        <h2 className="text-sm font-semibold">{t("orders.detail.contract")}</h2>
         {!contract ? (
-          <p className="text-xs text-muted-foreground">No contract yet.</p>
+          <p className="text-xs text-muted-foreground">{t("orders.detail.noContract")}</p>
         ) : (
           <div className="rounded-lg border p-3 text-sm space-y-1">
-            <p className="font-medium">{contract.contract_no} (revision {contract.revision_no})</p>
+            <p className="font-medium">
+              {t("orders.detail.revision", {
+                contractNo: contract.contract_no,
+                revision: contract.revision_no,
+              })}
+            </p>
             <p className="text-xs">
-              Buyer signed: {contract.buyer_signed_url ? "✓" : "—"} ·
-              {" "}Seller signed: {contract.seller_signed_url ? "✓" : "—"} ·
-              {" "}Buyer approved: {contract.buyer_approved_at ? "✓" : "—"}
+              {t("orders.detail.buyerSigned")}{" "}
+              {contract.buyer_signed_url ? yes : no} ·{" "}
+              {t("orders.detail.sellerSigned")}{" "}
+              {contract.seller_signed_url ? yes : no} ·{" "}
+              {t("orders.detail.buyerApproved")}{" "}
+              {contract.buyer_approved_at ? yes : no}
             </p>
             {contract.buyer_rejected_at && (
               <p className="text-xs text-red-400">
-                Rejected: {contract.buyer_reject_reason}
+                {t("orders.detail.rejected", {
+                  reason: contract.buyer_reject_reason ?? "",
+                })}
               </p>
             )}
           </div>
         )}
       </section>
 
-      {/* Payment schedule */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Payment Schedule</h2>
+        <h2 className="text-sm font-semibold">{t("orders.detail.paymentSchedule")}</h2>
         {!order.payment_schedules || order.payment_schedules.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No schedule defined.</p>
+          <p className="text-xs text-muted-foreground">{t("orders.detail.noSchedule")}</p>
         ) : (
           <div className="rounded-lg border overflow-hidden">
             <table className="w-full text-xs">
               <thead className="bg-muted/30 text-muted-foreground">
                 <tr>
                   <th className="text-left px-3 py-2 w-8">#</th>
-                  <th className="text-left px-3 py-2">Category</th>
-                  <th className="text-left px-3 py-2">Milestone</th>
+                  <th className="text-left px-3 py-2">
+                    {t("orders.detail.scheduleTable.category")}
+                  </th>
+                  <th className="text-left px-3 py-2">
+                    {t("orders.detail.scheduleTable.milestone")}
+                  </th>
                   <th className="text-right px-3 py-2">%</th>
-                  <th className="text-right px-3 py-2">Amount</th>
-                  <th className="text-left px-3 py-2">Due</th>
-                  <th className="text-left px-3 py-2">Status</th>
+                  <th className="text-right px-3 py-2">
+                    {t("orders.table.amount")}
+                  </th>
+                  <th className="text-left px-3 py-2">
+                    {t("orders.detail.scheduleTable.due")}
+                  </th>
+                  <th className="text-left px-3 py-2">
+                    {t("orders.detail.scheduleTable.status")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -268,14 +302,20 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                   .map((s) => (
                     <tr key={s.id} className="border-t border-border/50">
                       <td className="px-3 py-2 text-muted-foreground">{s.sequence + 1}</td>
-                      <td className="px-3 py-2">{CATEGORY_LABEL[s.category]}</td>
-                      <td className="px-3 py-2">{MILESTONE_LABEL[s.milestone]}</td>
+                      <td className="px-3 py-2">
+                        {tEnums(`payment.category.${s.category}`)}
+                      </td>
+                      <td className="px-3 py-2">
+                        {tEnums(`payment.milestone.${s.milestone}`)}
+                      </td>
                       <td className="px-3 py-2 text-right">{s.percentage.toFixed(2)}%</td>
                       <td className="px-3 py-2 text-right">
                         {s.amount.toFixed(2)} {s.currency}
                       </td>
                       <td className="px-3 py-2 text-muted-foreground">{s.due_date ?? "—"}</td>
-                      <td className="px-3 py-2">{SCHEDULE_STATUS_LABEL[s.status]}</td>
+                      <td className="px-3 py-2">
+                        {tEnums(`payment.scheduleStatus.${s.status}`)}
+                      </td>
                     </tr>
                   ))}
               </tbody>
@@ -284,11 +324,10 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         )}
       </section>
 
-      {/* Payments */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Payments</h2>
+        <h2 className="text-sm font-semibold">{t("orders.detail.payments")}</h2>
         {(order.payments ?? []).length === 0 ? (
-          <p className="text-xs text-muted-foreground">None.</p>
+          <p className="text-xs text-muted-foreground">{t("orders.detail.none")}</p>
         ) : (
           <ul className="space-y-2">
             {(order.payments ?? []).map((p) => (
@@ -296,27 +335,39 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                 <span>
                   {p.amount} {p.currency} · {p.method.replace(/_/g, " ")}
                 </span>
-                <Badge variant="outline" className="text-[10px]">{p.status}</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  {tEnums(`payment.status.${p.status as "pending" | "verified" | "rejected"}`)}
+                </Badge>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      {/* Shipment summary */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Shipment</h2>
+        <h2 className="text-sm font-semibold">{t("orders.detail.shipment")}</h2>
         <div className="rounded border p-3 text-xs grid grid-cols-2 gap-2">
-          <div>B/L: <span className="font-medium">{order.bl_no ?? "—"}</span></div>
-          <div>Vessel: <span className="font-medium">{order.vessel_name ?? "—"}</span></div>
-          <div>ATA: <span className="font-medium">{order.ata ?? "—"}</span></div>
-          <div>Destination: <span className="font-medium">{order.destination ?? "—"}</span></div>
+          <div>
+            {t("orders.detail.bl")}{" "}
+            <span className="font-medium">{order.bl_no ?? "—"}</span>
+          </div>
+          <div>
+            {t("orders.detail.vessel")}{" "}
+            <span className="font-medium">{order.vessel_name ?? "—"}</span>
+          </div>
+          <div>
+            {t("orders.detail.ata")}{" "}
+            <span className="font-medium">{order.ata ?? "—"}</span>
+          </div>
+          <div>
+            {t("orders.detail.destination")}{" "}
+            <span className="font-medium">{order.destination ?? "—"}</span>
+          </div>
         </div>
       </section>
 
-      {/* Documents */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Documents</h2>
+        <h2 className="text-sm font-semibold">{t("orders.detail.documents")}</h2>
         <OrderDocumentsTab
           orderId={order.id}
           documents={documents}
@@ -325,11 +376,10 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         />
       </section>
 
-      {/* Audit log */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Audit Log</h2>
+        <h2 className="text-sm font-semibold">{t("orders.detail.auditLog")}</h2>
         {!auditLogs || auditLogs.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No admin actions logged.</p>
+          <p className="text-xs text-muted-foreground">{t("orders.detail.noAudit")}</p>
         ) : (
           <ul className="space-y-1 text-xs">
             {auditLogs.map((log) => (
@@ -349,9 +399,8 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         )}
       </section>
 
-      {/* Timeline */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Order Timeline</h2>
+        <h2 className="text-sm font-semibold">{t("orders.detail.timeline")}</h2>
         <ol className="space-y-1 text-xs">
           {[...(order.timeline ?? [])].reverse().map((item, idx) => (
             <li key={idx} className="rounded border p-2">

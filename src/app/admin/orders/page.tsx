@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,7 +12,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export const metadata = { title: "Admin · Orders" };
+export async function generateMetadata() {
+  const t = await getTranslations("admin");
+  return { title: `${t("meta.orders")} — Mada Graphite` };
+}
 
 const statusColor: Record<string, string> = {
   draft: "text-muted-foreground",
@@ -26,6 +31,8 @@ const statusColor: Record<string, string> = {
 };
 
 export default async function AdminOrdersPage() {
+  const t = await getTranslations("admin");
+  const tEnums = await getTranslations("enums");
   const admin = createAdminClient();
 
   const { data: orders } = await admin
@@ -48,22 +55,20 @@ export default async function AdminOrdersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">All Orders</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Monitor all orders across the platform.
-        </p>
+        <h1 className="text-2xl font-semibold">{t("orders.title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("orders.subtitle")}</p>
       </div>
 
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Order No</TableHead>
-              <TableHead>Buyer</TableHead>
-              <TableHead>Seller</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Created</TableHead>
+              <TableHead>{t("orders.table.orderNo")}</TableHead>
+              <TableHead>{t("orders.table.buyer")}</TableHead>
+              <TableHead>{t("orders.table.seller")}</TableHead>
+              <TableHead className="text-right">{t("orders.table.amount")}</TableHead>
+              <TableHead>{t("orders.table.status")}</TableHead>
+              <TableHead>{t("orders.table.created")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -81,7 +86,7 @@ export default async function AdminOrdersPage() {
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className={statusColor[o.status] ?? ""}>
-                    {o.status.replace(/_/g, " ")}
+                    {tEnums(`order.status.${o.status as "draft"}`)}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">

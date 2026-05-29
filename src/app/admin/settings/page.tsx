@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   SMS_NOTIFICATIONS_KEY,
@@ -9,11 +11,15 @@ import { getKycThresholds } from "@/lib/platform/settings";
 import { SendTestEmailButton } from "@/components/admin/SendTestEmailButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const metadata = { title: "Admin · Settings" };
+export async function generateMetadata() {
+  const t = await getTranslations("admin");
+  return { title: `${t("meta.settings")} — Mada Graphite` };
+}
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
+  const t = await getTranslations("admin");
   const admin = createAdminClient();
 
   const { data: setting } = await admin
@@ -31,31 +37,29 @@ export default async function AdminSettingsPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Platform Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Configure platform-wide notification and integration options.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("settings.title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("settings.subtitle")}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Email (SMTP)</CardTitle>
+          <CardTitle className="text-lg">{t("settings.email.title")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1 text-sm">
             <p>
-              Status:{" "}
+              {t("settings.email.status")}{" "}
               {smtpConfigured ? (
-                <span className="text-emerald-400 font-medium">Configured</span>
+                <span className="text-emerald-400 font-medium">
+                  {t("settings.email.configured")}
+                </span>
               ) : (
-                <span className="text-amber-400 font-medium">Not configured</span>
+                <span className="text-amber-400 font-medium">
+                  {t("settings.email.notConfigured")}
+                </span>
               )}
             </p>
-            <p className="text-xs text-muted-foreground">
-              Configure SMTP_HOST / SMTP_USER / SMTP_PASS / EMAIL_FROM_ADDRESS in
-              .env.local. AWS SES domain must be verified before sending to
-              non-verified recipients (production access required).
-            </p>
+            <p className="text-xs text-muted-foreground">{t("settings.email.hint")}</p>
           </div>
           <SendTestEmailButton />
         </CardContent>
@@ -63,7 +67,7 @@ export default async function AdminSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">KYC gates</CardTitle>
+          <CardTitle className="text-lg">{t("settings.kycGates.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <KycThresholdSettings
@@ -75,7 +79,7 @@ export default async function AdminSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Notifications</CardTitle>
+          <CardTitle className="text-lg">{t("settings.notifications.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <SmsNotificationsToggle
@@ -84,7 +88,9 @@ export default async function AdminSettingsPage() {
           />
           {setting?.updated_at && (
             <p className="text-xs text-muted-foreground mt-4">
-              Last updated: {new Date(setting.updated_at).toLocaleString()}
+              {t("settings.notifications.lastUpdated", {
+                date: new Date(setting.updated_at).toLocaleString(),
+              })}
             </p>
           )}
         </CardContent>

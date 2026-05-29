@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,13 +16,38 @@ import {
   ReactivateCategoryButton,
 } from "@/components/admin/CategoryActions";
 import {
-  describeCategorySpec,
   parseCategorySpec,
+  type CategorySpec,
 } from "@/lib/categories/spec";
 
-export const metadata = { title: "Admin · Categories" };
+export async function generateMetadata() {
+  const t = await getTranslations("admin");
+  return { title: `${t("meta.categories")} — Mada Graphite` };
+}
+
+function describeCategorySpecLocalized(
+  spec: CategorySpec,
+  t: Awaited<ReturnType<typeof getTranslations<"admin">>>
+): string {
+  const parts: string[] = [];
+  if (spec.is_custom) {
+    parts.push(t("categories.spec.customMesh"));
+  } else if (spec.mesh_size) {
+    parts.push(t("categories.spec.mesh", { size: spec.mesh_size }));
+  }
+  parts.push(
+    t("categories.spec.carbon", {
+      min: spec.fixed_carbon_min,
+      max: spec.fixed_carbon_max,
+    })
+  );
+  parts.push(t("categories.spec.moisture", { max: spec.moisture_max }));
+  return parts.join(" · ");
+}
 
 export default async function AdminCategoriesPage() {
+  const t = await getTranslations("admin");
+  const tEnums = await getTranslations("enums");
   const admin = createAdminClient();
 
   const { data: categories } = await admin
@@ -37,8 +64,6 @@ export default async function AdminCategoriesPage() {
       created_at: string;
     }[]>();
 
-  // Count listings per category so admins can see usage at a glance
-  // before deactivating. Service-role client so we see all rows.
   const categoryIds = (categories ?? []).map((c) => c.id);
   const listingCounts = new Map<string, number>();
   if (categoryIds.length > 0) {
@@ -56,12 +81,8 @@ export default async function AdminCategoriesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Product Categories</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage product categories and their specification defaults.
-            Custom Grade categories let sellers fill in mesh and exact values
-            per listing.
-          </p>
+          <h1 className="text-2xl font-semibold">{t("categories.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("categories.subtitle")}</p>
         </div>
         <CategoryFormDialog />
       </div>
@@ -70,12 +91,12 @@ export default async function AdminCategoriesPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Specification</TableHead>
-              <TableHead className="text-right">Listings</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>{t("categories.table.name")}</TableHead>
+              <TableHead>{t("categories.table.specification")}</TableHead>
+              <TableHead className="text-right">{t("categories.table.listings")}</TableHead>
+              <TableHead>{t("categories.table.description")}</TableHead>
+              <TableHead>{t("categories.table.status")}</TableHead>
+              <TableHead>{t("categories.table.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -94,14 +115,16 @@ export default async function AdminCategoriesPage() {
                         variant="outline"
                         className="ml-2 text-amber-400 border-amber-400/40"
                       >
-                        custom
+                        {t("categories.customBadge")}
                       </Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground align-top">
-                    {describeCategorySpec(spec)}
+                    {describeCategorySpecLocalized(spec, t)}
                     <div className="text-[10px] mt-1 text-muted-foreground/70">
-                      ≥ {spec.size_distribution_min_pct}% match mesh
+                      {t("categories.spec.meshMatch", {
+                        pct: spec.size_distribution_min_pct,
+                      })}
                     </div>
                   </TableCell>
                   <TableCell className="text-right align-top tabular-nums">
@@ -112,7 +135,7 @@ export default async function AdminCategoriesPage() {
                             ? "font-medium"
                             : "text-muted-foreground"
                         }
-                        title={`${usageCount} listing(s) reference this category`}
+                        title={t("categories.listingsCountTitle", { count: usageCount })}
                       >
                         {usageCount}
                       </span>
@@ -132,7 +155,9 @@ export default async function AdminCategoriesPage() {
                           : "text-muted-foreground"
                       }
                     >
-                      {c.is_active ? "active" : "inactive"}
+                      {c.is_active
+                        ? tEnums("category.active")
+                        : tEnums("category.inactive")}
                     </Badge>
                   </TableCell>
                   <TableCell className="align-top">

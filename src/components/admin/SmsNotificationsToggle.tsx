@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { updateSmsNotificationsEnabled } from "@/actions/admin";
@@ -18,6 +19,7 @@ export function SmsNotificationsToggle({
   gatewayConfigured,
 }: SmsNotificationsToggleProps) {
   const router = useRouter();
+  const t = useTranslations("admin");
   const [isPending, startTransition] = useTransition();
 
   function handleToggle() {
@@ -29,7 +31,7 @@ export function SmsNotificationsToggle({
         return;
       }
       toast.success(
-        next ? "SMS notifications enabled." : "SMS notifications disabled."
+        next ? t("settings.notifications.enabledToast") : t("settings.notifications.disabledToast")
       );
       router.refresh();
     });
@@ -39,16 +41,14 @@ export function SmsNotificationsToggle({
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="space-y-1">
         <Label htmlFor="sms-notifications-toggle" className="text-base">
-          SMS notifications
+          {t("settings.notifications.smsLabel")}
         </Label>
         <p className="text-sm text-muted-foreground">
-          When enabled, transactional SMS are sent alongside email for users with a
-          phone number on their profile. Requires SMS gateway environment variables.
+          {t("settings.notifications.smsHint")}
         </p>
         {!gatewayConfigured && (
           <p className="text-sm text-amber-400">
-            Gateway not configured: set SMS_BASE_URL and SMS_APP_ID in your deployment
-            environment.
+            {t("settings.notifications.gatewayNotConfigured")}
           </p>
         )}
       </div>
@@ -60,7 +60,7 @@ export function SmsNotificationsToggle({
         onClick={handleToggle}
         className="shrink-0"
       >
-        {enabled ? "Enabled" : "Disabled"}
+        {enabled ? t("settings.notifications.enabled") : t("settings.notifications.disabled")}
       </Button>
     </div>
   );

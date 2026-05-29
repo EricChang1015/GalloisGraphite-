@@ -1,0 +1,357 @@
+{
+  "meta": {
+    "dashboard": "Admin Dashboard",
+    "users": "Users",
+    "categories": "Categories",
+    "orders": "Orders",
+    "orderDetail": "Order",
+    "payments": "Payments",
+    "news": "News",
+    "settings": "Settings"
+  },
+  "layout": {
+    "consoleTitle": "Admin Console",
+    "overview": "Overview",
+    "links": {
+      "dashboard": "Dashboard",
+      "home": "Home"
+    },
+    "nav": {
+      "users": "Users",
+      "categories": "Categories",
+      "orders": "Orders",
+      "payments": "Payments",
+      "news": "News",
+      "settings": "Settings"
+    },
+    "badges": {
+      "paymentsPending": "Payments awaiting review",
+      "disputedOrders": "Disputed orders"
+    }
+  },
+  "error": {
+    "title": "Admin Error",
+    "fallback": "An unexpected error occurred in the admin console.",
+    "tryAgain": "Try again"
+  },
+  "dashboard": {
+    "title": "Admin Dashboard",
+    "subtitle": "Platform overview and the items waiting on the admin team.",
+    "stats": {
+      "totalUsers": "Total Users",
+      "totalOrders": "Total Orders",
+      "disputedOrders": "Disputed Orders",
+      "paymentsPending": "Payments Pending"
+    },
+    "actionNeeded": "Action needed",
+    "priority": {
+      "title": "Priority Actions",
+      "subtitle": "Items waiting on the admin team.",
+      "disputedTitle": "{count, plural, one {# disputed order} other {# disputed orders}}",
+      "disputedSub": "Open mediation: review timeline + force-transition if needed.",
+      "paymentsTitle": "{count, plural, one {# payment awaiting review} other {# payments awaiting review}}",
+      "paymentsSub": "Verifying a proof automatically advances the order to paid.",
+      "badgeDisputed": "Disputed",
+      "badgeReview": "Review"
+    },
+    "caughtUp": {
+      "title": "All caught up",
+      "body": "No disputed orders and no pending payments to review. Use the sidebar to manage <usersLink>users</usersLink>, <categoriesLink>categories</categoriesLink>, or <newsLink>news</newsLink>."
+    }
+  },
+  "users": {
+    "title": "Users",
+    "subtitle": "Manage user roles and account status.",
+    "table": {
+      "user": "User",
+      "company": "Company",
+      "country": "Country",
+      "role": "Role",
+      "status": "Status",
+      "kyc": "KYC",
+      "joined": "Joined",
+      "actions": "Actions"
+    },
+    "actions": {
+      "unfreeze": "Unfreeze",
+      "freeze": "Freeze",
+      "frozen": "User frozen.",
+      "reactivated": "User reactivated.",
+      "roleUpdated": "Role updated to {role}."
+    },
+    "kyc": {
+      "button": "KYC",
+      "dialogTitle": "KYC — {user}",
+      "pendingBanner": "{count, plural, one {# document awaiting review} other {# documents awaiting review}}",
+      "pendingHint": "Approve to grant Level 2 (identity verified). Phone verification is not required first.",
+      "approveDocs": "Approve documents → Level 2",
+      "phone": "Phone:",
+      "phoneVerified": "Phone verified:",
+      "phoneVerifiedNo": "No",
+      "levelOverride": "KYC level (admin override)",
+      "levelHint": "Level 3 is for trusted sellers (e.g. listing gate). Document approval sets level 2; phone OTP sets level 1. All changes are logged in audit_logs.",
+      "uploadedDocs": "Uploaded documents",
+      "noDocs": "No documents on file.",
+      "viewFile": "View file",
+      "signedUrlUnavailable": "Signed URL unavailable",
+      "saveLevel": "Save KYC level",
+      "levelUpdated": "KYC level updated.",
+      "docsApproved": "Documents approved. User is now level {level}.",
+      "phoneBadge": "Phone ✓",
+      "docsPending": "{count, plural, one {# doc pending} other {# docs pending}}",
+      "docsApprovedCount": "{approved}/{total} docs"
+    }
+  },
+  "categories": {
+    "title": "Product Categories",
+    "subtitle": "Manage product categories and their specification defaults. Custom Grade categories let sellers fill in mesh and exact values per listing.",
+    "table": {
+      "name": "Name",
+      "specification": "Specification",
+      "listings": "Listings",
+      "description": "Description",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "customBadge": "custom",
+    "spec": {
+      "customMesh": "Custom mesh",
+      "mesh": "{size} Mesh",
+      "carbon": "{min}–{max}% C",
+      "moisture": "moisture ≤ {max}%",
+      "meshMatch": "≥ {pct}% match mesh"
+    },
+    "listingsCountTitle": "{count, plural, one {# listing references this category} other {# listings reference this category}}",
+    "form": {
+      "newCategory": "New Category",
+      "editCategory": "Edit Category",
+      "categoryName": "Category Name",
+      "namePlaceholder": "e.g. Flake Graphite +100 Mesh",
+      "description": "Description",
+      "descriptionPlaceholder": "One-sentence summary shown to buyers.",
+      "specDefaults": "Specification defaults",
+      "productType": "Product Type",
+      "selectProductType": "Select product type",
+      "customGrade": "Custom grade",
+      "customGradeHint": "Seller fills in mesh size and exact values per listing.",
+      "standard": "Standard",
+      "custom": "Custom",
+      "meshSize": "Mesh Size",
+      "selectMeshSize": "Select mesh size",
+      "meshHint": "e.g. +100 means ≥80% of particles retained on a 100-mesh screen. -100 means ≥80% pass through it.",
+      "meshOption": "{size} Mesh",
+      "fixedCarbonMin": "Fixed Carbon Min (%)",
+      "fixedCarbonMax": "Fixed Carbon Max (%)",
+      "moistureMax": "Moisture Max (%)",
+      "sizeDistributionMin": "Size Distribution Min (%)",
+      "sizeDistributionHint": "Default 80 — i.e. 80% MIN on the mesh.",
+      "created": "Category created.",
+      "updated": "Category updated.",
+      "deactivated": "Category deactivated.",
+      "reactivated": "Category reactivated.",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate"
+    },
+    "productType": {
+      "flake_graphite": "Flake Graphite"
+    }
+  },
+  "orders": {
+    "title": "All Orders",
+    "subtitle": "Monitor all orders across the platform.",
+    "table": {
+      "orderNo": "Order No",
+      "buyer": "Buyer",
+      "seller": "Seller",
+      "amount": "Amount",
+      "status": "Status",
+      "created": "Created"
+    },
+    "detail": {
+      "breadcrumb": "All Orders",
+      "viewAsParty": "View as party",
+      "buyer": "Buyer",
+      "seller": "Seller",
+      "order": "Order",
+      "qty": "Qty:",
+      "total": "Total:",
+      "created": "Created:",
+      "contract": "Contract",
+      "noContract": "No contract yet.",
+      "revision": "{contractNo} (revision {revision})",
+      "buyerSigned": "Buyer signed:",
+      "sellerSigned": "Seller signed:",
+      "buyerApproved": "Buyer approved:",
+      "rejected": "Rejected: {reason}",
+      "paymentSchedule": "Payment Schedule",
+      "noSchedule": "No schedule defined.",
+      "payments": "Payments",
+      "none": "None.",
+      "shipment": "Shipment",
+      "bl": "B/L:",
+      "vessel": "Vessel:",
+      "ata": "ATA:",
+      "destination": "Destination:",
+      "documents": "Documents",
+      "auditLog": "Audit Log",
+      "noAudit": "No admin actions logged.",
+      "timeline": "Order Timeline",
+      "scheduleTable": {
+        "category": "Category",
+        "milestone": "Milestone",
+        "due": "Due",
+        "status": "Status"
+      },
+      "forceTransition": {
+        "title": "Admin: Force Transition",
+        "hint": "Bypasses the state machine. All actions are recorded in audit_logs. Use only for dispute resolution or recovery.",
+        "currentStatus": "Current Status",
+        "targetStatus": "Target Status",
+        "reason": "Reason (required, audit-logged)",
+        "reasonPlaceholder": "Why is this manual transition needed?",
+        "submit": "Force Transition",
+        "transitioning": "Transitioning…",
+        "reasonRequired": "Reason is required for force transitions.",
+        "sameStatus": "Target status is the same as current.",
+        "success": "Order force-transitioned to {status}."
+      }
+    }
+  },
+  "payments": {
+    "title": "Payment Oversight",
+    "subtitle": "Sellers are the primary reviewers for payments on their own orders. This page lets admins audit and (if needed) override the decision — e.g. to mediate disputes or unstick a payment when a seller is unresponsive.",
+    "loadFailed": "Failed to load payments.",
+    "pendingReview": "Pending Review",
+    "noPending": "No pending payments. 🎉",
+    "history": "History",
+    "noHistory": "No reviewed payments yet.",
+    "table": {
+      "buyer": "Buyer",
+      "order": "Order",
+      "method": "Method",
+      "amount": "Amount",
+      "txProof": "TX / Proof",
+      "date": "Date",
+      "action": "Action",
+      "status": "Status",
+      "adminNote": "Admin Note",
+      "viewProof": "View proof"
+    }
+  },
+  "news": {
+    "title": "News Articles",
+    "subtitleDesktop": "Aggregate, review and publish graphite industry news. Use the Fetch latest news button to pull fresh candidates from the LLM (no DB writes until you confirm).",
+    "subtitleMobile": "Review, fetch, and publish industry news.",
+    "fetchLatest": "Fetch latest news",
+    "manualArticle": "Manual article",
+    "tabs": {
+      "pending": "Pending review",
+      "pendingShort": "Pending",
+      "published": "Published",
+      "rejected": "Rejected",
+      "drafts": "Drafts"
+    },
+    "empty": "Nothing here yet.",
+    "table": {
+      "title": "Title",
+      "source": "Source",
+      "score": "Score",
+      "status": "Status",
+      "translations": "Translations",
+      "fetchedCreated": "Fetched / Created",
+      "actions": "Actions",
+      "reason": "Reason: {reason}"
+    },
+    "form": {
+      "newArticle": "New Article",
+      "editArticle": "Edit Article",
+      "title": "Title",
+      "slug": "Slug",
+      "slugPlaceholder": "my-article-slug",
+      "coverUrl": "Cover Image URL (optional)",
+      "summary": "Summary",
+      "contentHtml": "Content (HTML)",
+      "publishImmediately": "Publish immediately",
+      "created": "Article created.",
+      "updated": "Article updated."
+    },
+    "fetch": {
+      "dialogTitle": "Fetch news candidates",
+      "lookback": "Lookback (days)",
+      "maxItems": "Max items",
+      "fetch": "Fetch",
+      "askingLlm": "Asking LLM…",
+      "modelTokens": "Model {model} · tokens {tokens}",
+      "searching": "Searching the web…",
+      "noCandidates": "No candidates yet. Click Fetch.",
+      "duplicateBadge": "Already in DB ({status})",
+      "scoreBadge": "score {score}",
+      "selectAllNew": "Select all new",
+      "clear": "Clear",
+      "importing": "Importing…",
+      "import": "Import {count} → Pending",
+      "pickOne": "Pick at least one candidate.",
+      "noCandidatesReturned": "Model returned no candidates.",
+      "fetchedSummary": "Fetched {count} candidates ({duplicates} duplicate).",
+      "importedSummary": "Imported {inserted} (skipped {skipped})."
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "unpublish": "Unpublish",
+      "translate": "Translate",
+      "published": "Published.",
+      "movedToPending": "Moved back to pending.",
+      "rejectedToast": "Rejected. (Hash kept for future dedup.)"
+    },
+    "reject": {
+      "title": "Reject article",
+      "hint": "The article will be hidden from the public site but kept in the database so the same source URL / title is auto-skipped on future fetches.",
+      "reasonPlaceholder": "Reason (optional, e.g. off-topic, low quality, duplicate event)",
+      "rejecting": "Rejecting…"
+    },
+    "translate": {
+      "title": "Translate article",
+      "hint": "Triggers one Poe call per language. Existing translations are overwritten when you click again.",
+      "done": "done",
+      "translating": "Translating…",
+      "retranslate": "Retranslate",
+      "success": "Translated to {locale}."
+    }
+  },
+  "settings": {
+    "title": "Platform Settings",
+    "subtitle": "Configure platform-wide notification and integration options.",
+    "email": {
+      "title": "Email (SMTP)",
+      "status": "Status:",
+      "configured": "Configured",
+      "notConfigured": "Not configured",
+      "hint": "Configure SMTP_HOST / SMTP_USER / SMTP_PASS / EMAIL_FROM_ADDRESS in .env.local. AWS SES domain must be verified before sending to non-verified recipients (production access required).",
+      "sendTest": "Send test email",
+      "sending": "Sending…",
+      "sent": "Test email sent to {to}",
+      "sentWithId": "Test email sent to {to} (id: {messageId})"
+    },
+    "kycGates": {
+      "title": "KYC gates",
+      "intro": "Minimum profiles.kyc_level required for each action. Set both to 0 during tuning so all active users can trade; raise to 1+ when you want documents on file.",
+      "inquiry": "Submit inquiry (buyers)",
+      "listing": "Create listing (sellers)",
+      "levelLine": "Level {level}: {label}",
+      "save": "Save KYC thresholds",
+      "updated": "KYC thresholds updated."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "smsLabel": "SMS notifications",
+      "smsHint": "When enabled, transactional SMS are sent alongside email for users with a phone number on their profile. Requires SMS gateway environment variables.",
+      "gatewayNotConfigured": "Gateway not configured: set SMS_BASE_URL and SMS_APP_ID in your deployment environment.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enabledToast": "SMS notifications enabled.",
+      "disabledToast": "SMS notifications disabled.",
+      "lastUpdated": "Last updated: {date}"
+    }
+  }
+}

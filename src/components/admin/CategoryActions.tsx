@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -16,7 +17,6 @@ import {
 import {
   MESH_SIZES,
   PRODUCT_TYPES,
-  PRODUCT_TYPE_LABEL,
   parseCategorySpec,
   type CategorySpec,
 } from "@/lib/categories/spec";
@@ -66,6 +66,8 @@ const MESH_NONE = "__custom__";
 
 export function CategoryFormDialog({ existing }: CategoryFormProps) {
   const router = useRouter();
+  const t = useTranslations("admin");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -103,7 +105,7 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
         toast.error(result.error.message);
         return;
       }
-      toast.success(existing ? "Category updated." : "Category created.");
+      toast.success(existing ? t("categories.form.updated") : t("categories.form.created"));
       setOpen(false);
       router.refresh();
     });
@@ -123,19 +125,19 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
         {existing ? (
           <>
             <PencilIcon className="w-3 h-3 mr-1" />
-            Edit
+            {tCommon("actions.edit")}
           </>
         ) : (
           <>
             <PlusIcon className="w-4 h-4 mr-2" />
-            New Category
+            {t("categories.form.newCategory")}
           </>
         )}
       </DialogTrigger>
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            {existing ? "Edit Category" : "New Category"}
+            {existing ? t("categories.form.editCategory") : t("categories.form.newCategory")}
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
@@ -148,10 +150,10 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category Name</FormLabel>
+                  <FormLabel>{t("categories.form.categoryName")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="e.g. Flake Graphite +100 Mesh"
+                      placeholder={t("categories.form.namePlaceholder")}
                       {...field}
                     />
                   </FormControl>
@@ -165,11 +167,11 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t("categories.form.description")}</FormLabel>
                   <FormControl>
                     <Textarea
                       rows={2}
-                      placeholder="One-sentence summary shown to buyers."
+                      placeholder={t("categories.form.descriptionPlaceholder")}
                       {...field}
                     />
                   </FormControl>
@@ -180,7 +182,7 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
 
             <div className="rounded-md border bg-card/40 p-3 space-y-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Specification defaults
+                {t("categories.form.specDefaults")}
               </p>
 
               <FormField
@@ -188,27 +190,27 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                 name="spec_schema.product_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Product Type</FormLabel>
+                    <FormLabel>{t("categories.form.productType")}</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          {/* Render the human label, not the enum code. */}
                           <SelectValue>
                             {(value: unknown) =>
-                              typeof value === "string" && value in PRODUCT_TYPE_LABEL
-                                ? PRODUCT_TYPE_LABEL[value as keyof typeof PRODUCT_TYPE_LABEL]
-                                : "Select product type"
+                              typeof value === "string" &&
+                              (PRODUCT_TYPES as readonly string[]).includes(value)
+                                ? t(`categories.productType.${value as "flake_graphite"}`)
+                                : t("categories.form.selectProductType")
                             }
                           </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {PRODUCT_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {PRODUCT_TYPE_LABEL[t]}
+                        {PRODUCT_TYPES.map((pt) => (
+                          <SelectItem key={pt} value={pt}>
+                            {t(`categories.productType.${pt}`)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -225,10 +227,10 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                   <FormItem className="flex items-center justify-between gap-3 rounded-md border border-border/60 px-3 py-2">
                     <div>
                       <FormLabel className="text-sm">
-                        Custom grade
+                        {t("categories.form.customGrade")}
                       </FormLabel>
                       <p className="text-xs text-muted-foreground">
-                        Seller fills in mesh size and exact values per listing.
+                        {t("categories.form.customGradeHint")}
                       </p>
                     </div>
                     <FormControl>
@@ -238,7 +240,7 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                         variant={field.value ? "default" : "outline"}
                         onClick={() => field.onChange(!field.value)}
                       >
-                        {field.value ? "Custom" : "Standard"}
+                        {field.value ? t("categories.form.custom") : t("categories.form.standard")}
                       </Button>
                     </FormControl>
                   </FormItem>
@@ -251,7 +253,7 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                   name="spec_schema.mesh_size"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mesh Size</FormLabel>
+                      <FormLabel>{t("categories.form.meshSize")}</FormLabel>
                       <Select
                         onValueChange={(v) =>
                           field.onChange(v === MESH_NONE ? null : v)
@@ -260,11 +262,11 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select mesh size">
+                            <SelectValue placeholder={t("categories.form.selectMeshSize")}>
                               {(value: unknown) =>
                                 typeof value === "string" && value && value !== MESH_NONE
-                                  ? `${value} Mesh`
-                                  : "Select mesh size"
+                                  ? t("categories.form.meshOption", { size: value })
+                                  : t("categories.form.selectMeshSize")
                               }
                             </SelectValue>
                           </SelectTrigger>
@@ -272,15 +274,13 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                         <SelectContent>
                           {MESH_SIZES.map((m) => (
                             <SelectItem key={m} value={m}>
-                              {m} Mesh
+                              {t("categories.form.meshOption", { size: m })}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        e.g. <span className="text-foreground">+100</span> means ≥80% of particles
-                        retained on a 100-mesh screen.{" "}
-                        <span className="text-foreground">-100</span> means ≥80% pass through it.
+                        {t("categories.form.meshHint")}
                       </p>
                       <FormMessage />
                     </FormItem>
@@ -294,7 +294,7 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                   name="spec_schema.fixed_carbon_min"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fixed Carbon Min (%)</FormLabel>
+                      <FormLabel>{t("categories.form.fixedCarbonMin")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -316,7 +316,7 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                   name="spec_schema.fixed_carbon_max"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fixed Carbon Max (%)</FormLabel>
+                      <FormLabel>{t("categories.form.fixedCarbonMax")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -341,7 +341,7 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                   name="spec_schema.moisture_max"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Moisture Max (%)</FormLabel>
+                      <FormLabel>{t("categories.form.moistureMax")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -363,7 +363,7 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                   name="spec_schema.size_distribution_min_pct"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Size Distribution Min (%)</FormLabel>
+                      <FormLabel>{t("categories.form.sizeDistributionMin")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -377,7 +377,7 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                         />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
-                        Default 80 — i.e. 80% MIN on the mesh.
+                        {t("categories.form.sizeDistributionHint")}
                       </p>
                       <FormMessage />
                     </FormItem>
@@ -392,10 +392,10 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
                 variant="outline"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                {tCommon("actions.cancel")}
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Saving…" : "Save"}
+                {isPending ? tCommon("actions.saving") : tCommon("actions.save")}
               </Button>
             </div>
           </form>
@@ -407,6 +407,7 @@ export function CategoryFormDialog({ existing }: CategoryFormProps) {
 
 export function DeleteCategoryButton({ categoryId }: { categoryId: string }) {
   const router = useRouter();
+  const t = useTranslations("admin");
   const [isPending, startTransition] = useTransition();
 
   function handleDelete() {
@@ -416,7 +417,7 @@ export function DeleteCategoryButton({ categoryId }: { categoryId: string }) {
         toast.error(result.error.message);
         return;
       }
-      toast.success("Category deactivated.");
+      toast.success(t("categories.form.deactivated"));
       router.refresh();
     });
   }
@@ -429,7 +430,7 @@ export function DeleteCategoryButton({ categoryId }: { categoryId: string }) {
       disabled={isPending}
       className="h-7 text-xs text-destructive hover:text-destructive"
     >
-      Deactivate
+      {t("categories.form.deactivate")}
     </Button>
   );
 }
@@ -440,6 +441,7 @@ export function ReactivateCategoryButton({
   categoryId: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
   const [isPending, startTransition] = useTransition();
 
   function handleReactivate() {
@@ -449,7 +451,7 @@ export function ReactivateCategoryButton({
         toast.error(result.error.message);
         return;
       }
-      toast.success("Category reactivated.");
+      toast.success(t("categories.form.reactivated"));
       router.refresh();
     });
   }
@@ -462,7 +464,7 @@ export function ReactivateCategoryButton({
       disabled={isPending}
       className="h-7 text-xs text-green-400 hover:text-green-400"
     >
-      Reactivate
+      {t("categories.form.reactivate")}
     </Button>
   );
 }

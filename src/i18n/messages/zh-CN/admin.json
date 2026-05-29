@@ -1,0 +1,357 @@
+{
+  "meta": {
+    "dashboard": "管理后台",
+    "users": "用户",
+    "categories": "品类",
+    "orders": "订单",
+    "orderDetail": "订单",
+    "payments": "付款",
+    "news": "资讯",
+    "settings": "设置"
+  },
+  "layout": {
+    "consoleTitle": "管理控制台",
+    "overview": "概览",
+    "links": {
+      "dashboard": "工作台",
+      "home": "首页"
+    },
+    "nav": {
+      "users": "用户",
+      "categories": "品类",
+      "orders": "订单",
+      "payments": "付款",
+      "news": "资讯",
+      "settings": "设置"
+    },
+    "badges": {
+      "paymentsPending": "待审核付款",
+      "disputedOrders": "争议订单"
+    }
+  },
+  "error": {
+    "title": "管理后台错误",
+    "fallback": "管理控制台发生意外错误。",
+    "tryAgain": "重试"
+  },
+  "dashboard": {
+    "title": "管理后台",
+    "subtitle": "平台概览及待管理员处理的事项。",
+    "stats": {
+      "totalUsers": "用户总数",
+      "totalOrders": "订单总数",
+      "disputedOrders": "争议订单",
+      "paymentsPending": "待审核付款"
+    },
+    "actionNeeded": "待处理",
+    "priority": {
+      "title": "优先事项",
+      "subtitle": "等待管理员团队处理的项目。",
+      "disputedTitle": "{count, plural, other {# 笔争议订单}}",
+      "disputedSub": "开启调解：查看时间线，必要时可强制变更状态。",
+      "paymentsTitle": "{count, plural, other {# 笔付款待审核}}",
+      "paymentsSub": "审核付款凭证后，订单将自动推进为已付款。",
+      "badgeDisputed": "争议",
+      "badgeReview": "审核"
+    },
+    "caughtUp": {
+      "title": "已全部处理",
+      "body": "暂无争议订单或待审核付款。可通过侧栏管理<usersLink>用户</usersLink>、<categoriesLink>品类</categoriesLink>或<newsLink>资讯</newsLink>。"
+    }
+  },
+  "users": {
+    "title": "用户",
+    "subtitle": "管理用户角色与账户状态。",
+    "table": {
+      "user": "用户",
+      "company": "公司",
+      "country": "国家/地区",
+      "role": "角色",
+      "status": "状态",
+      "kyc": "KYC",
+      "joined": "注册时间",
+      "actions": "操作"
+    },
+    "actions": {
+      "unfreeze": "解冻",
+      "freeze": "冻结",
+      "frozen": "用户已冻结。",
+      "reactivated": "用户已恢复。",
+      "roleUpdated": "角色已更新为 {role}。"
+    },
+    "kyc": {
+      "button": "KYC",
+      "dialogTitle": "KYC — {user}",
+      "pendingBanner": "{count, plural, other {# 份文件待审核}}",
+      "pendingHint": "批准后授予 2 级（身份已验证）。无需先完成手机验证。",
+      "approveDocs": "批准文件 → 2 级",
+      "phone": "手机：",
+      "phoneVerified": "手机已验证：",
+      "phoneVerifiedNo": "否",
+      "levelOverride": "KYC 等级（管理员覆盖）",
+      "levelHint": "3 级用于可信卖家（如上架门槛）。文件批准设为 2 级；手机 OTP 设为 1 级。所有变更记入 audit_logs。",
+      "uploadedDocs": "已上传文件",
+      "noDocs": "暂无文件。",
+      "viewFile": "查看文件",
+      "signedUrlUnavailable": "签名链接不可用",
+      "saveLevel": "保存 KYC 等级",
+      "levelUpdated": "KYC 等级已更新。",
+      "docsApproved": "文件已批准。用户现为 {level} 级。",
+      "phoneBadge": "手机 ✓",
+      "docsPending": "{count, plural, other {# 份待审}}",
+      "docsApprovedCount": "已批 {approved}/{total}"
+    }
+  },
+  "categories": {
+    "title": "产品品类",
+    "subtitle": "管理产品品类及其规格默认值。自定义等级品类允许卖家按挂牌填写筛目与精确数值。",
+    "table": {
+      "name": "名称",
+      "specification": "规格",
+      "listings": "挂牌数",
+      "description": "说明",
+      "status": "状态",
+      "actions": "操作"
+    },
+    "customBadge": "自定义",
+    "spec": {
+      "customMesh": "自定义筛目",
+      "mesh": "{size} 目",
+      "carbon": "固定碳 {min}–{max}%",
+      "moisture": "水分 ≤ {max}%",
+      "meshMatch": "≥ {pct}% 符合筛目"
+    },
+    "listingsCountTitle": "{count, plural, other {# 个挂牌引用此品类}}",
+    "form": {
+      "newCategory": "新品类",
+      "editCategory": "编辑品类",
+      "categoryName": "品类名称",
+      "namePlaceholder": "例如：鳞片石墨 +100 目",
+      "description": "说明",
+      "descriptionPlaceholder": "向买家展示的一句话摘要。",
+      "specDefaults": "规格默认值",
+      "productType": "产品类型",
+      "selectProductType": "选择产品类型",
+      "customGrade": "自定义等级",
+      "customGradeHint": "卖家按挂牌填写筛目与精确数值。",
+      "standard": "标准",
+      "custom": "自定义",
+      "meshSize": "筛目",
+      "selectMeshSize": "选择筛目",
+      "meshHint": "例如 +100 表示 ≥80% 颗粒留在 100 目筛上；-100 表示 ≥80% 通过。",
+      "meshOption": "{size} 目",
+      "fixedCarbonMin": "固定碳下限 (%)",
+      "fixedCarbonMax": "固定碳上限 (%)",
+      "moistureMax": "水分上限 (%)",
+      "sizeDistributionMin": "粒径分布下限 (%)",
+      "sizeDistributionHint": "默认 80，即筛上最低占比 80%。",
+      "created": "品类已创建。",
+      "updated": "品类已更新。",
+      "deactivated": "品类已停用。",
+      "reactivated": "品类已重新启用。",
+      "deactivate": "停用",
+      "reactivate": "重新启用"
+    },
+    "productType": {
+      "flake_graphite": "鳞片石墨"
+    }
+  },
+  "orders": {
+    "title": "全部订单",
+    "subtitle": "监控平台全部订单。",
+    "table": {
+      "orderNo": "订单号",
+      "buyer": "买家",
+      "seller": "卖家",
+      "amount": "金额",
+      "status": "状态",
+      "created": "创建时间"
+    },
+    "detail": {
+      "breadcrumb": "全部订单",
+      "viewAsParty": "以参与方视角查看",
+      "buyer": "买家",
+      "seller": "卖家",
+      "order": "订单",
+      "qty": "数量：",
+      "total": "合计：",
+      "created": "创建：",
+      "contract": "合同",
+      "noContract": "尚无合同。",
+      "revision": "{contractNo}（修订 {revision}）",
+      "buyerSigned": "买家已签：",
+      "sellerSigned": "卖家已签：",
+      "buyerApproved": "买家已批：",
+      "rejected": "已拒绝：{reason}",
+      "paymentSchedule": "付款计划",
+      "noSchedule": "未定义计划。",
+      "payments": "付款记录",
+      "none": "无。",
+      "shipment": "装运",
+      "bl": "提单：",
+      "vessel": "船名：",
+      "ata": "ATA：",
+      "destination": "目的地：",
+      "documents": "单证",
+      "auditLog": "审计日志",
+      "noAudit": "暂无管理员操作记录。",
+      "timeline": "订单时间线",
+      "scheduleTable": {
+        "category": "类别",
+        "milestone": "节点",
+        "due": "到期",
+        "status": "状态"
+      },
+      "forceTransition": {
+        "title": "管理员：强制变更状态",
+        "hint": "绕过状态机。所有操作记入 audit_logs。仅用于争议调解或恢复。",
+        "currentStatus": "当前状态",
+        "targetStatus": "目标状态",
+        "reason": "原因（必填，记入审计）",
+        "reasonPlaceholder": "为何需要手动变更状态？",
+        "submit": "强制变更",
+        "transitioning": "变更中…",
+        "reasonRequired": "强制变更必须填写原因。",
+        "sameStatus": "目标状态与当前相同。",
+        "success": "订单已强制变更为 {status}。"
+      }
+    }
+  },
+  "payments": {
+    "title": "付款监管",
+    "subtitle": "卖家为其订单付款的主要审核人。本页供管理员审计并在必要时覆盖决定，例如调解争议或在卖家无响应时推进付款。",
+    "loadFailed": "加载付款失败。",
+    "pendingReview": "待审核",
+    "noPending": "暂无待审核付款。🎉",
+    "history": "历史记录",
+    "noHistory": "暂无已审核付款。",
+    "table": {
+      "buyer": "买家",
+      "order": "订单",
+      "method": "方式",
+      "amount": "金额",
+      "txProof": "交易号 / 凭证",
+      "date": "日期",
+      "action": "操作",
+      "status": "状态",
+      "adminNote": "管理员备注",
+      "viewProof": "查看凭证"
+    }
+  },
+  "news": {
+    "title": "资讯文章",
+    "subtitleDesktop": "聚合、审核并发布石墨行业资讯。使用「获取最新资讯」从 LLM 拉取候选（确认前不会写入数据库）。",
+    "subtitleMobile": "审核、获取并发布行业资讯。",
+    "fetchLatest": "获取最新资讯",
+    "manualArticle": "手动创建",
+    "tabs": {
+      "pending": "待审核",
+      "pendingShort": "待审",
+      "published": "已发布",
+      "rejected": "已拒绝",
+      "drafts": "草稿"
+    },
+    "empty": "暂无内容。",
+    "table": {
+      "title": "标题",
+      "source": "来源",
+      "score": "相关度",
+      "status": "状态",
+      "translations": "翻译",
+      "fetchedCreated": "抓取 / 创建",
+      "actions": "操作",
+      "reason": "原因：{reason}"
+    },
+    "form": {
+      "newArticle": "新建文章",
+      "editArticle": "编辑文章",
+      "title": "标题",
+      "slug": "Slug",
+      "slugPlaceholder": "my-article-slug",
+      "coverUrl": "封面图 URL（可选）",
+      "summary": "摘要",
+      "contentHtml": "正文 (HTML)",
+      "publishImmediately": "立即发布",
+      "created": "文章已创建。",
+      "updated": "文章已更新。"
+    },
+    "fetch": {
+      "dialogTitle": "获取资讯候选",
+      "lookback": "回溯天数",
+      "maxItems": "最多条数",
+      "fetch": "获取",
+      "askingLlm": "正在询问 LLM…",
+      "modelTokens": "模型 {model} · tokens {tokens}",
+      "searching": "正在检索…",
+      "noCandidates": "尚无候选。点击获取。",
+      "duplicateBadge": "已在库中 ({status})",
+      "scoreBadge": "分数 {score}",
+      "selectAllNew": "全选新条目",
+      "clear": "清除",
+      "importing": "导入中…",
+      "import": "导入 {count} 条 → 待审",
+      "pickOne": "请至少选择一条。",
+      "noCandidatesReturned": "模型未返回候选。",
+      "fetchedSummary": "已获取 {count} 条候选（{duplicates} 条重复）。",
+      "importedSummary": "已导入 {inserted} 条（跳过 {skipped} 条）。"
+    },
+    "actions": {
+      "approve": "批准",
+      "reject": "拒绝",
+      "unpublish": "下架",
+      "translate": "翻译",
+      "published": "已发布。",
+      "movedToPending": "已移回待审。",
+      "rejectedToast": "已拒绝。（保留哈希供日后去重。）"
+    },
+    "reject": {
+      "title": "拒绝文章",
+      "hint": "文章将从公开站点隐藏，但保留在库中，以便今后自动跳过相同来源 URL / 标题。",
+      "reasonPlaceholder": "原因（可选，如离题、质量低、重复事件）",
+      "rejecting": "拒绝中…"
+    },
+    "translate": {
+      "title": "翻译文章",
+      "hint": "每种语言触发一次 Poe 调用。再次点击将覆盖已有翻译。",
+      "done": "完成",
+      "translating": "翻译中…",
+      "retranslate": "重新翻译",
+      "success": "已翻译为 {locale}。"
+    }
+  },
+  "settings": {
+    "title": "平台设置",
+    "subtitle": "配置全平台通知与集成选项。",
+    "email": {
+      "title": "邮件 (SMTP)",
+      "status": "状态：",
+      "configured": "已配置",
+      "notConfigured": "未配置",
+      "hint": "在 .env.local 中配置 SMTP_HOST / SMTP_USER / SMTP_PASS / EMAIL_FROM_ADDRESS。向未验证收件人发送前须验证 AWS SES 域名（生产环境需开通发送权限）。",
+      "sendTest": "发送测试邮件",
+      "sending": "发送中…",
+      "sent": "测试邮件已发送至 {to}",
+      "sentWithId": "测试邮件已发送至 {to}（id: {messageId}）"
+    },
+    "kycGates": {
+      "title": "KYC 门槛",
+      "intro": "各操作所需的最低 profiles.kyc_level。调试阶段可设为 0 以便所有活跃用户交易；需要留档时提高至 1 及以上。",
+      "inquiry": "提交询价（买家）",
+      "listing": "创建挂牌（卖家）",
+      "levelLine": "{level} 级：{label}",
+      "save": "保存 KYC 门槛",
+      "updated": "KYC 门槛已更新。"
+    },
+    "notifications": {
+      "title": "通知",
+      "smsLabel": "短信通知",
+      "smsHint": "启用后，对有手机号的用户除邮件外亦发送事务短信。需配置短信网关环境变量。",
+      "gatewayNotConfigured": "网关未配置：请在部署环境中设置 SMS_BASE_URL 与 SMS_APP_ID。",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "enabledToast": "短信通知已启用。",
+      "disabledToast": "短信通知已禁用。",
+      "lastUpdated": "最后更新：{date}"
+    }
+  }
+}

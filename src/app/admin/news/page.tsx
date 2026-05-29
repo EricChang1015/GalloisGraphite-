@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -8,23 +9,22 @@ import {
 import { NewsAdminTabs } from "@/components/admin/NewsAdminTabs";
 import type { AdminNewsRow } from "@/components/admin/NewsArticleViews";
 
-export const metadata = { title: "Admin · News" };
+export async function generateMetadata() {
+  const t = await getTranslations("admin");
+  return { title: `${t("meta.news")} — Mada Graphite` };
+}
 
-const STATUS_TABS = [
-  { value: "pending", label: "Pending review" },
-  { value: "published", label: "Published" },
-  { value: "rejected", label: "Rejected" },
-  { value: "draft", label: "Drafts" },
-] as const;
+const STATUS_TAB_VALUES = ["pending", "published", "rejected", "draft"] as const;
 
 export default async function AdminNewsPage({
   searchParams,
 }: {
   searchParams?: Promise<{ tab?: string }>;
 }) {
+  const t = await getTranslations("admin");
   const params = (await searchParams) ?? {};
   const activeTab =
-    STATUS_TABS.find((t) => t.value === params.tab)?.value ?? "pending";
+    STATUS_TAB_VALUES.find((v) => v === params.tab) ?? "pending";
 
   const admin = createAdminClient();
 
@@ -52,17 +52,10 @@ export default async function AdminNewsPage({
     <div className="space-y-4 md:space-y-6">
       <div className="sticky top-0 z-10 -mx-4 space-y-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-backdrop-filter:bg-background/80 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
         <div>
-          <h1 className="text-xl font-semibold md:text-2xl">News Articles</h1>
+          <h1 className="text-xl font-semibold md:text-2xl">{t("news.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground md:block">
-            <span className="hidden sm:inline">
-              Aggregate, review and publish graphite industry news. Use the
-              <span className="text-foreground"> Fetch latest news</span> button
-              to pull fresh candidates from the LLM (no DB writes until you
-              confirm).
-            </span>
-            <span className="sm:hidden">
-              Review, fetch, and publish industry news.
-            </span>
+            <span className="hidden sm:inline">{t("news.subtitleDesktop")}</span>
+            <span className="sm:hidden">{t("news.subtitleMobile")}</span>
           </p>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:flex md:flex-wrap">

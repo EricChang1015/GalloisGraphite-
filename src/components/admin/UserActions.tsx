@@ -2,8 +2,9 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ShieldIcon, SnowflakeIcon, SunIcon } from "lucide-react";
+import { SnowflakeIcon, SunIcon } from "lucide-react";
 
 import { freezeUser, unfreezeUser, setUserRole } from "@/actions/admin";
 import { Button } from "@/components/ui/button";
@@ -15,15 +16,19 @@ interface UserActionsProps {
   currentStatus: string;
 }
 
+const ASSIGNABLE_ROLES = ["buyer", "seller", "admin"] as const;
+
 export function UserActions({ userId, currentRole, currentStatus }: UserActionsProps) {
   const router = useRouter();
+  const t = useTranslations("admin");
+  const tEnums = useTranslations("enums");
   const [isPending, startTransition] = useTransition();
 
   function handleFreeze() {
     startTransition(async () => {
       const result = await freezeUser({ user_id: userId, reason: "Admin action" });
       if (result.error) { toast.error(result.error.message); return; }
-      toast.success("User frozen.");
+      toast.success(t("users.actions.frozen"));
       router.refresh();
     });
   }
@@ -32,7 +37,7 @@ export function UserActions({ userId, currentRole, currentStatus }: UserActionsP
     startTransition(async () => {
       const result = await unfreezeUser(userId);
       if (result.error) { toast.error(result.error.message); return; }
-      toast.success("User reactivated.");
+      toast.success(t("users.actions.reactivated"));
       router.refresh();
     });
   }
@@ -42,7 +47,7 @@ export function UserActions({ userId, currentRole, currentStatus }: UserActionsP
     startTransition(async () => {
       const result = await setUserRole({ user_id: userId, role: role as "buyer" | "seller" | "admin" });
       if (result.error) { toast.error(result.error.message); return; }
-      toast.success(`Role updated to ${role}.`);
+      toast.success(t("users.actions.roleUpdated", { role: tEnums(`role.${role as "buyer" | "seller" | "admin"}`) }));
       router.refresh();
     });
   }
@@ -54,20 +59,22 @@ export function UserActions({ userId, currentRole, currentStatus }: UserActionsP
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="buyer">buyer</SelectItem>
-          <SelectItem value="seller">seller</SelectItem>
-          <SelectItem value="admin">admin</SelectItem>
+          {ASSIGNABLE_ROLES.map((role) => (
+            <SelectItem key={role} value={role}>
+              {tEnums(`role.${role}`)}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
       {currentStatus === "frozen" ? (
         <Button size="sm" variant="outline" onClick={handleUnfreeze} disabled={isPending} className="h-7 text-xs">
           <SunIcon className="w-3 h-3 mr-1" />
-          Unfreeze
+          {t("users.actions.unfreeze")}
         </Button>
       ) : (
         <Button size="sm" variant="destructive" onClick={handleFreeze} disabled={isPending} className="h-7 text-xs">
           <SnowflakeIcon className="w-3 h-3 mr-1" />
-          Freeze
+          {t("users.actions.freeze")}
         </Button>
       )}
     </div>

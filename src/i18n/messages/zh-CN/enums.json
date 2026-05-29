@@ -87,5 +87,54 @@
       "3": "信任卖家"
     },
     "levelLabel": "KYC 等级 {level}"
+  },
+  "payment": {
+    "status": {
+      "pending": "待审核",
+      "verified": "已通过",
+      "rejected": "已拒绝"
+    },
+    "category": {
+      "prepayment": "预付款",
+      "regular_payment": "常规付款",
+      "postpayment": "尾款"
+    },
+    "milestone": {
+      "contract_signed": "合同已签署",
+      "before_production": "生产前",
+      "before_shipment": "发运前",
+      "before_loading": "装船前",
+      "loaded_onto_vessel": "已装船",
+      "bl_received": "已收提单",
+      "shipping_docs_received": "已收装运单证",
+      "bl_plus_insurance_received": "提单+保险已收",
+      "arrived_at_port": "已到港",
+      "goods_picked_up": "已提货",
+      "accepted_by_buyer": "买家已验收",
+      "bl_date_plus_30": "提单日 +30 天",
+      "bl_date_plus_60": "提单日 +60 天",
+      "bl_date_plus_90": "提单日 +90 天"
+    },
+    "scheduleStatus": {
+      "scheduled": "已计划",
+      "due": "到期",
+      "awaiting_review": "待审核",
+      "paid": "已付",
+      "overdue": "逾期",
+      "waived": "已豁免"
+    }
+  },
+  "news": {
+    "status": {
+      "draft": "草稿",
+      "pending": "待审核",
+      "approved": "已批准",
+      "published": "已发布",
+      "rejected": "已拒绝"
+    }
+  },
+  "category": {
+    "active": "启用",
+    "inactive": "停用"
   }
 }

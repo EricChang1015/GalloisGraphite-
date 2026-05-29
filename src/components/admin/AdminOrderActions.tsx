@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { forceTransitionOrder } from "@/actions/order";
@@ -15,10 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  STATUS_LABEL,
-  type OrderStatus,
-} from "@/lib/order/stateMachine";
+import { type OrderStatus } from "@/lib/order/stateMachine";
 
 interface Props {
   orderId: string;
@@ -48,17 +46,19 @@ const ALL_STATUSES: OrderStatus[] = [
 
 export function AdminOrderActions({ orderId, currentStatus }: Props) {
   const router = useRouter();
+  const t = useTranslations("admin");
+  const tEnums = useTranslations("enums");
   const [isPending, startTransition] = useTransition();
   const [target, setTarget] = useState<OrderStatus>(currentStatus);
   const [reason, setReason] = useState("");
 
   function handleSubmit() {
     if (!reason.trim()) {
-      toast.error("Reason is required for force transitions.");
+      toast.error(t("orders.detail.forceTransition.reasonRequired"));
       return;
     }
     if (target === currentStatus) {
-      toast.error("Target status is the same as current.");
+      toast.error(t("orders.detail.forceTransition.sameStatus"));
       return;
     }
     startTransition(async () => {
@@ -67,7 +67,11 @@ export function AdminOrderActions({ orderId, currentStatus }: Props) {
         toast.error(result.error.message);
         return;
       }
-      toast.success(`Order force-transitioned to ${target}.`);
+      toast.success(
+        t("orders.detail.forceTransition.success", {
+          status: tEnums(`order.status.${target}`),
+        })
+      );
       setReason("");
       router.refresh();
     });
@@ -76,19 +80,24 @@ export function AdminOrderActions({ orderId, currentStatus }: Props) {
   return (
     <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-3">
       <div>
-        <p className="text-sm font-medium text-yellow-400">Admin: Force Transition</p>
+        <p className="text-sm font-medium text-yellow-400">
+          {t("orders.detail.forceTransition.title")}
+        </p>
         <p className="text-xs text-muted-foreground">
-          Bypasses the state machine. All actions are recorded in audit_logs.
-          Use only for dispute resolution or recovery.
+          {t("orders.detail.forceTransition.hint")}
         </p>
       </div>
       <div className="grid sm:grid-cols-2 gap-3">
         <div>
-          <Label className="text-xs">Current Status</Label>
-          <p className="text-sm font-medium mt-1">{STATUS_LABEL[currentStatus]}</p>
+          <Label className="text-xs">{t("orders.detail.forceTransition.currentStatus")}</Label>
+          <p className="text-sm font-medium mt-1">
+            {tEnums(`order.status.${currentStatus}`)}
+          </p>
         </div>
         <div>
-          <Label className="text-xs" htmlFor="target-status">Target Status</Label>
+          <Label className="text-xs" htmlFor="target-status">
+            {t("orders.detail.forceTransition.targetStatus")}
+          </Label>
           <Select value={target} onValueChange={(v) => setTarget(v as OrderStatus)}>
             <SelectTrigger id="target-status">
               <SelectValue />
@@ -96,7 +105,7 @@ export function AdminOrderActions({ orderId, currentStatus }: Props) {
             <SelectContent>
               {ALL_STATUSES.map((s) => (
                 <SelectItem key={s} value={s} disabled={s === currentStatus}>
-                  {STATUS_LABEL[s]}
+                  {tEnums(`order.status.${s}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -104,13 +113,15 @@ export function AdminOrderActions({ orderId, currentStatus }: Props) {
         </div>
       </div>
       <div>
-        <Label className="text-xs" htmlFor="reason">Reason (required, audit-logged)</Label>
+        <Label className="text-xs" htmlFor="reason">
+          {t("orders.detail.forceTransition.reason")}
+        </Label>
         <Textarea
           id="reason"
           rows={3}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Why is this manual transition needed?"
+          placeholder={t("orders.detail.forceTransition.reasonPlaceholder")}
         />
       </div>
       <Button
@@ -119,7 +130,9 @@ export function AdminOrderActions({ orderId, currentStatus }: Props) {
         disabled={isPending || !reason.trim() || target === currentStatus}
         onClick={handleSubmit}
       >
-        {isPending ? "Transitioning…" : "Force Transition"}
+        {isPending
+          ? t("orders.detail.forceTransition.transitioning")
+          : t("orders.detail.forceTransition.submit")}
       </Button>
     </div>
   );

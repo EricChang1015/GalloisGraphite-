@@ -87,5 +87,54 @@
       "3": "Trusted seller"
     },
     "levelLabel": "KYC level {level}"
+  },
+  "payment": {
+    "status": {
+      "pending": "Pending",
+      "verified": "Verified",
+      "rejected": "Rejected"
+    },
+    "category": {
+      "prepayment": "Prepayment",
+      "regular_payment": "Regular Payment",
+      "postpayment": "Postpayment"
+    },
+    "milestone": {
+      "contract_signed": "Contract Signed",
+      "before_production": "Before Production",
+      "before_shipment": "Before Shipment",
+      "before_loading": "Before Loading",
+      "loaded_onto_vessel": "Loaded onto Vessel",
+      "bl_received": "B/L Received",
+      "shipping_docs_received": "Shipping Documents Received",
+      "bl_plus_insurance_received": "B/L + Insurance Received",
+      "arrived_at_port": "Arrived at Port",
+      "goods_picked_up": "Goods Picked Up",
+      "accepted_by_buyer": "Accepted by Buyer",
+      "bl_date_plus_30": "B/L Date + 30 days",
+      "bl_date_plus_60": "B/L Date + 60 days",
+      "bl_date_plus_90": "B/L Date + 90 days"
+    },
+    "scheduleStatus": {
+      "scheduled": "Scheduled",
+      "due": "Due",
+      "awaiting_review": "Awaiting Review",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "waived": "Waived"
+    }
+  },
+  "news": {
+    "status": {
+      "draft": "Draft",
+      "pending": "Pending review",
+      "approved": "Approved",
+      "published": "Published",
+      "rejected": "Rejected"
+    }
+  },
+  "category": {
+    "active": "active",
+    "inactive": "inactive"
   }
 }

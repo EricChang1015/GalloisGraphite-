@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,19 +13,20 @@ import {
 } from "@/components/ui/table";
 import { PaymentVerifyActions } from "@/components/order/PaymentVerifyActions";
 
-export const metadata = { title: "Admin · Payments" };
+export async function generateMetadata() {
+  const t = await getTranslations("admin");
+  return { title: `${t("meta.payments")} — Mada Graphite` };
+}
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function AdminPaymentsPage() {
+  const t = await getTranslations("admin");
+  const tEnums = await getTranslations("enums");
+  const tReviewer = await getTranslations("orders.detail.payment.reviewerLabel");
   const admin = createAdminClient();
 
-  // NOTE: the FK on `payments.buyer_id -> profiles.id` is named
-  // `payments_payer_id_fkey` (legacy schema name from before the
-  // `payer_id` -> `buyer_id` rename). Using the wrong hint silently
-  // fails the JOIN and returns no rows, which is why the admin
-  // dashboard could simultaneously show "1 Action needed" and an
-  // empty list.
   const { data: payments, error: paymentsError } = await admin
     .from("payments")
     .select(
@@ -62,18 +65,13 @@ export default async function AdminPaymentsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Payment Oversight</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Sellers are the primary reviewers for payments on their own orders.
-          This page lets admins audit and (if needed) override the decision —
-          e.g. to mediate disputes or unstick a payment when a seller is
-          unresponsive.
-        </p>
+        <h1 className="text-2xl font-semibold">{t("payments.title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("payments.subtitle")}</p>
       </div>
 
       {paymentsError && (
         <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
-          <p className="font-medium">Failed to load payments.</p>
+          <p className="font-medium">{t("payments.loadFailed")}</p>
           <p className="text-xs opacity-80 mt-1 break-all">
             {paymentsError.message}
           </p>
@@ -82,7 +80,7 @@ export default async function AdminPaymentsPage() {
 
       <section>
         <h2 className="text-base font-semibold mb-3">
-          Pending Review{" "}
+          {t("payments.pendingReview")}{" "}
           {pending.length > 0 && (
             <Badge variant="destructive" className="ml-2">
               {pending.length}
@@ -91,20 +89,20 @@ export default async function AdminPaymentsPage() {
         </h2>
         {pending.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground text-sm">
-            No pending payments. 🎉
+            {t("payments.noPending")}
           </div>
         ) : (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Buyer</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>TX / Proof</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="w-56">Action</TableHead>
+                  <TableHead>{t("payments.table.buyer")}</TableHead>
+                  <TableHead>{t("payments.table.order")}</TableHead>
+                  <TableHead>{t("payments.table.method")}</TableHead>
+                  <TableHead className="text-right">{t("payments.table.amount")}</TableHead>
+                  <TableHead>{t("payments.table.txProof")}</TableHead>
+                  <TableHead>{t("payments.table.date")}</TableHead>
+                  <TableHead className="w-56">{t("payments.table.action")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -143,7 +141,7 @@ export default async function AdminPaymentsPage() {
                           rel="noopener noreferrer"
                           className="text-primary underline block"
                         >
-                          View proof
+                          {t("payments.table.viewProof")}
                         </a>
                       )}
                       {p.note && (
@@ -160,7 +158,10 @@ export default async function AdminPaymentsPage() {
                       {new Date(p.created_at).toLocaleString()}
                     </TableCell>
                     <TableCell>
-                      <PaymentVerifyActions paymentId={p.id} reviewerLabel="Admin" />
+                      <PaymentVerifyActions
+                        paymentId={p.id}
+                        reviewerLabel={tReviewer("admin")}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -171,22 +172,22 @@ export default async function AdminPaymentsPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-semibold mb-3">History</h2>
+        <h2 className="text-base font-semibold mb-3">{t("payments.history")}</h2>
         {reviewed.length === 0 ? (
           <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground text-sm">
-            No reviewed payments yet.
+            {t("payments.noHistory")}
           </div>
         ) : (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Buyer</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Admin Note</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>{t("payments.table.buyer")}</TableHead>
+                  <TableHead>{t("payments.table.order")}</TableHead>
+                  <TableHead className="text-right">{t("payments.table.amount")}</TableHead>
+                  <TableHead>{t("payments.table.status")}</TableHead>
+                  <TableHead>{t("payments.table.adminNote")}</TableHead>
+                  <TableHead>{t("payments.table.date")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -205,7 +206,7 @@ export default async function AdminPaymentsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusColor[p.status] ?? ""}>
-                        {p.status}
+                        {tEnums(`payment.status.${p.status as "pending" | "verified" | "rejected"}`)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
