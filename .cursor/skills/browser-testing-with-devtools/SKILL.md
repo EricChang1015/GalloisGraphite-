@@ -35,8 +35,8 @@ CDP `Input.*` is denied (focus-sensitive in Electron). Use the dedicated browser
 
 ```
 1. Ensure dev server on port 3000
-   - Get-NetTCPConnection -LocalPort 3000 to confirm
-   - If stale, Stop-Process -Id <pid> -Force, then npm run dev
+   - If port is busy or a stale instance exists: `npm run stop` (or `npm run stop:all`)
+   - Then `npm run dev`
 2. browser_tabs (list) → check existing tabs
 3. browser_navigate http://localhost:3000/<path>
 4. browser_lock { action: "lock" }

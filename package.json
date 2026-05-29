@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "stop": "node scripts/stop-server.mjs",
+    "stop:all": "node scripts/stop-server.mjs 3000 3001 3002",
     "build": "npm run gen:world-map && next build",
     "gen:world-map": "node scripts/gen-world-map.mjs",
     "start": "next start",

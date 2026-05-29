@@ -68,6 +68,13 @@ sellers. Built on Next.js 16 (App Router) + Supabase + Tailwind v4 + shadcn/ui.
    npm run dev
    ```
 
+   To stop a leftover `dev` / `start` instance (Git Bash, cmd, or PowerShell):
+
+   ```bash
+   npm run stop       # port 3000
+   npm run stop:all   # ports 3000–3002 (stale dev instances)
+   ```
+
 5. Open http://localhost:3000
 
 ## Documentation
