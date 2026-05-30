@@ -1,0 +1,14 @@
+*Mada Graphite — 每日工程摘要*
+*涵蓋期間：* 2026-05-29 17:00 UTC → 2026-05-30 17:00 UTC
+
+*資料來源：* `origin/main` **0 commits**、**0 個 merged PR**；`main` 仍停在 `7eb81d4`（`git log` / `git rev-parse` 比對視窗前後相同）。
+
+• *main 無新變更（靜默日）* — 視窗內 `origin/main` 無 push/merge；最新 tip 仍為 `7eb81d4` `feat(admin): add users page filters and attention prioritization`（2026-05-29 09:09 UTC，早於本視窗起點）。
+• *昨日已上線能力維持不變* — 目前 production 候選線仍包含：新聞後台聚合 + PR [#17](https://github.com/EricChang1015/GalloisGraphite-/pull/17) 直向 UI（`db9ba26`）、Admin `en`/`zh-CN` i18n（`0447ca2`）、`/admin/users` 篩選與「需關注」排序（`7eb81d4`）、`npm run stop`（`7b86665`）。
+• *倉庫周邊活動（未進 main）* — `cursor/daily-engineering-digest-8463` 在視窗邊界提交 `76a0153` / `1b8db47`（`digests/2026-05-29.txt` + `scripts/post-engineering-digest.mjs`）；僅影響 digest 自動化，不影響產品執行路徑。
+• *開放 PR 狀態* — 仍僅 [#15](https://github.com/EricChang1015/GalloisGraphite-/pull/15)（Cloud Agent `AGENTS.md` 說明）開啟，最後更新 2026-05-28，本日無新 PR 活動。
+
+*Watchlist*
+• **Migration 029 部署**：若任一環境尚未執行 `npm run db:migrate` + `npm run db:types`，Admin 新聞聚合與 `news_translations` 仍可能缺表/欄位（延續 05-29 摘要風險）。
+• **Admin i18n / 使用者列表**：大面積字串與 in-memory `filterUsers` 行為未在本日驗證；建議以 `mg-locale=zh-CN` 抽測 KYC、新聞、付款路徑並跑 `npm run qa:check-dev`。
+• **Digest 基礎設施未合併**：`post-engineering-digest.mjs` 與歷史 `digests/*.txt` 仍在 feature branch；合併至 `main` 前 Slack cron 需確認 webhook 與檔案路徑一致。
