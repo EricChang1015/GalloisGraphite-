@@ -1,0 +1,15 @@
+*Mada Graphite — 每日工程摘要*
+*涵蓋期間：* 2026-05-30 17:01 UTC → 2026-05-31 17:01 UTC
+
+*資料來源：* `origin/main` **0 commits**、**0 個 merged PR**；`main` tip 仍為 `7eb81d4`（`git log` / `git rev-parse` 比對視窗前後相同）。
+
+• *main 連續第二個靜默日* — 視窗內 `origin/main` 無 push/merge；與前一日摘要（`digests/2026-05-30.txt`）相同，最新程式仍停在 2026-05-29 的 Admin 使用者管理強化（`7eb81d4`）。
+• *目前 main 上的最新能力（未變）* — 新聞後台聚合 + migration `029_news_aggregation.sql`（`db9ba26` / PR [#17](https://github.com/EricChang1015/GalloisGraphite-/pull/17)）；Admin `en`/`zh-CN` i18n（`0447ca2`）；`/admin/users` 篩選與「需關注」優先排序 + 側欄 KYC 計數對齊（`7eb81d4`）；`npm run stop` 終止殘留 dev server（`7b86665`）。
+• *安全與依賴* — 本視窗內無 `package.json`、RLS、migrations 或 auth 相關 commit；無新增 CVE 修補或依賴升級證據。
+• *倉庫周邊活動（未進 main）* — `origin/cursor/daily-engineering-digest-8081` 於 2026-05-30 17:02 UTC 提交 `digests/2026-05-30.txt` 與 `scripts/post-engineering-digest.mjs`；僅 digest 自動化，不影響產品執行路徑。
+• *開放 PR* — 仍僅 [#15](https://github.com/EricChang1015/GalloisGraphite-/pull/15)（`AGENTS.md` Cursor Cloud 說明）為 OPEN，最後更新 2026-05-28，本視窗無新 PR 建立或合併。
+
+*Watchlist*
+• **Migration 029 部署**：若任一環境尚未執行 `npm run db:migrate` + `npm run db:types`，Admin 新聞工作流與 `news_translations` 仍可能缺表/欄位（`029_news_aggregation.sql` 已隨 05-29 合併進 main）。
+• **Admin 大面積 i18n 未在本日驗證**：建議以 `mg-locale=zh-CN` 抽測 KYC、新聞審稿、付款覆審，並跑 `npm run qa:check-dev`；`/admin/users` 仍為全量 profiles 記憶體篩選，使用者成長後需分頁。
+• **Digest 基礎設施未合併 main**：`post-engineering-digest.mjs` 與歷史 `digests/*.txt` 仍在 feature branch；Slack cron 需確認 webhook 與 `--file` 路徑與 `main` 一致後再依賴。
