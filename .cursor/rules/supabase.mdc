@@ -33,10 +33,14 @@ export default async function Page() {
 
 ## RLS
 
-- Enable RLS on every user-data table.
+- Enable RLS on **every** table in `public` (including internal ops tables).
 - Keep policies in SQL migrations under `supabase/migrations/`.
 - For each new table, write at minimum: `select`, `insert`, `update`, `delete`
-  policies, even if some are `using (false)`.
+  policies, even if some are `using (false)` — unless the table is never
+  accessed via PostgREST (then RLS + `revoke all … from anon, authenticated`
+  is enough; see `030_agent_migrations_rls.sql`).
+- Run `npm run qa:verify-rls` after schema changes; it fails on any public
+  table with RLS disabled (Supabase linter `rls_disabled_in_public`).
 - Admin escapes RLS by using the service role key from `admin.ts`.
 
 ## Storage

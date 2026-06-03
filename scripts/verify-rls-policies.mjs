@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * A7 RLS policy review — asserts critical policies from 005 / 009 / 010 / 015 / 018 exist.
+ * RLS review — every public heap table must have RLS enabled; plus spot-checks
+ * for critical policies (005 / 009 / 010 / 015 / 018).
  * Usage: node scripts/verify-rls-policies.mjs
  */
 import { createAdminQuery, loadEnvLocal } from "./lib/supabase-env.mjs";
@@ -18,6 +19,19 @@ function check(cond, label) {
     fail++;
     console.log(`  ✗ ${label}`);
   }
+}
+
+async function publicTablesWithoutRls() {
+  const rows = await q(`
+    select c.relname as table_name
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public'
+       and c.relkind = 'r'
+       and not c.relrowsecurity
+     order by 1;
+  `);
+  return rows.map((r) => r.table_name);
 }
 
 async function policiesOn(table) {
@@ -43,9 +57,27 @@ async function storagePolicies(bucketId) {
 }
 
 async function main() {
-  console.log("=== A7 RLS policy review ===\n");
+  console.log("=== RLS policy review ===\n");
 
-  console.log("--- public.payments (005 / 015) ---");
+  console.log("--- public schema: RLS enabled on all tables ---");
+  const noRls = await publicTablesWithoutRls();
+  if (noRls.length === 0) {
+    check(true, "all public tables have RLS enabled");
+  } else {
+    for (const t of noRls) {
+      check(false, `${t} has RLS disabled (Supabase rls_disabled_in_public)`);
+    }
+  }
+
+  console.log("\n--- public._agent_migrations (030) ---");
+  const agentRls = await q(`
+    select relrowsecurity from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public' and c.relname = '_agent_migrations';
+  `);
+  check(agentRls[0]?.relrowsecurity === true, "_agent_migrations RLS enabled");
+
+  console.log("\n--- public.payments (005 / 015) ---");
   const pay = await policiesOn("payments");
   check(pay.includes("payments_buyer_insert"), "payments_buyer_insert exists");
   check(pay.includes("payments_seller_or_admin_update"), "payments_seller_or_admin_update exists");

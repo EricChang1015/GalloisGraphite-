@@ -608,6 +608,8 @@ supabase/migrations/
   026_waive_schedules_on_cancelled_orders.sql  ← 訂單取消時把 `payment_schedules.status` 改 `waived`
   027_quotations_created_by.sql     ← `quotations.created_by` NOT NULL FK profiles + backfill：第一份永遠是 seller、counter-offer = parent.countered_by。修正 `inquiries/[id]` 的「Round #N · by seller/buyer」標籤誤判 + 提案人能接受/反提自己 offer 的兩個 bug；server-side 在 `acceptQuotation` / `counterQuotation` / `rejectQuotation` 加上「不能對自己的 offer 動作」校驗
   028_profile_locale.sql            ← `profiles.locale text not null default 'en'` + CHECK (`en`, `zh-CN`)；供 next-intl 語系解析（cookie `mg-locale` → profile → Accept-Language）
+  029_news_aggregation.sql          ← 新聞 workflow / `news_translations` / `news_fetch_batches` + RLS
+  030_agent_migrations_rls.sql      ← `_agent_migrations` 啟用 RLS + revoke anon/authenticated（修 Supabase `rls_disabled_in_public`）
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）
@@ -625,7 +627,7 @@ npm run db:migrate:dry       # 列印計畫但不實際跑
 npm run db:types             # 重新生成 src/types/database.ts
 ```
 
-追蹤表：`public._agent_migrations(name PK, checksum, applied_at, bootstrap)`。
+追蹤表：`public._agent_migrations(name PK, checksum, applied_at, bootstrap)`（RLS 啟用、無 PostgREST policy；僅 Management API / service_role 寫入）。
 作者規則見 [`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc)。
 
 ---

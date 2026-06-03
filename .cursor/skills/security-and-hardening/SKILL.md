@@ -96,7 +96,9 @@ export async function createInquiry(input: unknown) {
 
 ## RLS policies
 
-- Every table must have RLS enabled and explicit `for select`, `for insert`, `for update`, `for delete` policies
+- Every table in `public` must have RLS enabled (`npm run qa:verify-rls` scans all tables; fixes Supabase `rls_disabled_in_public`)
+- User-facing tables need explicit `for select`, `for insert`, `for update`, `for delete` policies
+- Internal tables only touched by Management API / service role: RLS on + `revoke all … from anon, authenticated` (no policies) — see `030_agent_migrations_rls.sql`
 - Buyer / seller / admin separation modeled via `profiles.role`
 - For cross-role tables (orders, payments, chat_rooms), policies reference both `buyer_id` and `seller_id`
 - Verify after any policy change:

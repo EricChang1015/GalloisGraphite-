@@ -135,6 +135,8 @@ create table if not exists public._agent_migrations (
   applied_at  timestamptz not null default now(),
   bootstrap   boolean not null default false
 );
+alter table public._agent_migrations enable row level security;
+revoke all on table public._agent_migrations from anon, authenticated;
 `;
 
 async function ensureTrackingTable(ctx) {

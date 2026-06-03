@@ -36,7 +36,7 @@ supabase/migrations/NNN_snake_case_purpose.sql
   during a rebase, rename one with `git mv` to the next free prefix and
   update any cross-references inside the SQL comment headers.
 
-Current ceiling: `028_profile_locale.sql` (applied 2026-05-27). Next file → `029_*.sql`.
+Current ceiling: `030_agent_migrations_rls.sql`. Next file → `031_*.sql`.
 
 ## Idempotency (REQUIRED)
 
@@ -70,15 +70,21 @@ example.
 
 ## RLS coverage
 
-For any new user-data table:
+For **any** new table in `public` (including internal/ops tables like
+`_agent_migrations`):
 
 ```sql
 alter table public.X enable row level security;
+revoke all on table public.X from anon, authenticated;  -- when app never uses PostgREST on X
 ```
 
 …then add at minimum a `select` and one of `insert / update / delete` policy
-matching the access pattern. Service-role writes bypass RLS by design (used
-by Server Actions through `src/lib/supabase/admin.ts`).
+matching the access pattern (or leave policy-less if only service_role /
+Management API touches the table). Service-role writes bypass RLS by design
+(used by Server Actions through `src/lib/supabase/admin.ts`).
+
+After adding a migration, run `npm run qa:verify-rls` — it fails if any
+`public` table has RLS disabled (catches Supabase `rls_disabled_in_public`).
 
 ## After-write workflow (DO THIS, don't ask the user)
 
