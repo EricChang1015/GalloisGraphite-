@@ -351,6 +351,49 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 
 ---
 
+## E. 基礎設施 — 自建 Supabase（Phase 1 ✅，Phase 2 進行中）
+
+> 完整操作手冊：[`DEPLOY_SELFHOST.md`](./DEPLOY_SELFHOST.md)  
+> Compose profiles：[`data/deploy/supabase/COMPOSE.md`](../data/deploy/supabase/COMPOSE.md)
+
+### E1. Phase 1 — Supabase 自建 + Next.js 仍 Vercel ✅（2026-06-02）
+
+**目標**：降低 Supabase Cloud 依賴，UAT 環境可完整跑 B2B 流程。
+
+| 項目 | 狀態 |
+|------|------|
+| UAT VM Docker Supabase（runtime-only profile） | ✅ |
+| nginx TLS `uat.gf-v.io` → Kong | ✅ |
+| 30 SQL migrations（`deploy:uat:migrate`） | ✅ |
+| Auth / REST / Storage / Realtime smoke | ✅ |
+| SSH jump deploy 腳本（`npm run deploy:uat:*`） | ✅ |
+| Compose profiles（default / dashboard / pooler / edge） | ✅ |
+| Vercel App 可切 `NEXT_PUBLIC_SUPABASE_URL` 至 UAT | ✅ |
+
+**Server 目錄**：`/data/deploy/{supabase,proxy}`、`/data/data/{postgres,storage}`
+
+**待補（上線前）**：
+
+- [ ] Regenerate JWT / ANON / SERVICE keys（勿沿用 demo keys）
+- [ ] GoTrue SMTP + Google OAuth redirect 指向 `uat.gf-v.io`
+- [ ] 正式 domain 憑證與 DNS
+
+### E2. Phase 2 — Next.js 同機部署（下一 thread）
+
+**目標**：App + Supabase 跑同一台 VM，Phase 1 nginx 擴充反代 Next.js。
+
+| 項目 | 說明 |
+|------|------|
+| `/data/deploy/next` | Next.js Docker（`next build` + `next start` 或 standalone） |
+| nginx | 新增 location：`/` → Next.js，`/auth/v1/` `/rest/v1/` … → Kong |
+| env | 容器內 `NEXT_PUBLIC_SUPABASE_URL` 可用 internal Kong 或 public URL |
+| Cron | Vercel Cron → 改 node-cron / systemd timer 或保留 Vercel 僅 cron |
+| RAM | 目前 runtime ~1 GB + Next.js 估 +512 MB–1 GB；VM 建議 ≥4 GB |
+
+**不在 Phase 2 範圍**：POE AI、AWS SES 仍走外部 API（無需同機）。
+
+---
+
 ## C. 風險與備案（保留）
 
 | 風險 | 備案 |

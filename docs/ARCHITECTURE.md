@@ -5,40 +5,46 @@
 > - 資料表細節請看 [`SCHEMA.md`](./SCHEMA.md)（001–028 執行後的最終 schema）
 > - 待補完項目請看 [`ROADMAP.md`](./ROADMAP.md)
 >
-> **最後同步**：2026-05-28（公開行銷頁 i18n 上線、docs 全面對齊 proxy / actions / AI market context）
+> **最後同步**：2026-06-02（Phase 1 自建 Supabase UAT；deploy 見 [`DEPLOY_SELFHOST.md`](./DEPLOY_SELFHOST.md)）
 
 ---
 
 ## 1. 系統概覽
 
+### 1.1 Production（現況 — Vercel + Supabase Cloud）
+
 ```
 ┌─────────────────────────── Vercel (Edge + Node) ──────────────────────────┐
-│                                                                            │
-│   Next.js 16 App Router (React 19)                                         │
-│     ├─ (public)        SSG/ISR 行銷頁、News、AI Chat                        │
-│     ├─ (auth)          login / register / verify                           │
-│     ├─ (app)           SSR 登入後 dashboard / market / orders / messages    │
-│     ├─ admin           SSR Admin Console（middleware 限 role）              │
-│     └─ api/chat        POE-backed AI streaming（route handler）             │
-│                                                                            │
-│   src/proxy.ts (formerly middleware.ts)                                    │
-│     - 統一 session refresh + 路由守衛                                       │
-│                                                                            │
-│   src/actions/* — Server Actions（所有 mutation）                           │
+│   Next.js 16 App Router  →  src/actions/* (Server Actions)                 │
 └────────────────────────────┬───────────────────────────────────────────────┘
                              │
             ┌────────────────┴────────────────────┬────────────────────┐
             ▼                                     ▼                    ▼
    ┌─────────────────┐               ┌──────────────────┐    ┌──────────────┐
    │  Supabase Cloud │               │  POE API         │    │  AWS SES     │
-   │  - Auth         │               │  (OpenAI-compat) │    │  (SMTP via   │
-   │  - Postgres+RLS │               │  Claude/GPT/...  │    │   nodemailer)│
-   │  - Storage      │               └──────────────────┘    └──────────────┘
-   │  - Realtime     │
+   │  Auth/Postgres  │               │  (AI streaming)  │    │  (SMTP)      │
+   │  Storage/RT     │               └──────────────────┘    └──────────────┘
    └─────────────────┘
 ```
 
-**部署模式**：單一 Next.js 應用，無獨立後端。所有 mutation 走 Server Actions，
+### 1.2 UAT / Phase 1（Vercel App + 自建 Supabase）
+
+Next.js 仍部署 Vercel；僅 **Supabase 後端** 改跑 UAT VM（`https://uat.gf-v.io`）。
+
+```
+Vercel (Next.js) ──HTTPS──► uat.gf-v.io (nginx) ──► Kong ──► auth/rest/storage/realtime
+                                                      └──► Postgres + Storage volumes
+```
+
+- Deploy 設定：`data/deploy/`（Compose profiles、nginx proxy）
+- 操作指南：[`DEPLOY_SELFHOST.md`](./DEPLOY_SELFHOST.md)
+- Agent skill：`.cursor/skills/self-hosted-supabase-ops/SKILL.md`
+
+### 1.3 Phase 2（規劃 — App + Supabase 同機）
+
+Next.js 容器化至 `/data/deploy/next`，nginx 同時反代 App 與 Supabase API。見 [`ROADMAP.md` §E](./ROADMAP.md#e-基礎設施--自建-supabasephase-1-完成phase-2-進行中)。
+
+**部署模式（共通）**：單一 Next.js 應用，無獨立後端。所有 mutation 走 Server Actions，
 僅 AI streaming 用 route handler。沒有 Express / Fastify、沒有 Prisma、沒有 wallet SDK。
 
 ---

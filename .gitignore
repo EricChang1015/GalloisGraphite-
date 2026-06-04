@@ -4,6 +4,7 @@
 .env
 .env.*
 !.env.example
+!**/.env.uat.example
 *.pem
 *.key
 
@@ -72,6 +73,16 @@ desktop.ini
 supabase/.branches
 supabase/.temp
 supabase/seed.sql.bak
+
+# Self-hosted deploy runtime (server-side data; never commit)
+/data/data/
+/data/logs/
+/data/deploy/supabase/upstream/
+/data/deploy/supabase/.env
+/data/deploy/supabase/.env.uat
+/data/deploy/next/.env
+.tmp.env.uat
+.tmp-migrate/
 
 # Cloudinary / Local uploads
 uploads/

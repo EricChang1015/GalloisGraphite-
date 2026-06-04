@@ -19,6 +19,7 @@ Quick reference:
 - `docs/SCHEMA.md` — database schema rationale (post-028 migration)
 - `docs/AI_PROMPT.md` — AI assistant prompt & FAQ maintenance guide
 - `docs/ROADMAP.md` — remaining MVP gaps + Phase 2 plan
+- `docs/DEPLOY_SELFHOST.md` — **Phase 1 自建 Supabase（UAT）** 部署、Compose profiles、migrations
 - `docs/TESTING.md` — **QA process** + test accounts + B2B E2E walkthrough (payment_schedules)
 - `docs/CONTRACT_TEMPLATE.md` — graphite sales contract template
 - `docs/LEGACY_CONTENT.md` — content migrated from old static madagraphite.com
@@ -42,6 +43,7 @@ Once you've internalised the rules above, pick the matching skill before startin
 | Build / hydration / RLS errors | `.cursor/skills/debugging-and-error-recovery/SKILL.md` |
 | Pre-merge review | `.cursor/skills/code-review-and-quality/SKILL.md` |
 | Auth / RLS / payments / uploads | `.cursor/skills/security-and-hardening/SKILL.md` |
+| Self-host Supabase VM / UAT / `data/deploy` | `.cursor/skills/self-hosted-supabase-ops/SKILL.md` |
 
 Skills cite the matching `npm run qa:*` commands; do not invent new test commands.
 

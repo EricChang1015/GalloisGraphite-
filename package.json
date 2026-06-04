@@ -33,7 +33,17 @@
     "qa:a7:dispute": "node scripts/smoke-a7-dispute-cancel.mjs --cleanup",
     "qa:verify-rls": "node scripts/verify-rls-policies.mjs",
     "qa:oauth": "node scripts/smoke-oauth-config.mjs",
-    "qa:a7": "npm run qa:payment-schedule && npm run qa:a7:gate && npm run qa:a7:dispute && npm run qa:verify-rls && npm run qa:oauth"
+    "qa:a7": "npm run qa:payment-schedule && npm run qa:a7:gate && npm run qa:a7:dispute && npm run qa:verify-rls && npm run qa:oauth",
+    "deploy:uat:check": "node scripts/deploy-uat-supabase.mjs --check",
+    "deploy:uat:supabase": "node scripts/deploy-uat-supabase.mjs",
+    "deploy:uat:proxy": "node scripts/deploy-uat-supabase.mjs --proxy-only",
+    "deploy:uat:migrate": "node scripts/migrate-uat-supabase.mjs",
+    "deploy:uat:migrate:status": "node scripts/migrate-uat-supabase.mjs --status",
+    "deploy:uat:status": "node scripts/ssh-uat-status.mjs",
+    "deploy:uat:compose": "node scripts/compose-uat-runtime.mjs",
+    "deploy:uat:migrate-cloud": "node scripts/migrate-cloud-to-uat.mjs",
+    "deploy:uat:migrate-cloud:dry": "node scripts/migrate-cloud-to-uat.mjs --dry-run",
+    "deploy:uat:migrate-cloud:storage": "node scripts/migrate-cloud-to-uat.mjs --storage-only"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.62",
@@ -76,6 +86,7 @@
     "eslint-config-next": "16.2.5",
     "playwright": "^1.60.0",
     "shadcn": "^4.7.0",
+    "ssh2": "^1.16.0",
     "tailwindcss": "^4",
     "topojson-client": "^3.1.0",
     "typescript": "^5",

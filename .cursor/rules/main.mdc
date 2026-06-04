@@ -61,5 +61,6 @@ This repo ships curated skill workflows under `.cursor/skills/`. Pick one when t
 | Build / hydration / RLS / migration errors | [debugging-and-error-recovery](mdc:.cursor/skills/debugging-and-error-recovery/SKILL.md) |
 | Pre-merge review | [code-review-and-quality](mdc:.cursor/skills/code-review-and-quality/SKILL.md) |
 | Auth / RLS / payments / uploads / KYC | [security-and-hardening](mdc:.cursor/skills/security-and-hardening/SKILL.md) |
+| Self-host Supabase VM / UAT deploy | [self-hosted-supabase-ops](mdc:.cursor/skills/self-hosted-supabase-ops/SKILL.md) |
 
 Full catalog: [.cursor/skills/README.md](mdc:.cursor/skills/README.md). Skills always reference real `npm run qa:*` commands — never invent new test commands.

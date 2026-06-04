@@ -26,6 +26,7 @@ Task arrives
     ├── Build / runtime / hydration error ─────→ debugging-and-error-recovery
     ├── Pre-merge review (yours or another agent's) → code-review-and-quality
     │     └── Auth / RLS / payments / uploads? → security-and-hardening
+    ├── Self-host Supabase VM / UAT deploy / data/deploy ─→ self-hosted-supabase-ops
     └── Git, migrations, i18n, server actions, shadcn, supabase
           → see `.cursor/rules/*.mdc` (always-on rules, not skills)
 ```
@@ -122,6 +123,7 @@ A task is not complete until verification passes. Evidence required:
 | Verify | [debugging-and-error-recovery](../debugging-and-error-recovery/SKILL.md) | Stop-the-line + layer triage |
 | Review | [code-review-and-quality](../code-review-and-quality/SKILL.md) | Five-axis pre-merge review |
 | Review | [security-and-hardening](../security-and-hardening/SKILL.md) | RLS, zod, Server Actions, payments |
+| Ops | [self-hosted-supabase-ops](../self-hosted-supabase-ops/SKILL.md) | SSH jump → UAT VM; `npm run deploy:uat:*` |
 
 ## Failure modes to avoid
 

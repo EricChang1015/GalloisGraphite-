@@ -22,6 +22,7 @@ Curated and adapted from [addyosmani/agent-skills](https://github.com/addyosmani
 | [debugging-and-error-recovery](./debugging-and-error-recovery/SKILL.md) | Rewritten for Next.js + Supabase stack | Build / hydration / RLS / migration errors |
 | [code-review-and-quality](./code-review-and-quality/SKILL.md) | Upstream + Graphite overrides | Before merging any change |
 | [security-and-hardening](./security-and-hardening/SKILL.md) | Rewritten for Supabase Auth + RLS + Server Actions | Auth / RLS / payments / uploads / KYC |
+| [self-hosted-supabase-ops](./self-hosted-supabase-ops/SKILL.md) | **Project-specific** | Deploy / migrate / debug self-hosted Supabase VM via SSH jump |
 
 ## References
 

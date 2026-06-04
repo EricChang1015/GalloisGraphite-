@@ -9,7 +9,24 @@
 > 舊文件若仍提到 `payment_pending → paid` 推進訂單，請以本文件與
 > [`ARCHITECTURE.md` §4.4–4.5](./ARCHITECTURE.md) 為準。
 >
-> **最後同步**：2026-05-27
+> **最後同步**：2026-06-02
+
+---
+
+## 0.1 自建 Supabase UAT（Phase 1）
+
+若 `.env.local` 指向 `https://uat.gf-v.io`（非 Cloud `*.supabase.co`）：
+
+| 指令 | 用途 |
+|------|------|
+| `npm run deploy:uat:status` | 遠端健康 + API keys |
+| `node scripts/smoke-supabase-connectivity.mjs` | REST / Storage / Realtime |
+| `node scripts/smoke-selfhost-auth.mjs` | buyer/seller/admin 登入 |
+| `npm run deploy:uat:migrate` | 套用 SQL migrations |
+
+**注意**：`npm run qa:preflight`、`qa:verify-rls` 等仍依賴 Cloud `SUPABASE_ACCESS_TOKEN`，自建環境請用 smoke 腳本 + `npm run build`。
+
+完整 deploy 文件：[`DEPLOY_SELFHOST.md`](./DEPLOY_SELFHOST.md)
 
 ---
 

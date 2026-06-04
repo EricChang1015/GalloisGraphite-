@@ -1,0 +1,19 @@
+---
+description: Self-hosted Supabase VM ops via SSH jump — use deploy:uat scripts, not Cloud Management API
+globs: data/deploy/**,scripts/deploy-uat*.mjs,scripts/migrate-uat*.mjs,scripts/migrate-cloud-to-uat.mjs,scripts/lib/ssh-jump.mjs,scripts/ssh-uat*.mjs
+alwaysApply: false
+---
+
+# Self-hosted Supabase VM
+
+When editing deploy configs or operating the **self-hosted** Supabase environment:
+
+1. **Read** [`.cursor/skills/self-hosted-supabase-ops/SKILL.md`](../skills/self-hosted-supabase-ops/SKILL.md) and follow it.
+2. **Connect** only via SSH jump using credentials in `.env.local`:
+   - `SSH_PROXY_*` → jump host
+   - `SELF_HOST_SUPABASE_*` → target VM
+3. **Use** `scripts/lib/ssh-jump.mjs` (`withJumpSsh`) or `npm run deploy:uat:*` — do not hand-roll SSH unless extending these scripts.
+4. **Migrations on UAT**: `npm run deploy:uat:migrate` — not `npm run db:migrate` (Cloud Management API).
+5. **Secrets**: never commit passwords, `.env.uat`, or SSL private keys; never echo credentials in chat.
+
+Quick check: `npm run deploy:uat:check` then `npm run deploy:uat:status`.
