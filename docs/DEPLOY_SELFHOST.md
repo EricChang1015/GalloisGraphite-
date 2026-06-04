@@ -1,35 +1,30 @@
-# Self-Hosted Supabase — Phase 1 部署指南
+# Self-Hosted Supabase + Next.js — UAT 部署指南
 
-> **Phase 1（已完成）**：Supabase 自建於 UAT VM（`uat.gf-v.io`），Next.js 仍跑 Vercel。  
-> **Phase 2（待做）**：Next.js 同機部署至 `/data/deploy/next`，nginx 反代 App + Supabase API。  
-> 詳見 [`ROADMAP.md` §E](./ROADMAP.md#e-基礎設施--自建-supabasephase-1-完成phase-2-進行中)。
+> **Phase 1（已完成）**：Supabase 自建於 UAT VM（`uat.gf-v.io`）。  
+> **Phase 2（已完成 2026-06-04）**：Next.js 同機部署至 `/data/deploy/next`，`https://uat.gf-v.io/` 為完整 App。  
+> 詳見 [`ROADMAP.md` §E](./ROADMAP.md#e-基礎設施--自建-uat)。
 
-**最後同步**：2026-06-02
+**最後同步**：2026-06-04
 
 ---
 
-## 1. 架構概覽（Phase 1）
+## 1. 架構概覽（Phase 2 — 現況）
 
 ```
-                    ┌── Vercel ──────────────────┐
-                    │  Next.js (galloisgraphite) │
-                    └────────────┬───────────────┘
-                                 │ HTTPS (Supabase JS client)
-                                 ▼
-Internet ──HTTPS──► proxy (nginx) ──► supabase-kong:8000
-                         │                    │
-                         │         auth / rest / storage / realtime
-                         │                    │
-                         └──────────── supabase-db (Postgres)
+Internet ──HTTPS──► proxy (nginx) ──┬──► mada-next:3000     (Next.js App, /, /login, …)
+                                    ├──► supabase-kong:8000 (Auth / REST / Storage / Realtime)
+                                    └──► supabase-db + /data/data/storage
 ```
 
-| 元件 | 位置 | 說明 |
+| 元件 | 容器 | 說明 |
 |------|------|------|
-| Next.js App | Vercel | Server Actions、AI `/api/chat`、Cron |
-| Supabase API | UAT VM Docker | Auth / REST / Storage / Realtime |
-| TLS | nginx `proxy` 容器 | 憑證在 server `conf.d/*.pem`（**不入 git**） |
-| Postgres 資料 | `/data/data/postgres` | 持久化 volume |
-| Storage 檔案 | `/data/data/storage` | 持久化 volume |
+| Next.js App | `mada-next` | standalone 映像，768MB limit |
+| Supabase API | kong + auth + rest + storage + realtime | runtime-only profile |
+| TLS | `proxy` | 憑證在 server `conf.d/*.pem`（**不入 git**） |
+| Postgres | `supabase-db` | `/data/data/postgres` |
+| Storage 檔案 | `supabase-storage` | `/data/data/storage` |
+
+**對外 URL**：`https://uat.gf-v.io` — App 與 Supabase API 同域。
 
 ---
 
@@ -48,6 +43,12 @@ data/deploy/
 └── proxy/
     ├── docker-compose.yml           # nginx，加入 supabase_default 網路
     └── conf.d/                      # upstream、locations、SSL 設定
+├── next/
+│   ├── Dockerfile                   # standalone runtime 映像
+│   ├── docker-compose.yml           # mada-next 容器
+│   ├── bootstrap.sh
+│   ├── cron-payment-schedule.sh   # 取代 Vercel cron（host crontab）
+│   └── .env.example
 ```
 
 **Server 端（不入 git）**
@@ -89,6 +90,7 @@ SUPABASE_SERVICE_ROLE_KEY=<deploy:uat:status>
 | `npm run deploy:uat:check` | SSH 連線 + docker 探測 |
 | `npm run deploy:uat:supabase` | 上傳 deploy 樹 + bootstrap + 重啟 proxy |
 | `npm run deploy:uat:compose` | **僅**上傳 override 並套用 runtime-only（不做 pull） |
+| `npm run deploy:uat:next` | 本機 build standalone + 部署 `mada-next` + 更新 nginx |
 | `npm run deploy:uat:proxy` | 只更新 nginx |
 | `npm run deploy:uat:migrate` | 套用 `supabase/migrations/*.sql` |
 | `npm run deploy:uat:migrate:status` | 遠端 migration 狀態 |
@@ -148,20 +150,23 @@ bash /data/deploy/supabase/compose-dashboard-stop.sh
 
 ---
 
-## 7. App / Vercel env（Phase 1）
+## 7. App env（UAT 同域）
 
-Vercel Production 或 Preview 指向 UAT 時：
+Server `/data/deploy/next/.env`（由 `deploy:uat:next` 從 `.env.local` 產生）：
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://uat.gf-v.io
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<from deploy:uat:status>
-SUPABASE_SERVICE_ROLE_KEY=<from deploy:uat:status>
-NEXT_PUBLIC_APP_URL=https://galloisgraphite.vercel.app
+NEXT_PUBLIC_APP_URL=https://uat.gf-v.io
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+# + POE / SMTP / CRON_SECRET / PLATFORM_* …
 ```
 
-GoTrue / Google OAuth callback：`https://uat.gf-v.io/auth/v1/callback`
+GoTrue `SITE_URL` 亦會同步為 `https://uat.gf-v.io`（deploy 時 merge 進 `upstream/.env` 並 recreate auth）。
 
-Server 端 GoTrue SMTP：在 `/data/deploy/supabase/.env.uat` 填入 AWS SES（與 App 相同 SMTP）。
+Google OAuth redirect：`https://uat.gf-v.io/auth/v1/callback`
+
+**Cron（payment schedule）**：host crontab 呼叫 `/data/deploy/next/cron-payment-schedule.sh`（04:00 UTC）。
 
 ---
 
@@ -195,16 +200,17 @@ npm run build
 
 ---
 
-## 10. Phase 1 完成檢查清單
+## 10. 完成檢查清單
 
 - [x] UAT VM Supabase stack（runtime-only profile）
-- [x] nginx TLS → Kong（`uat.gf-v.io`）
+- [x] nginx TLS → Kong + mada-next
+- [x] Next.js 於 `https://uat.gf-v.io/`（home/login HTTP 200）
 - [x] 30 migrations 已套用
-- [x] Auth / REST / Storage / Realtime 驗證通過
-- [x] Vercel App 可切換 `NEXT_PUBLIC_SUPABASE_URL` 至 UAT
-- [ ] 正式環境前：regenerate JWT keys（勿沿用 demo keys）
+- [x] Auth / REST / Storage / Realtime smoke
+- [x] `npm run deploy:uat:next` 一鍵部署
+- [ ] Host crontab 設定 payment-schedule cron
+- [ ] Regenerate JWT keys（勿沿用 demo keys）
 - [ ] GoTrue SMTP + Google OAuth redirect 完整設定
-- [ ] Phase 2：Next.js 同機部署（見 ROADMAP §E）
 
 ---
 
@@ -214,7 +220,7 @@ npm run build
 A: 不行。那是 Supabase Cloud Management API 專用。
 
 **Q: Studio 怎麼開？**  
-A: Server 上 `compose-dashboard.sh`，用 SSH tunnel 存取，勿公網暴露。
+A: Server 上 `compose-dashboard.sh`，用 **SSH tunnel** 存取（nginx 已移除公網 `/studio` 路由，避免與 Next `/_next/` 衝突）。
 
 **Q: 如何切回 Cloud？**  
 A: `.env.local` 把 `NEXT_PUBLIC_SUPABASE_URL` 改回 `*.supabase.co`，保留 UAT 變數加 `x` 前綴即可。

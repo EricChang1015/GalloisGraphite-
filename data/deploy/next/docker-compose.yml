@@ -1,0 +1,21 @@
+services:
+  next:
+    container_name: mada-next
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - supabase_default
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+networks:
+  supabase_default:
+    external: true

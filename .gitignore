@@ -81,6 +81,8 @@ supabase/seed.sql.bak
 /data/deploy/supabase/.env
 /data/deploy/supabase/.env.uat
 /data/deploy/next/.env
+.tmp-next-deploy/
+.tmp-next-deploy.tgz
 .tmp.env.uat
 .tmp-migrate/
 

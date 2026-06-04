@@ -73,7 +73,7 @@ npm run deploy:uat:check
 - **Kong has no host port** (avoids 8000 conflicts); nginx joins `supabase_default`
 - **Supavisor disabled** (avoids 5432 conflicts with other Postgres on VM)
 - **Edge Functions disabled** (MVP not used)
-- **Phase 1**: Next.js stays on Vercel; only Supabase is self-hosted
+- **Phase 2（2026-06-04）**: Next.js on same VM (`mada-next`); `https://uat.gf-v.io/` serves full App + Supabase API
 
 ## Docker Compose profiles
 
@@ -121,6 +121,7 @@ After updating override locally, run `npm run deploy:uat:supabase` then `compose
 | `npm run deploy:uat:migrate:status` | List pending/applied migrations on UAT |
 | `npm run deploy:uat:status` | Container health + `/auth/v1/health` + print API keys for Vercel |
 | `npm run deploy:uat:compose` | Upload override + apply runtime-only stack (no bootstrap pull) |
+| `npm run deploy:uat:next` | Build Next.js standalone locally + deploy `mada-next` + nginx |
 | `npm run deploy:uat:migrate-cloud` | Cloud → UAT data migration (if script present) |
 
 ## Standard workflows

@@ -4,6 +4,7 @@ import type { NextConfig } from "next";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   // Allow the dev server to be accessed by LAN IP (e.g. for mobile or cross-device testing).
   // This enables Next.js internal dev resources (HMR, etc.) from those origins.
   // Add / remove IPs as needed; only takes effect in `next dev`.

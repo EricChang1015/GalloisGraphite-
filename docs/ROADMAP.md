@@ -351,10 +351,9 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 
 ---
 
-## E. 基礎設施 — 自建 Supabase（Phase 1 ✅，Phase 2 進行中）
+## E. 基礎設施 — 自建 UAT
 
-> 完整操作手冊：[`DEPLOY_SELFHOST.md`](./DEPLOY_SELFHOST.md)  
-> Compose profiles：[`data/deploy/supabase/COMPOSE.md`](../data/deploy/supabase/COMPOSE.md)
+> 完整操作手冊：[`DEPLOY_SELFHOST.md`](./DEPLOY_SELFHOST.md)
 
 ### E1. Phase 1 — Supabase 自建 + Next.js 仍 Vercel ✅（2026-06-02）
 
@@ -378,19 +377,18 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 - [ ] GoTrue SMTP + Google OAuth redirect 指向 `uat.gf-v.io`
 - [ ] 正式 domain 憑證與 DNS
 
-### E2. Phase 2 — Next.js 同機部署（下一 thread）
+### E2. Phase 2 — Next.js 同機部署 ✅（2026-06-04）
 
-**目標**：App + Supabase 跑同一台 VM，Phase 1 nginx 擴充反代 Next.js。
-
-| 項目 | 說明 |
+| 項目 | 狀態 |
 |------|------|
-| `/data/deploy/next` | Next.js Docker（`next build` + `next start` 或 standalone） |
-| nginx | 新增 location：`/` → Next.js，`/auth/v1/` `/rest/v1/` … → Kong |
-| env | 容器內 `NEXT_PUBLIC_SUPABASE_URL` 可用 internal Kong 或 public URL |
-| Cron | Vercel Cron → 改 node-cron / systemd timer 或保留 Vercel 僅 cron |
-| RAM | 目前 runtime ~1 GB + Next.js 估 +512 MB–1 GB；VM 建議 ≥4 GB |
+| `/data/deploy/next` + `mada-next` 容器（standalone） | ✅ |
+| nginx：`/` → Next.js；`/auth/v1/` … → Kong | ✅ |
+| `npm run deploy:uat:next` | ✅ |
+| `https://uat.gf-v.io/` home + login HTTP 200 | ✅ |
+| GoTrue `SITE_URL` 同步為 UAT 網域 | ✅ |
+| Host cron script（`cron-payment-schedule.sh`） | ✅ 腳本就緒，crontab 待設定 |
 
-**不在 Phase 2 範圍**：POE AI、AWS SES 仍走外部 API（無需同機）。
+**待補**：host crontab 04:00 UTC、regenerate JWT keys、GoTrue SMTP/OAuth。
 
 ---
 
