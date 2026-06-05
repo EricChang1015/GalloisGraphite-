@@ -627,14 +627,28 @@ supabase/migrations/
   028_profile_locale.sql            ← `profiles.locale text not null default 'en'` + CHECK (`en`, `zh-CN`)；供 next-intl 語系解析（cookie `mg-locale` → profile → Accept-Language）
   029_news_aggregation.sql          ← 新聞 workflow / `news_translations` / `news_fetch_batches` + RLS
   030_agent_migrations_rls.sql      ← `_agent_migrations` 啟用 RLS + revoke anon/authenticated（修 Supabase `rls_disabled_in_public`）
+  031_mine_photos.sql               ← 礦區照片 CMS（`mine_photo_categories` / `mine_photos` + `mine-photos` Storage bucket + RLS）
+  032_mine_photos_grants.sql        ← 補 `GRANT SELECT` 給 anon（公開 `/mining-photos` 可讀）
+  033_mine_photo_cover_photo_id.sql ← 分類封面改為指向相簿內照片（`cover_photo_id`）；backfill 各分類第一張
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）
 
-由於 `.env.local` 已有 `SUPABASE_ACCESS_TOKEN`（Personal Access Token），
-所有 migration 都改用 [`scripts/apply-migrations.mjs`](../scripts/apply-migrations.mjs)
-透過 [Supabase Management API](https://api.supabase.com)
-（`POST /v1/projects/{ref}/database/query`）執行，**不需 DB password**。
+**UAT 自建 Supabase（主要環境）** — 不需 `SUPABASE_ACCESS_TOKEN`，透過 SSH jump 在 VM 上
+`docker exec supabase-db psql` 執行：
+
+```powershell
+npm run deploy:uat:migrate:status   # 顯示 UAT 已/未執行清單
+npm run deploy:uat:migrate          # 套用 pending migration
+```
+
+腳本：[`scripts/migrate-uat-supabase.mjs`](../scripts/migrate-uat-supabase.mjs)。詳見
+[`docs/DEPLOY_SELFHOST.md`](./DEPLOY_SELFHOST.md) 與
+[`.cursor/skills/self-hosted-supabase-ops/SKILL.md`](../.cursor/skills/self-hosted-supabase-ops/SKILL.md)。
+
+**Supabase Cloud（選用）** — 若 `.env.local` 有 `SUPABASE_ACCESS_TOKEN`，可用
+[`scripts/apply-migrations.mjs`](../scripts/apply-migrations.mjs)
+透過 [Supabase Management API](https://api.supabase.com) 執行：
 
 ```powershell
 npm run db:migrate           # 跑所有未執行的 migration
@@ -644,7 +658,7 @@ npm run db:migrate:dry       # 列印計畫但不實際跑
 npm run db:types             # 重新生成 src/types/database.ts
 ```
 
-追蹤表：`public._agent_migrations(name PK, checksum, applied_at, bootstrap)`（RLS 啟用、無 PostgREST policy；僅 Management API / service_role 寫入）。
+追蹤表：`public._agent_migrations(name PK, checksum, applied_at, bootstrap)`（RLS 啟用、無 PostgREST policy；UAT 由 migrate script 寫入，Cloud 由 Management API 寫入）。
 作者規則見 [`.cursor/rules/migrations.mdc`](../.cursor/rules/migrations.mdc)。
 
 ---

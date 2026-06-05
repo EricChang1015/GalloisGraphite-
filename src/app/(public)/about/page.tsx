@@ -4,7 +4,10 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { getLocale } from "@/i18n/get-locale";
-import { getPublishedMinePhotoGallery } from "@/lib/mine-photos/queries";
+import {
+  getPublishedMinePhotoGallery,
+  resolveCategoryCoverUrl,
+} from "@/lib/mine-photos/queries";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("about");
@@ -18,15 +21,6 @@ const SECTION_IMAGES = [
   "/images/legacy/map_a.png",
   "/images/legacy/map_c.png",
   "/images/legacy/map_b.png",
-];
-
-const LEGACY_PHOTO_ITEMS = [
-  { src: "/images/legacy/mining/header/1.jpg", slug: "general-view" },
-  { src: "/images/legacy/mining/header/2.jpg", slug: "processing-plant" },
-  { src: "/images/legacy/mining/header/3.jpg", slug: "warehouse-lab" },
-  { src: "/images/legacy/mining/header/4.jpg", slug: "team-culture" },
-  { src: "/images/legacy/mining/header/5.jpg", slug: "social-responsibility" },
-  { src: "/images/legacy/mining/header/6.jpg", slug: "local-customs" },
 ];
 
 export default async function AboutPage() {
@@ -43,32 +37,22 @@ export default async function AboutPage() {
   }));
 
   const gallery = await getPublishedMinePhotoGallery();
-  const fallbackLabels = t.raw("photos.items") as Array<{
-    src: string;
-    label: string;
-  }>;
 
-  const photoCards =
-    gallery.length > 0
-      ? gallery.map((cat) => ({
-          key: cat.id,
-          href: `/mining-photos?category=${cat.slug}`,
-          src:
-            cat.cover_url ??
-            cat.photos[0]?.thumb_url ??
-            LEGACY_PHOTO_ITEMS.find((l) => l.slug === cat.slug)?.src ??
-            LEGACY_PHOTO_ITEMS[0].src,
-          label:
-            locale === "zh-CN" && cat.title_zh_cn
-              ? cat.title_zh_cn
-              : cat.title_en,
-        }))
-      : fallbackLabels.map((photo, index) => ({
-          key: photo.src,
-          href: `/mining-photos?category=${LEGACY_PHOTO_ITEMS[index]?.slug ?? "general-view"}`,
-          src: photo.src,
-          label: photo.label,
-        }));
+  const photoCards = gallery.flatMap((cat) => {
+    const src = resolveCategoryCoverUrl(cat, cat.photos);
+    if (!src) return [];
+    return [
+      {
+        key: cat.id,
+        href: `/mining-photos?category=${cat.slug}`,
+        src,
+        label:
+          locale === "zh-CN" && cat.title_zh_cn
+            ? cat.title_zh_cn
+            : cat.title_en,
+      },
+    ];
+  });
 
   return (
     <div className="bg-background text-foreground">

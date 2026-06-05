@@ -63,7 +63,7 @@ async function uploadDir(conn, localDir, remoteDir) {
   }
 }
 
-function stageStandaloneBundle() {
+async function stageStandaloneBundle() {
   rmSync(STAGE, { recursive: true, force: true });
   mkdirSync(STAGE, { recursive: true });
 
@@ -79,6 +79,63 @@ function stageStandaloneBundle() {
   cpSync(standalone, dest, { recursive: true, dereference: true });
   cpSync(staticDir, join(dest, ".next", "static"), { recursive: true });
   cpSync(join(ROOT, "public"), join(dest, "public"), { recursive: true });
+  await patchStandaloneSharp(dest);
+}
+
+const SHARP_MUSL_CACHE = join(ROOT, ".tmp-sharp-musl");
+const SHARP_MUSL_PKGS = [
+  { name: "@img/sharp-linuxmusl-x64", version: "0.34.5", folder: "sharp-linuxmusl-x64" },
+  {
+    name: "@img/sharp-libvips-linuxmusl-x64",
+    version: "1.2.4",
+    folder: "sharp-libvips-linuxmusl-x64",
+  },
+];
+
+async function fetchNpmPackageToDir(pkgName, version, destDir) {
+  const encoded = pkgName.replace("/", "%2F");
+  const meta = await fetch(`https://registry.npmjs.org/${encoded}`).then((r) => r.json());
+  const tarball = meta.versions?.[version]?.dist?.tarball;
+  if (!tarball) throw new Error(`npm tarball not found for ${pkgName}@${version}`);
+  const tgzPath = join(destDir, "pkg.tgz");
+  const res = await fetch(tarball);
+  if (!res.ok) throw new Error(`Failed to download ${tarball} (${res.status})`);
+  writeFileSync(tgzPath, Buffer.from(await res.arrayBuffer()));
+  const unpack = join(destDir, "unpack");
+  rmSync(unpack, { recursive: true, force: true });
+  mkdirSync(unpack, { recursive: true });
+  execSync(`tar -xzf pkg.tgz -C unpack`, { cwd: destDir, stdio: "pipe" });
+  return join(unpack, "package");
+}
+
+async function ensureSharpMuslCache() {
+  const cacheModules = join(SHARP_MUSL_CACHE, "node_modules", "@img");
+  if (existsSync(join(cacheModules, "sharp-linuxmusl-x64"))) return;
+
+  rmSync(SHARP_MUSL_CACHE, { recursive: true, force: true });
+  mkdirSync(cacheModules, { recursive: true });
+  console.log("▸ Downloading sharp linuxmusl-x64 from npm registry...");
+  for (const pkg of SHARP_MUSL_PKGS) {
+    const work = join(SHARP_MUSL_CACHE, pkg.folder);
+    mkdirSync(work, { recursive: true });
+    const extracted = await fetchNpmPackageToDir(pkg.name, pkg.version, work);
+    cpSync(extracted, join(cacheModules, pkg.folder), { recursive: true });
+  }
+}
+
+/** Next standalone is built on Windows; UAT runs node:22-alpine (linuxmusl). */
+async function patchStandaloneSharp(standaloneDir) {
+  console.log("▸ Patching sharp for linuxmusl-x64 (Alpine UAT)...");
+  await ensureSharpMuslCache();
+  const cacheModules = join(SHARP_MUSL_CACHE, "node_modules", "@img");
+  const destImg = join(standaloneDir, "node_modules", "@img");
+  mkdirSync(destImg, { recursive: true });
+  for (const pkg of ["sharp-linuxmusl-x64", "sharp-libvips-linuxmusl-x64"]) {
+    const src = join(cacheModules, pkg);
+    const dest = join(destImg, pkg);
+    rmSync(dest, { recursive: true, force: true });
+    cpSync(src, dest, { recursive: true });
+  }
 }
 
 async function applySupabaseUatEnv(conn, env) {
@@ -145,7 +202,7 @@ async function main() {
         env: buildNextProductionEnv(env),
       });
     }
-    stageStandaloneBundle();
+    await stageStandaloneBundle();
   }
 
   await withJumpSsh({

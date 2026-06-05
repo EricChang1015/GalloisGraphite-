@@ -1,17 +1,17 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ImagePlus, Pencil, Trash2, Upload } from "lucide-react";
+import { ImagePlus, Pencil, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   deleteMinePhoto,
   deleteMinePhotoCategory,
+  setMinePhotoCategoryCover,
   updateMinePhoto,
-  uploadMinePhoto,
-  uploadMinePhotoCover,
   upsertMinePhotoCategory,
 } from "@/actions/admin-mine-photos";
+import { uploadMinePhoto } from "@/actions/admin-mine-photos-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { MinePhotoCategoryWithPhotos } from "@/lib/mine-photos/queries";
+import {
+  resolveCategoryCoverUrl,
+  type MinePhotoCategoryWithPhotos,
+} from "@/lib/mine-photos/types";
+import { cn } from "@/lib/utils";
 
 type Props = {
   categories: MinePhotoCategoryWithPhotos[];
@@ -41,7 +45,8 @@ type Props = {
     published: string;
     save: string;
     uploadPhoto: string;
-    uploadCover: string;
+    setCover: string;
+    coverBadge: string;
     deletePhoto: string;
     deletePhotoConfirm: string;
     altEn: string;
@@ -79,7 +84,6 @@ export function MinePhotosAdmin({ categories: initial, labels }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
   const [uploadCategoryId, setUploadCategoryId] = useState<string | null>(null);
 
   const openEdit = (cat: MinePhotoCategoryWithPhotos) => {
@@ -142,18 +146,25 @@ export function MinePhotosAdmin({ categories: initial, labels }: Props) {
     });
   };
 
-  const handleUploadCover = (categoryId: string, file: File) => {
-    const fd = new FormData();
-    fd.set("category_id", categoryId);
-    fd.set("file", file);
+  const handleSetCover = (categoryId: string, photoId: string) => {
     startTransition(async () => {
-      const { error } = await uploadMinePhotoCover(fd);
+      const { data, error } = await setMinePhotoCategoryCover(categoryId, photoId);
       if (error) {
-        toast.error(labels.uploadFailed, { description: error.message });
+        toast.error(labels.saveFailed, { description: error.message });
         return;
       }
-      toast.success(labels.uploadSuccess);
-      window.location.reload();
+      toast.success(labels.saveSuccess);
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === categoryId
+            ? {
+                ...c,
+                cover_photo_id: photoId,
+                cover_url: data?.cover_url ?? c.cover_url,
+              }
+            : c
+        )
+      );
     });
   };
 
@@ -167,10 +178,18 @@ export function MinePhotosAdmin({ categories: initial, labels }: Props) {
       }
       toast.success(labels.deleteSuccess);
       setCategories((prev) =>
-        prev.map((c) => ({
-          ...c,
-          photos: c.photos.filter((p) => p.id !== photoId),
-        }))
+        prev.map((c) => {
+          const photos = c.photos.filter((p) => p.id !== photoId);
+          const wasCover = c.cover_photo_id === photoId;
+          return {
+            ...c,
+            photos,
+            cover_photo_id: wasCover ? null : c.cover_photo_id,
+            cover_url: wasCover
+              ? (photos[0]?.thumb_url ?? null)
+              : c.cover_url,
+          };
+        })
       );
     });
   };
@@ -186,27 +205,33 @@ export function MinePhotosAdmin({ categories: initial, labels }: Props) {
   ) => {
     const photo = categories.flatMap((c) => c.photos).find((p) => p.id === photoId);
     if (!photo) return;
+    const previous = { ...photo };
+    const next = {
+      id: photoId,
+      alt_en: patch.alt_en ?? photo.alt_en,
+      alt_zh_cn: patch.alt_zh_cn ?? photo.alt_zh_cn,
+      sort_order: patch.sort_order ?? photo.sort_order,
+      is_published: patch.is_published ?? photo.is_published,
+    };
+    setCategories((prev) =>
+      prev.map((c) => ({
+        ...c,
+        photos: c.photos.map((p) => (p.id === photoId ? { ...p, ...next } : p)),
+      }))
+    );
     startTransition(async () => {
-      const { error } = await updateMinePhoto({
-        id: photoId,
-        alt_en: patch.alt_en ?? photo.alt_en,
-        alt_zh_cn: patch.alt_zh_cn ?? photo.alt_zh_cn,
-        sort_order: patch.sort_order ?? photo.sort_order,
-        is_published: patch.is_published ?? photo.is_published,
-      });
+      const { error } = await updateMinePhoto(next);
       if (error) {
         toast.error(labels.saveFailed, { description: error.message });
-        return;
+        setCategories((prev) =>
+          prev.map((c) => ({
+            ...c,
+            photos: c.photos.map((p) =>
+              p.id === photoId ? { ...p, ...previous } : p
+            ),
+          }))
+        );
       }
-      toast.success(labels.saveSuccess);
-      setCategories((prev) =>
-        prev.map((c) => ({
-          ...c,
-          photos: c.photos.map((p) =>
-            p.id === photoId ? { ...p, ...patch } : p
-          ),
-        }))
-      );
     });
   };
 
@@ -315,165 +340,217 @@ export function MinePhotosAdmin({ categories: initial, labels }: Props) {
           e.target.value = "";
         }}
       />
-      <input
-        ref={coverInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file && uploadCategoryId) handleUploadCover(uploadCategoryId, file);
-          e.target.value = "";
-        }}
-      />
 
       <div className="space-y-8">
-        {categories.map((cat) => (
-          <section
-            key={cat.id}
-            className="rounded-lg border border-border bg-card p-4 space-y-4"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex gap-3">
-                {cat.cover_url && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={cat.cover_url}
-                    alt=""
-                    className="size-16 rounded object-cover border border-border"
-                  />
-                )}
-                <div>
-                  <h2 className="font-semibold">{cat.title_en}</h2>
-                  <p className="text-xs text-muted-foreground">
-                    {cat.slug} · {labels.photosCount.replace("{count}", String(cat.photos.length))}
-                  </p>
+        {categories.map((cat) => {
+          const coverUrl = resolveCategoryCoverUrl(cat, cat.photos);
+          return (
+            <section
+              key={cat.id}
+              className="rounded-lg border border-border bg-card p-4 space-y-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex gap-3">
+                  {coverUrl && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={coverUrl}
+                      alt=""
+                      className="size-16 rounded object-cover border border-border"
+                    />
+                  )}
+                  <div>
+                    <h2 className="font-semibold">{cat.title_en}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {cat.slug} ·{" "}
+                      {labels.photosCount.replace(
+                        "{count}",
+                        String(cat.photos.length)
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => openEdit(cat)}
+                  >
+                    <Pencil className="size-3.5" />
+                    {labels.editCategory}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => {
+                      setUploadCategoryId(cat.id);
+                      photoInputRef.current?.click();
+                    }}
+                  >
+                    <ImagePlus className="size-3.5" />
+                    {labels.uploadPhoto}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => handleDeleteCategory(cat.id)}
+                  >
+                    <Trash2 className="size-3.5" />
+                    {labels.deleteCategory}
+                  </Button>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => openEdit(cat)}
-                >
-                  <Pencil className="size-3.5" />
-                  {labels.editCategory}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => {
-                    setUploadCategoryId(cat.id);
-                    coverInputRef.current?.click();
-                  }}
-                >
-                  <Upload className="size-3.5" />
-                  {labels.uploadCover}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => {
-                    setUploadCategoryId(cat.id);
-                    photoInputRef.current?.click();
-                  }}
-                >
-                  <ImagePlus className="size-3.5" />
-                  {labels.uploadPhoto}
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => handleDeleteCategory(cat.id)}
-                >
-                  <Trash2 className="size-3.5" />
-                  {labels.deleteCategory}
-                </Button>
-              </div>
-            </div>
 
-            {cat.photos.length > 0 && (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {cat.photos.map((photo) => (
-                  <div
-                    key={photo.id}
-                    className="flex gap-3 rounded border border-border p-2"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={photo.thumb_url}
-                      alt=""
-                      className="size-20 shrink-0 rounded object-cover"
-                    />
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <Input
-                        placeholder={labels.altEn}
-                        defaultValue={photo.alt_en}
-                        className="h-8 text-xs"
-                        onBlur={(e) => {
-                          if (e.target.value !== photo.alt_en) {
-                            handlePhotoMeta(photo.id, { alt_en: e.target.value });
-                          }
-                        }}
-                      />
-                      <Input
-                        placeholder={labels.altZh}
-                        defaultValue={photo.alt_zh_cn}
-                        className="h-8 text-xs"
-                        onBlur={(e) => {
-                          if (e.target.value !== photo.alt_zh_cn) {
-                            handlePhotoMeta(photo.id, { alt_zh_cn: e.target.value });
-                          }
-                        }}
-                      />
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          defaultValue={photo.sort_order}
-                          className="h-8 w-16 text-xs"
-                          onBlur={(e) => {
-                            const n = Number(e.target.value);
-                            if (!Number.isNaN(n) && n !== photo.sort_order) {
-                              handlePhotoMeta(photo.id, { sort_order: n });
+              {cat.photos.length > 0 && (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {cat.photos.map((photo) => {
+                    const isCover = cat.cover_photo_id === photo.id;
+                    return (
+                      <div
+                        key={photo.id}
+                        className={cn(
+                          "flex gap-3 rounded border p-2",
+                          isCover
+                            ? "border-accent ring-1 ring-accent/40"
+                            : "border-border"
+                        )}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photo.thumb_url}
+                          alt=""
+                          className="size-20 shrink-0 rounded object-cover"
+                        />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          {isCover && (
+                            <span className="inline-flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+                              <Star className="size-3 fill-current" />
+                              {labels.coverBadge}
+                            </span>
+                          )}
+                          <Input
+                            placeholder={labels.altEn}
+                            value={photo.alt_en}
+                            className="h-8 text-xs"
+                            onChange={(e) =>
+                              setCategories((prev) =>
+                                prev.map((c) => ({
+                                  ...c,
+                                  photos: c.photos.map((p) =>
+                                    p.id === photo.id
+                                      ? { ...p, alt_en: e.target.value }
+                                      : p
+                                  ),
+                                }))
+                              )
                             }
-                          }}
-                        />
-                        <Checkbox
-                          checked={photo.is_published}
-                          onCheckedChange={(v) =>
-                            handlePhotoMeta(photo.id, {
-                              is_published: v === true,
-                            })
-                          }
-                          aria-label={labels.published}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="ml-auto size-8 text-destructive"
-                          disabled={pending}
-                          onClick={() => handleDeletePhoto(photo.id)}
-                          aria-label={labels.deletePhoto}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                            onBlur={(e) => {
+                              handlePhotoMeta(photo.id, {
+                                alt_en: e.target.value,
+                              });
+                            }}
+                          />
+                          <Input
+                            placeholder={labels.altZh}
+                            value={photo.alt_zh_cn}
+                            className="h-8 text-xs"
+                            onChange={(e) =>
+                              setCategories((prev) =>
+                                prev.map((c) => ({
+                                  ...c,
+                                  photos: c.photos.map((p) =>
+                                    p.id === photo.id
+                                      ? { ...p, alt_zh_cn: e.target.value }
+                                      : p
+                                  ),
+                                }))
+                              )
+                            }
+                            onBlur={(e) => {
+                              handlePhotoMeta(photo.id, {
+                                alt_zh_cn: e.target.value,
+                              });
+                            }}
+                          />
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              value={photo.sort_order}
+                              className="h-8 w-16 text-xs"
+                              onChange={(e) => {
+                                const n = Number(e.target.value);
+                                if (!Number.isNaN(n)) {
+                                  setCategories((prev) =>
+                                    prev.map((c) => ({
+                                      ...c,
+                                      photos: c.photos.map((p) =>
+                                        p.id === photo.id
+                                          ? { ...p, sort_order: n }
+                                          : p
+                                      ),
+                                    }))
+                                  );
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const n = Number(e.target.value);
+                                if (!Number.isNaN(n)) {
+                                  handlePhotoMeta(photo.id, { sort_order: n });
+                                }
+                              }}
+                            />
+                            <Checkbox
+                              checked={photo.is_published}
+                              onCheckedChange={(v) =>
+                                handlePhotoMeta(photo.id, {
+                                  is_published: v === true,
+                                })
+                              }
+                              aria-label={labels.published}
+                            />
+                            {!isCover && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-8 text-accent"
+                                disabled={pending}
+                                onClick={() =>
+                                  handleSetCover(cat.id, photo.id)
+                                }
+                                aria-label={labels.setCover}
+                                title={labels.setCover}
+                              >
+                                <Star className="size-4" />
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="ml-auto size-8 text-destructive"
+                              disabled={pending}
+                              onClick={() => handleDeletePhoto(photo.id)}
+                              aria-label={labels.deletePhoto}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        ))}
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })}
       </div>
     </div>
   );

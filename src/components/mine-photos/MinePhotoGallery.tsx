@@ -10,7 +10,10 @@ import {
   type LightboxPhoto,
 } from "@/components/mine-photos/MinePhotoLightbox";
 import { cn } from "@/lib/utils";
-import type { MinePhotoCategoryWithPhotos } from "@/lib/mine-photos/queries";
+import {
+  resolveCategoryCoverUrl,
+  type MinePhotoCategoryWithPhotos,
+} from "@/lib/mine-photos/types";
 
 type Props = {
   categories: MinePhotoCategoryWithPhotos[];
@@ -74,10 +77,8 @@ export function MinePhotoGallery({ categories, initialSlug, labels }: Props) {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {categories.map((cat) => {
           const title = categoryTitle(cat, locale);
-          const cover =
-            cat.cover_url ??
-            cat.photos[0]?.thumb_url ??
-            "/images/legacy/mining/header/1.jpg";
+          const cover = resolveCategoryCoverUrl(cat, cat.photos);
+          if (!cover) return null;
           const isActive = cat.slug === activeCategory?.slug;
           return (
             <button

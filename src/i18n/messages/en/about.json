@@ -51,14 +51,6 @@
   "photos": {
     "title": "Photos of Mining Sites",
     "subtitle": "A look inside the Gallois mine operations in Madagascar.",
-    "viewAll": "View full gallery",
-    "items": [
-      { "src": "/images/legacy/mining/header/1.jpg", "label": "General View of the Mine" },
-      { "src": "/images/legacy/mining/header/2.jpg", "label": "Processing Plant" },
-      { "src": "/images/legacy/mining/header/3.jpg", "label": "Final Products Warehouse + Lab" },
-      { "src": "/images/legacy/mining/header/4.jpg", "label": "Our Team + Cultural Activities" },
-      { "src": "/images/legacy/mining/header/5.jpg", "label": "Social Responsibilities" },
-      { "src": "/images/legacy/mining/header/6.jpg", "label": "Local Customs and Practices" }
-    ]
+    "viewAll": "View full gallery"
   }
 }

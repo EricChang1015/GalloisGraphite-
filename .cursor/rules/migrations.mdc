@@ -7,10 +7,19 @@ alwaysApply: false
 # Database migrations — authoring + auto-apply
 
 Agents must be able to **author and apply** Supabase migrations end-to-end
-without bouncing the user back to the Supabase Dashboard. The runner
-[`scripts/apply-migrations.mjs`](mdc:scripts/apply-migrations.mjs) calls the
-Supabase Management API with `SUPABASE_ACCESS_TOKEN` from `.env.local`, so no
-DB password is needed.
+without bouncing the user back to the Supabase Dashboard.
+
+**Two apply paths (pick by environment):**
+
+| Environment | Command | How |
+|---|---|---|
+| **Supabase Cloud** | `npm run db:migrate` | [`scripts/apply-migrations.mjs`](mdc:scripts/apply-migrations.mjs) → Management API + `SUPABASE_ACCESS_TOKEN` |
+| **Self-host UAT** (`uat.gf-v.io`) | `npm run deploy:uat:migrate` | [`scripts/migrate-uat-supabase.mjs`](mdc:scripts/migrate-uat-supabase.mjs) → SSH jump → `docker exec supabase-db psql` (no `SUPABASE_ACCESS_TOKEN`) |
+
+UAT is the **primary** DB for this project. Agents must **not** ask the user to
+run migrations manually — use `deploy:uat:migrate:status` then
+`deploy:uat:migrate` when Cloud token is absent. See
+[`.cursor/skills/self-hosted-supabase-ops/SKILL.md`](mdc:.cursor/skills/self-hosted-supabase-ops/SKILL.md).
 
 ## When to write a migration
 
@@ -36,7 +45,7 @@ supabase/migrations/NNN_snake_case_purpose.sql
   during a rebase, rename one with `git mv` to the next free prefix and
   update any cross-references inside the SQL comment headers.
 
-Current ceiling: `030_agent_migrations_rls.sql`. Next file → `031_*.sql`.
+Current ceiling: `033_mine_photo_cover_photo_id.sql`. Next file → `034_*.sql`.
 
 ## Idempotency (REQUIRED)
 
@@ -88,35 +97,32 @@ After adding a migration, run `npm run qa:verify-rls` — it fails if any
 
 ## After-write workflow (DO THIS, don't ask the user)
 
-1. **Status check** first:
+### Self-host UAT (default for this repo)
+
+1. **Status check**:
 
    ```powershell
-   npm run db:migrate:status
+   npm run deploy:uat:migrate:status
    ```
 
-   Confirms the new file is `pending` and prior ones are `applied`.
-
-2. **Dry run** to print the plan:
+2. **Apply** pending files via Postgres on the VM:
 
    ```powershell
-   npm run db:migrate:dry
+   npm run deploy:uat:migrate
    ```
 
-3. **Apply**:
+3. Re-run status to confirm all `✓ applied`.
 
-   ```powershell
-   npm run db:migrate
-   ```
+### Supabase Cloud (only when `SUPABASE_ACCESS_TOKEN` is set)
 
-4. If the migration changed schema (new table / column / enum), regenerate
-   TypeScript types:
+1. `npm run db:migrate:status` → `npm run db:migrate:dry` → `npm run db:migrate`
 
-   ```powershell
-   npm run db:types
-   ```
+### Both paths
 
-5. Update the migration ledger inside [`docs/ARCHITECTURE.md` §10](mdc:docs/ARCHITECTURE.md)
-   so the architecture doc stays in sync with the file list.
+- If the migration changed schema (new table / column / enum), regenerate
+  TypeScript types: `npm run db:types` (Cloud token) or hand-edit
+  `src/types/database.ts`.
+- Update the migration ledger inside [`docs/ARCHITECTURE.md` §10](mdc:docs/ARCHITECTURE.md).
 
 ## Modifying an existing migration that has already been applied
 

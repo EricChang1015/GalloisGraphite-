@@ -1,33 +1,18 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export type MinePhotoCategoryRow = {
-  id: string;
-  legacy_cid: number | null;
-  slug: string;
-  title_en: string;
-  title_zh_cn: string;
-  cover_url: string | null;
-  sort_order: number;
-  is_published: boolean;
-};
+export type {
+  MinePhotoCategoryRow,
+  MinePhotoCategoryWithPhotos,
+  MinePhotoRow,
+} from "@/lib/mine-photos/types";
+export { resolveCategoryCoverUrl } from "@/lib/mine-photos/types";
 
-export type MinePhotoRow = {
-  id: string;
-  category_id: string;
-  thumb_url: string;
-  full_url: string;
-  storage_path_thumb: string;
-  storage_path_full: string;
-  alt_en: string;
-  alt_zh_cn: string;
-  sort_order: number;
-  is_published: boolean;
-};
-
-export type MinePhotoCategoryWithPhotos = MinePhotoCategoryRow & {
-  photos: MinePhotoRow[];
-};
+import type {
+  MinePhotoCategoryRow,
+  MinePhotoCategoryWithPhotos,
+  MinePhotoRow,
+} from "@/lib/mine-photos/types";
 
 /** Public gallery — published categories + photos only (RLS). */
 export async function getPublishedMinePhotoGallery(): Promise<
@@ -37,7 +22,7 @@ export async function getPublishedMinePhotoGallery(): Promise<
   const { data: categories } = await supabase
     .from("mine_photo_categories")
     .select(
-      "id, legacy_cid, slug, title_en, title_zh_cn, cover_url, sort_order, is_published"
+      "id, legacy_cid, slug, title_en, title_zh_cn, cover_url, cover_photo_id, sort_order, is_published"
     )
     .eq("is_published", true)
     .order("sort_order", { ascending: true })
@@ -75,7 +60,7 @@ export async function getAdminMinePhotoGallery(): Promise<
   const { data: categories } = await admin
     .from("mine_photo_categories")
     .select(
-      "id, legacy_cid, slug, title_en, title_zh_cn, cover_url, sort_order, is_published"
+      "id, legacy_cid, slug, title_en, title_zh_cn, cover_url, cover_photo_id, sort_order, is_published"
     )
     .order("sort_order", { ascending: true })
     .returns<MinePhotoCategoryRow[]>();

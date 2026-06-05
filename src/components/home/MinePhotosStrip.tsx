@@ -1,28 +1,29 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
+import {
+  getPublishedMinePhotoGallery,
+  resolveCategoryCoverUrl,
+} from "@/lib/mine-photos/queries";
 import { cn } from "@/lib/utils";
 
 /**
- * Edge-to-edge mine photo strip. Uses the existing legacy photography
- * (operation site, processing, lab, team) but desaturates and adds a
- * top/bottom inset shadow so the strip reads as cinematic context rather
- * than stock filler.
+ * Edge-to-edge mine photo strip. Cover images from mine-photos CMS only.
  */
-
-const PHOTO_SRCS = [
-  "/images/legacy/mining/header/1.jpg",
-  "/images/legacy/mining/header/2.jpg",
-  "/images/legacy/mining/header/3.jpg",
-  "/images/legacy/mining/header/4.jpg",
-  "/images/legacy/mining/header/5.jpg",
-  "/images/legacy/mining/header/6.jpg",
-];
-
 export async function MinePhotosStrip({ className }: { className?: string }) {
   const t = await getTranslations("home");
-  const photos = (t.raw("photos") as Array<{ alt: string }>).map(
-    (photo, index) => ({ ...photo, src: PHOTO_SRCS[index] })
-  );
+  const gallery = await getPublishedMinePhotoGallery();
+  const altItems = t.raw("photos") as Array<{ alt: string }>;
+
+  const photos = altItems.flatMap((photo, index) => {
+    const category = gallery[index];
+    const src = category
+      ? resolveCategoryCoverUrl(category, category.photos)
+      : null;
+    if (!src) return [];
+    return [{ ...photo, src, key: category.id }];
+  });
+
+  if (!photos.length) return null;
 
   return (
     <section
@@ -31,7 +32,6 @@ export async function MinePhotosStrip({ className }: { className?: string }) {
         className
       )}
     >
-      {/* Top + bottom edge shadows for cinematic feel */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-background to-transparent z-10"
@@ -44,7 +44,7 @@ export async function MinePhotosStrip({ className }: { className?: string }) {
       <div className="flex">
         {photos.map((p, i) => (
           <div
-            key={p.src}
+            key={p.key}
             className="group relative aspect-[3/2] flex-1 min-w-0 overflow-hidden"
           >
             <Image

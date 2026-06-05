@@ -478,6 +478,7 @@ export type Database = {
       }
       mine_photo_categories: {
         Row: {
+          cover_photo_id: string | null
           cover_url: string | null
           created_at: string
           id: string
@@ -490,6 +491,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cover_photo_id?: string | null
           cover_url?: string | null
           created_at?: string
           id?: string
@@ -502,6 +504,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cover_photo_id?: string | null
           cover_url?: string | null
           created_at?: string
           id?: string
@@ -513,7 +516,15 @@ export type Database = {
           title_zh_cn?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mine_photo_categories_cover_photo_id_fkey"
+            columns: ["cover_photo_id"]
+            isOneToOne: false
+            referencedRelation: "mine_photos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mine_photos: {
         Row: {
