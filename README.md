@@ -7,8 +7,7 @@ sellers. Built on Next.js 16 (App Router) + Supabase + Tailwind v4 + shadcn/ui.
 
 - **Production (Vercel)**: <https://galloisgraphite.vercel.app/>
 - **Legacy static site**: <http://madagraphite.com/> (the original brochure
-  site this platform is replacing; preserved for content reference under
-  [`docs/oldSite/`](./docs/oldSite/) and summarised in
+  site this platform is replacing; content summarised in
   [`docs/LEGACY_CONTENT.md`](./docs/LEGACY_CONTENT.md))
 
 ## Quick start

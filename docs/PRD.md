@@ -205,8 +205,8 @@ quotation_pending → quoted ↔ negotiating
 
 ## 6. 內容資產
 
-- 舊 madagraphite.com 鏡像位於 `docs/oldSite/madagraphite.com-mirror/`,
-  從中抽取公司介紹、產品規格、礦場照片;整理至 [`docs/LEGACY_CONTENT.md`](./LEGACY_CONTENT.md)。
+- 舊站 <http://madagraphite.com/> 已抽取公司介紹、產品規格、礦場照片,
+  整理至 [`docs/LEGACY_CONTENT.md`](./LEGACY_CONTENT.md)。
 - 行銷文案參考 [`docs/COPY_DRAFTS.md`](./COPY_DRAFTS.md)。
 - 合約範本參考 [`docs/CONTRACT_TEMPLATE.md`](./CONTRACT_TEMPLATE.md)，
   動態渲染由 `src/lib/contract/template.ts` 完成。

@@ -1,7 +1,0 @@
-.banner .banner-text{ background-image: url(../images/fr/banner.png); width: 728px; height: 337px;}
-
-@media screen and (max-width: 640px){
-    .banner .banner-text{ background-image:none; width: 100%; height: auto;}
-    .banner .banner-text img{  width: 86%;}
-
-}

@@ -1,8 +1,8 @@
 # Legacy Content (from madagraphite.com)
 
-> 來源:`docs/oldSite/madagraphite.com-mirror/index.html`(英文版)
-> 同站還有:简体中文 (`__q_241d0d28b1`) / Français (`__q_6480609547`) / 日本語 (`__q_b254d4159c`)
-> 之後做 i18n 時可從那幾份語系檔抽取對應翻譯。
+> 來源:<http://madagraphite.com/>（英文版為預設首頁）
+> 同站語言切換支援 English / 简体中文 / Français / 日本語。
+> 之後做 i18n 時可從舊站各語系頁面抽取對應翻譯。
 
 ## 公司關鍵資訊
 
@@ -87,13 +87,12 @@
 
 ## 圖片資產(舊站可借用)
 
-舊站圖片相對路徑(可在 MVP 借用):
+已從 <http://madagraphite.com/> 匯入至 `public/images/legacy/`:
 ```
-docs/oldSite/madagraphite.com-mirror/content/assets/images/
+public/images/legacy/
   ├── map_a.png / map_b.png / map_c.png       # 礦區地圖
   ├── mada_logo_a.png / mada_logo_b.png        # 品牌 logo
-  ├── mining/header/1..6.jpg                   # 礦區照片
-  └── form-bg.jpg                              # contact 圖
+  └── mining/header/1..6.jpg                   # 礦區照片
 ```
 
 > ⚠️ 上線前請確認版權允許再用;不確定時改用 picsum / 自行拍攝。
@@ -124,9 +123,9 @@ Expandable graphite, High purity graphite, Spherical graphite, Graphite
 
 ## i18n 預設語言對應(舊站)
 
-| 語系 | 舊站檔名 | 新站 locale |
+| 語系 | 舊站 (<http://madagraphite.com/>) | 新站 locale |
 |---|---|---|
-| English | `index.html` 或 `index__q_bbf4ee439d.html` | `en` |
-| 简体中文 | `index__q_241d0d28b1.html` | `zh-CN` |
-| Français | `index__q_6480609547.html` | `fr` |
-| 日本語 | `index__q_b254d4159c.html` | `ja` |
+| English | 預設首頁 | `en` |
+| 简体中文 | 語言切換 | `zh-CN` |
+| Français | 語言切換 | `fr` |
+| 日本語 | 語言切換 | `ja` |
