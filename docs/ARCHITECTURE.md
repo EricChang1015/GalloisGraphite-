@@ -65,7 +65,8 @@ Production 仍可使用 Vercel + Supabase Cloud；UAT 為自建完整堆疊。
 | 路由 | 檔案 | 內容 |
 |---|---|---|
 | `/` | `(public)/page.tsx` | Hero narrative、Stats、Mine intro、Geopolitics、Products、Sustainability、Applications、Partners、AI CTA、Mining photos strip |
-| `/about` | `(public)/about/page.tsx` | 公司歷史、三個礦場、全球客戶、礦區照片 |
+| `/about` | `(public)/about/page.tsx` | 公司歷史、三個礦場、全球客戶、礦區照片 teaser |
+| `/mining-photos` | `(public)/mining-photos/page.tsx` | 礦區照片圖庫（DB `mine_photo_*` + `mine-photos` bucket；全螢幕 lightbox） |
 | `/products` | `(public)/products/page.tsx` | MADA1/MADA2 brand cards + standard grades 規格表 |
 | `/news` | `(public)/news/page.tsx` | 已發布新聞列表（ISR 5 分鐘） |
 | `/news/[slug]` | `(public)/news/[slug]/page.tsx` | 單篇文章（read content_html，含 cover） |
@@ -124,6 +125,7 @@ Production 仍可使用 Vercel + Supabase Cloud；UAT 為自建完整堆疊。
 | `/admin/orders/[id]` | Admin 訂單詳情：ProgressBar + **Force Transition**（繞過 state machine）+ contract 狀態 + payments + documents + audit log + timeline |
 | `/admin/payments` | ⭐ Pending Review + History 兩段，**核心人工審核流程**（`<PaymentVerifyActions />`） |
 | `/admin/news` | 新聞 CRUD（slug、content_html、cover、published toggle） |
+| `/admin/mine-photos` | 礦區照片分類與圖庫 CMS（`mine_photo_categories` / `mine_photos`） |
 | `/admin/settings` | 平台設定：Email SMTP 連線狀態 + `<SendTestEmailButton />` + `<KycThresholdSettings />` + `<SmsNotificationsToggle />`（SMS 需 env `SMS_BASE_URL` + `SMS_APP_ID`） |
 
 **Layout**：`admin/layout.tsx` → 左側 Admin Console nav；Payments / Orders 兩個項目從 `getAdminActionCounts()` 抓 `paymentsPending` / `ordersDisputed` 並顯示 badge（金 / 紅），與 `/admin` 卡片數字一致。

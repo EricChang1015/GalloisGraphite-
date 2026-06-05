@@ -510,6 +510,7 @@ select o.order_no, o.status, o.incoterm,
 | `scripts/smoke-a7-dispute-cancel.mjs` | Dispute / cancel / admin force + RLS |
 | `scripts/verify-rls-policies.mjs` | 005/010/015/018 關鍵 policy 斷言 |
 | `scripts/smoke-oauth-config.mjs` | Google OAuth 程式路徑 + migration 008 |
+| `scripts/smoke-mine-photos-public.mjs` | 礦區照片公開讀取（anon SELECT + migration 032 grants） |
 | `scripts/e2e-full-trading.mjs` | Playwright 30/70 UI 全流程（§4） |
 
 `package.json` 捷徑：`npm run qa:preflight`、`npm run qa:chat`、`npm run qa:a7`、`npm run qa:a7:gate`、`npm run qa:a7:dispute`、`npm run qa:verify-rls`、`npm run qa:oauth`、`npm run qa:payment-schedule`、`npm run qa:cleanup`、`npm run qa:seed-order`。

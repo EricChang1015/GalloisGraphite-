@@ -88,7 +88,7 @@ SUPABASE_SERVICE_ROLE_KEY=<deploy:uat:status>
 | `npm run deploy:uat:check` | SSH 連線 + docker 探測 |
 | `npm run deploy:uat:supabase` | 上傳 deploy 樹 + bootstrap + 重啟 proxy |
 | `npm run deploy:uat:compose` | **僅**上傳 override 並套用 runtime-only（不做 pull） |
-| `npm run deploy:uat:next` | 本機 `npm run build` → 上傳 ~7MB tarball → **restart 容器**（不 rebuild Docker image） |
+| `npm run deploy:uat:next` | 本機 `npm run build` → 上傳 ~7MB tarball → **`--force-recreate` 容器**（不 rebuild Docker image） |
 | `npm run deploy:uat:next -- --skip-build` | 略過 build，只上傳現有 `.next/standalone` |
 | `npm run deploy:uat:next -- --next-only` | 只更新 Next.js，不重啟 nginx |
 | `npm run deploy:uat:next -- --sync-auth-env` | 順便 patch GoTrue `SITE_URL`（預設不做） |
@@ -143,7 +143,7 @@ bash /data/deploy/supabase/compose-dashboard-stop.sh
 1. 本機 `npm run build`（`output: "standalone"`）
 2. 打包 `standalone/`（含 `.next/static`、`public`）→ tarball **~7MB**
 3. SSH 上傳至 `/data/deploy/next/standalone/`
-4. `docker compose restart` — **不 rebuild Docker image**
+4. `docker compose up -d --force-recreate next` — **不 rebuild Docker image**（必須 recreate，否則舊 Node 進程不會載入新 `standalone/`）
 
 **容器模型：** 固定映像 `node:22-alpine`，build 產物以 **volume 掛載** `./standalone:/app:ro`。
 

@@ -4,7 +4,11 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { useLocale } from "next-intl";
 
-import { MinePhotoLightbox, type LightboxPhoto } from "@/components/mine-photos/MinePhotoLightbox";
+import {
+  MinePhotoLightbox,
+  type LightboxLabels,
+  type LightboxPhoto,
+} from "@/components/mine-photos/MinePhotoLightbox";
 import { cn } from "@/lib/utils";
 import type { MinePhotoCategoryWithPhotos } from "@/lib/mine-photos/queries";
 
@@ -12,8 +16,8 @@ type Props = {
   categories: MinePhotoCategoryWithPhotos[];
   initialSlug?: string;
   labels: {
-    allCategories: string;
     noPhotos: string;
+    lightbox: LightboxLabels;
   };
 };
 
@@ -154,6 +158,7 @@ export function MinePhotoGallery({ categories, initialSlug, labels }: Props) {
         open={lightboxOpen}
         onOpenChange={setLightboxOpen}
         onIndexChange={setLightboxIndex}
+        labels={labels.lightbox}
       />
     </div>
   );

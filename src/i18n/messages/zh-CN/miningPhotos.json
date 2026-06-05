@@ -7,6 +7,14 @@
     "body": "浏览矿山全景、加工厂、成品仓库与实验室、团队与文化活动、社会责任及当地风俗。"
   },
   "backToAbout": "← 返回关于我们",
-  "allCategories": "分类",
-  "noPhotos": "此分类尚无照片。"
+  "noPhotos": "此分类尚无照片。",
+  "lightbox": {
+    "close": "关闭",
+    "previous": "上一张",
+    "next": "下一张",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "zoomReset": "重置缩放",
+    "zoomHint": "滚轮或双指缩放 · 双击放大 · 放大后可拖动"
+  }
 }

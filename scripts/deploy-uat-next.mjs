@@ -171,7 +171,7 @@ async function main() {
           await applySupabaseUatEnv(conn, env);
         }
 
-        console.log("▸ Restarting mada-next (volume mount, no image rebuild)...");
+        console.log("▸ Restarting mada-next (--force-recreate picks up new standalone/)...");
         await execCommand(
           conn,
           `chmod +x ${REMOTE_NEXT}/bootstrap.sh ${REMOTE_NEXT}/cron-payment-schedule.sh && bash ${REMOTE_NEXT}/bootstrap.sh`,
@@ -207,6 +207,10 @@ async function main() {
       await execCommand(
         conn,
         `curl -sf -o /dev/null -w 'login HTTP %{http_code}\\n' --resolve uat.gf-v.io:443:127.0.0.1 ${origin}/login`,
+      );
+      await execCommand(
+        conn,
+        `curl -sf -o /dev/null -w 'static HTTP %{http_code}\\n' --resolve uat.gf-v.io:443:127.0.0.1 ${origin}/images/legacy/map_a.png`,
       );
     },
   });

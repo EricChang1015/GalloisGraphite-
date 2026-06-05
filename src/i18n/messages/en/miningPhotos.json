@@ -7,6 +7,14 @@
     "body": "Explore our mine overview, processing plant, warehouse and laboratory, team activities, social programmes, and local culture."
   },
   "backToAbout": "← Back to About",
-  "allCategories": "Categories",
-  "noPhotos": "No photos in this category yet."
+  "noPhotos": "No photos in this category yet.",
+  "lightbox": {
+    "close": "Close",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "zoomHint": "Scroll or pinch to zoom · Double-click to enlarge · Drag when zoomed"
+  }
 }

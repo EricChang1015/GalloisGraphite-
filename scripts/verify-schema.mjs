@@ -372,6 +372,16 @@ async function main() {
     check(minePolNames.has(p), `policy ${p} exists`);
   }
 
+  console.log("\n=== mine photos grants (032) ===");
+  const anonCatSelect = await q(`
+    select has_table_privilege('anon', 'public.mine_photo_categories', 'SELECT') as ok;
+  `);
+  check(anonCatSelect[0]?.ok === true, "anon can SELECT mine_photo_categories");
+  const anonPhotoSelect = await q(`
+    select has_table_privilege('anon', 'public.mine_photos', 'SELECT') as ok;
+  `);
+  check(anonPhotoSelect[0]?.ok === true, "anon can SELECT mine_photos");
+
   console.log(`\n==== ${pass} passed · ${fail} failed ====`);
   process.exit(fail === 0 ? 0 : 1);
 }

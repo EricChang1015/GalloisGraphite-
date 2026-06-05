@@ -43,8 +43,16 @@ export default async function MiningPhotosPage({
           categories={categories}
           initialSlug={params.category}
           labels={{
-            allCategories: t("allCategories"),
             noPhotos: t("noPhotos"),
+            lightbox: {
+              close: t("lightbox.close"),
+              previous: t("lightbox.previous"),
+              next: t("lightbox.next"),
+              zoomIn: t("lightbox.zoomIn"),
+              zoomOut: t("lightbox.zoomOut"),
+              zoomReset: t("lightbox.zoomReset"),
+              zoomHint: t("lightbox.zoomHint"),
+            },
           }}
         />
       </section>
