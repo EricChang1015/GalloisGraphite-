@@ -338,6 +338,40 @@ async function main() {
   `);
   check(createdByIdx.length === 1, "idx_quotations_created_by exists");
 
+  console.log("\n=== mine photos (031) ===");
+  const mineCats = await cols("mine_photo_categories");
+  check(mineCats.has("slug"), "mine_photo_categories.slug exists");
+  check(mineCats.has("cover_url"), "mine_photo_categories.cover_url exists");
+  const minePhotos = await cols("mine_photos");
+  check(minePhotos.has("full_url"), "mine_photos.full_url exists");
+  check(minePhotos.has("thumb_url"), "mine_photos.thumb_url exists");
+  const mineBucket = await q(`
+    select id, public, file_size_limit from storage.buckets where id = 'mine-photos';
+  `);
+  check(mineBucket.length === 1, "mine-photos bucket exists");
+  if (mineBucket.length) {
+    check(mineBucket[0].public === true, "mine-photos bucket is public");
+  }
+  const minePolicies = await q(`
+    select polname from pg_policy
+     where polrelid = 'storage.objects'::regclass
+       and polname in (
+         'mine-photos:public read',
+         'mine-photos:admin insert',
+         'mine-photos:admin update',
+         'mine-photos:admin delete'
+       );
+  `);
+  const minePolNames = new Set(minePolicies.map((p) => p.polname));
+  for (const p of [
+    "mine-photos:public read",
+    "mine-photos:admin insert",
+    "mine-photos:admin update",
+    "mine-photos:admin delete",
+  ]) {
+    check(minePolNames.has(p), `policy ${p} exists`);
+  }
+
   console.log(`\n==== ${pass} passed · ${fail} failed ====`);
   process.exit(fail === 0 ? 0 : 1);
 }

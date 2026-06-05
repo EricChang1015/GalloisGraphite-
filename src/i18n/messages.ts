@@ -19,6 +19,7 @@ const NAMESPACES = [
   "nav",
   "home",
   "about",
+  "miningPhotos",
   "products",
   "sustainability",
   "geopolitics",

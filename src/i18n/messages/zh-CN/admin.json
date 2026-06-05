@@ -7,6 +7,7 @@
     "orderDetail": "订单",
     "payments": "付款",
     "news": "资讯",
+    "minePhotos": "矿区照片",
     "settings": "设置"
   },
   "layout": {
@@ -22,6 +23,7 @@
       "orders": "订单",
       "payments": "付款",
       "news": "资讯",
+      "minePhotos": "矿区照片",
       "settings": "设置"
     },
     "badges": {
@@ -382,5 +384,32 @@
       "disabledToast": "短信通知已禁用。",
       "lastUpdated": "最后更新：{date}"
     }
+  },
+  "minePhotos": {
+    "title": "矿区照片",
+    "subtitle": "管理公开矿区照片页的分类与图库。",
+    "addCategory": "新增分类",
+    "editCategory": "编辑",
+    "deleteCategory": "删除分类",
+    "deleteCategoryConfirm": "确定删除此分类及所有照片？此操作无法撤销。",
+    "slug": "Slug（URL）",
+    "titleEn": "标题（英文）",
+    "titleZh": "标题（简体中文）",
+    "sortOrder": "排序",
+    "published": "已发布",
+    "save": "保存",
+    "uploadPhoto": "上传照片",
+    "uploadCover": "上传封面",
+    "deletePhoto": "删除照片",
+    "deletePhotoConfirm": "确定删除此照片？",
+    "altEn": "替代文字（英文）",
+    "altZh": "替代文字（中文）",
+    "photosCount": "{count} 张照片",
+    "uploadSuccess": "上传完成。",
+    "uploadFailed": "上传失败。",
+    "saveSuccess": "已保存。",
+    "saveFailed": "保存失败。",
+    "deleteSuccess": "已删除。",
+    "deleteFailed": "删除失败。"
   }
 }

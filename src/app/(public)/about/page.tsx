@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+
+import { getLocale } from "@/i18n/get-locale";
+import { getPublishedMinePhotoGallery } from "@/lib/mine-photos/queries";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("about");
@@ -16,8 +20,18 @@ const SECTION_IMAGES = [
   "/images/legacy/map_b.png",
 ];
 
+const LEGACY_PHOTO_ITEMS = [
+  { src: "/images/legacy/mining/header/1.jpg", slug: "general-view" },
+  { src: "/images/legacy/mining/header/2.jpg", slug: "processing-plant" },
+  { src: "/images/legacy/mining/header/3.jpg", slug: "warehouse-lab" },
+  { src: "/images/legacy/mining/header/4.jpg", slug: "team-culture" },
+  { src: "/images/legacy/mining/header/5.jpg", slug: "social-responsibility" },
+  { src: "/images/legacy/mining/header/6.jpg", slug: "local-customs" },
+];
+
 export default async function AboutPage() {
   const t = await getTranslations("about");
+  const locale = await getLocale();
   const stats = t.raw("stats") as Array<{ value: string; label: string }>;
   const sections = (t.raw("sections") as Array<{
     title: string;
@@ -27,7 +41,34 @@ export default async function AboutPage() {
     ...section,
     image: SECTION_IMAGES[index] ?? SECTION_IMAGES[0],
   }));
-  const photos = t.raw("photos.items") as Array<{ src: string; label: string }>;
+
+  const gallery = await getPublishedMinePhotoGallery();
+  const fallbackLabels = t.raw("photos.items") as Array<{
+    src: string;
+    label: string;
+  }>;
+
+  const photoCards =
+    gallery.length > 0
+      ? gallery.map((cat) => ({
+          key: cat.id,
+          href: `/mining-photos?category=${cat.slug}`,
+          src:
+            cat.cover_url ??
+            cat.photos[0]?.thumb_url ??
+            LEGACY_PHOTO_ITEMS.find((l) => l.slug === cat.slug)?.src ??
+            LEGACY_PHOTO_ITEMS[0].src,
+          label:
+            locale === "zh-CN" && cat.title_zh_cn
+              ? cat.title_zh_cn
+              : cat.title_en,
+        }))
+      : fallbackLabels.map((photo, index) => ({
+          key: photo.src,
+          href: `/mining-photos?category=${LEGACY_PHOTO_ITEMS[index]?.slug ?? "general-view"}`,
+          src: photo.src,
+          label: photo.label,
+        }));
 
   return (
     <div className="bg-background text-foreground">
@@ -107,11 +148,18 @@ export default async function AboutPage() {
             <p className="text-muted-foreground text-sm">
               {t("photos.subtitle")}
             </p>
+            <Link
+              href="/mining-photos"
+              className="inline-block text-sm text-[color:var(--gold)] hover:underline"
+            >
+              {t("photos.viewAll")}
+            </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {photos.map((photo) => (
-              <div
-                key={photo.src}
+            {photoCards.map((photo) => (
+              <Link
+                key={photo.key}
+                href={photo.href}
                 className="group relative overflow-hidden rounded-lg border border-border aspect-[4/3]"
               >
                 <Image
@@ -121,12 +169,11 @@ export default async function AboutPage() {
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
                   unoptimized
                 />
-                {/* Caption gradient: always darken bottom regardless of theme */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                 <p className="absolute bottom-2 left-2 right-2 text-xs text-white leading-tight">
                   {photo.label}
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

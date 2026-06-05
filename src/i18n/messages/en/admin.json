@@ -7,6 +7,7 @@
     "orderDetail": "Order",
     "payments": "Payments",
     "news": "News",
+    "minePhotos": "Mine Photos",
     "settings": "Settings"
   },
   "layout": {
@@ -22,6 +23,7 @@
       "orders": "Orders",
       "payments": "Payments",
       "news": "News",
+      "minePhotos": "Mine Photos",
       "settings": "Settings"
     },
     "badges": {
@@ -382,5 +384,32 @@
       "disabledToast": "SMS notifications disabled.",
       "lastUpdated": "Last updated: {date}"
     }
+  },
+  "minePhotos": {
+    "title": "Mining Site Photos",
+    "subtitle": "Manage photo categories and galleries shown on the public mining photos page.",
+    "addCategory": "Add category",
+    "editCategory": "Edit",
+    "deleteCategory": "Delete category",
+    "deleteCategoryConfirm": "Delete this category and all its photos? This cannot be undone.",
+    "slug": "Slug (URL)",
+    "titleEn": "Title (English)",
+    "titleZh": "Title (简体中文)",
+    "sortOrder": "Sort order",
+    "published": "Published",
+    "save": "Save",
+    "uploadPhoto": "Upload photo",
+    "uploadCover": "Upload cover",
+    "deletePhoto": "Delete photo",
+    "deletePhotoConfirm": "Delete this photo?",
+    "altEn": "Alt text (EN)",
+    "altZh": "Alt text (ZH)",
+    "photosCount": "{count} photos",
+    "uploadSuccess": "Upload complete.",
+    "uploadFailed": "Upload failed.",
+    "saveSuccess": "Saved.",
+    "saveFailed": "Save failed.",
+    "deleteSuccess": "Deleted.",
+    "deleteFailed": "Delete failed."
   }
 }

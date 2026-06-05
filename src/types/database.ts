@@ -476,6 +476,98 @@ export type Database = {
           },
         ]
       }
+      mine_photo_categories: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          id: string
+          is_published: boolean
+          legacy_cid: number | null
+          slug: string
+          sort_order: number
+          title_en: string
+          title_zh_cn: string
+          updated_at: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          legacy_cid?: number | null
+          slug: string
+          sort_order?: number
+          title_en: string
+          title_zh_cn?: string
+          updated_at?: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          legacy_cid?: number | null
+          slug?: string
+          sort_order?: number
+          title_en?: string
+          title_zh_cn?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mine_photos: {
+        Row: {
+          alt_en: string
+          alt_zh_cn: string
+          category_id: string
+          created_at: string
+          full_url: string
+          id: string
+          is_published: boolean
+          sort_order: number
+          storage_path_full: string
+          storage_path_thumb: string
+          thumb_url: string
+          updated_at: string
+        }
+        Insert: {
+          alt_en?: string
+          alt_zh_cn?: string
+          category_id: string
+          created_at?: string
+          full_url: string
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          storage_path_full: string
+          storage_path_thumb: string
+          thumb_url: string
+          updated_at?: string
+        }
+        Update: {
+          alt_en?: string
+          alt_zh_cn?: string
+          category_id?: string
+          created_at?: string
+          full_url?: string
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          storage_path_full?: string
+          storage_path_thumb?: string
+          thumb_url?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mine_photos_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "mine_photo_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news: {
         Row: {
           author_id: string | null

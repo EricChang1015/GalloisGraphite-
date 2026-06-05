@@ -51,6 +51,7 @@
   "photos": {
     "title": "矿区照片",
     "subtitle": "走进马达加斯加 Gallois 矿山运营现场。",
+    "viewAll": "查看完整图库",
     "items": [
       { "src": "/images/legacy/mining/header/1.jpg", "label": "矿山全景" },
       { "src": "/images/legacy/mining/header/2.jpg", "label": "加工厂" },
