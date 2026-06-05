@@ -3,10 +3,14 @@
 /**
  * Build Next.js (standalone) locally and deploy to UAT VM at /data/deploy/next.
  *
+ * Deploy model: upload standalone tarball + restart container (no docker build per deploy).
+ *
  * Usage:
  *   node scripts/deploy-uat-next.mjs
  *   node scripts/deploy-uat-next.mjs --skip-build
+ *   node scripts/deploy-uat-next.mjs --next-only     # skip nginx proxy upload
  *   node scripts/deploy-uat-next.mjs --proxy-only
+ *   node scripts/deploy-uat-next.mjs --sync-auth-env # patch GoTrue SITE_URL (rare)
  */
 import { execSync } from "node:child_process";
 import {
@@ -41,6 +45,8 @@ const DEPLOY_PROXY = join(ROOT, "data", "deploy", "proxy");
 const flags = {
   skipBuild: process.argv.includes("--skip-build"),
   proxyOnly: process.argv.includes("--proxy-only"),
+  nextOnly: process.argv.includes("--next-only"),
+  syncAuthEnv: process.argv.includes("--sync-auth-env"),
 };
 
 async function uploadDir(conn, localDir, remoteDir) {
@@ -68,11 +74,11 @@ function stageStandaloneBundle() {
       "Missing .next/standalone — run build first (output: standalone in next.config.ts)",
     );
   }
-  cpSync(standalone, join(STAGE, "standalone"), { recursive: true });
-  cpSync(staticDir, join(STAGE, "static"), { recursive: true });
-  cpSync(join(ROOT, "public"), join(STAGE, "public"), { recursive: true });
-  cpSync(join(DEPLOY_NEXT, "Dockerfile"), join(STAGE, "Dockerfile"));
-  cpSync(join(DEPLOY_NEXT, "docker-compose.yml"), join(STAGE, "docker-compose.yml"));
+  const dest = join(STAGE, "standalone");
+  // dereference: true — Windows cannot create symlinks (sharp) without admin EPERM
+  cpSync(standalone, dest, { recursive: true, dereference: true });
+  cpSync(staticDir, join(dest, ".next", "static"), { recursive: true });
+  cpSync(join(ROOT, "public"), join(dest, "public"), { recursive: true });
 }
 
 async function applySupabaseUatEnv(conn, env) {
@@ -103,15 +109,20 @@ async function applySupabaseUatEnv(conn, env) {
 }
 
 async function uploadBundle(conn) {
-  const tgz = join(ROOT, ".tmp-next-deploy.tgz");
-  console.log("▸ Packaging standalone bundle...");
-  execSync(`tar -czf "${tgz}" -C "${STAGE}" .`, { stdio: "inherit" });
+  const tgzName = ".tmp-next-deploy.tgz";
+  const tgz = join(ROOT, tgzName);
+  console.log("▸ Packaging standalone bundle (standalone + static + public)...");
+  execSync(`tar -czf ${tgzName} -C .tmp-next-deploy .`, {
+    cwd: ROOT,
+    stdio: "inherit",
+  });
   try {
-    console.log("▸ Uploading bundle...");
+    const sizeMb = (statSync(tgz).size / (1024 * 1024)).toFixed(1);
+    console.log(`▸ Uploading bundle (~${sizeMb} MB, no docker build on server)...`);
     await uploadFile(conn, tgz, `${REMOTE_NEXT}/deploy.tgz`);
     await execCommand(
       conn,
-      `cd ${REMOTE_NEXT} && tar -xzf deploy.tgz && rm -f deploy.tgz`,
+      `cd ${REMOTE_NEXT} && rm -rf standalone && tar -xzf deploy.tgz && rm -f deploy.tgz`,
     );
   } finally {
     rmSync(tgz, { force: true });
@@ -142,7 +153,9 @@ async function main() {
       await execCommand(conn, "mkdir -p /data/deploy/next /data/logs/next /data/deploy/proxy");
 
       if (!flags.proxyOnly) {
-        console.log("▸ Uploading Next.js build context...");
+        await uploadDir(conn, DEPLOY_NEXT, REMOTE_NEXT);
+
+        console.log("▸ Uploading Next.js build output...");
         await uploadBundle(conn);
 
         const tmpEnv = join(ROOT, ".tmp-next.env");
@@ -153,31 +166,34 @@ async function main() {
           unlinkSync(tmpEnv);
         }
 
-        await uploadFile(conn, join(DEPLOY_NEXT, "bootstrap.sh"), `${REMOTE_NEXT}/bootstrap.sh`);
-        await uploadFile(
-          conn,
-          join(DEPLOY_NEXT, "cron-payment-schedule.sh"),
-          `${REMOTE_NEXT}/cron-payment-schedule.sh`,
-        );
+        if (flags.syncAuthEnv) {
+          console.log("▸ Patching Supabase GoTrue SITE_URL...");
+          await applySupabaseUatEnv(conn, env);
+        }
 
-        console.log("▸ Patching Supabase GoTrue SITE_URL for UAT app origin...");
-        await applySupabaseUatEnv(conn, env);
-
-        console.log("▸ Building & starting mada-next container...");
+        console.log("▸ Restarting mada-next (volume mount, no image rebuild)...");
         await execCommand(
           conn,
           `chmod +x ${REMOTE_NEXT}/bootstrap.sh ${REMOTE_NEXT}/cron-payment-schedule.sh && bash ${REMOTE_NEXT}/bootstrap.sh`,
         );
       }
 
-      console.log("▸ Uploading nginx proxy config...");
-      await uploadDir(conn, DEPLOY_PROXY, "/data/deploy/proxy");
-
-      console.log("▸ Restarting nginx proxy...");
-      await execCommand(
-        conn,
-        "cd /data/deploy/proxy && docker compose up -d --force-recreate",
-      );
+      if (!flags.nextOnly && !flags.proxyOnly) {
+        console.log("▸ Uploading nginx proxy config...");
+        await uploadDir(conn, DEPLOY_PROXY, "/data/deploy/proxy");
+        console.log("▸ Restarting nginx proxy...");
+        await execCommand(
+          conn,
+          "cd /data/deploy/proxy && docker compose up -d --force-recreate",
+        );
+      } else if (flags.proxyOnly) {
+        console.log("▸ Uploading nginx proxy config...");
+        await uploadDir(conn, DEPLOY_PROXY, "/data/deploy/proxy");
+        await execCommand(
+          conn,
+          "cd /data/deploy/proxy && docker compose up -d --force-recreate",
+        );
+      }
 
       console.log("▸ Health checks...");
       await execCommand(
@@ -191,16 +207,6 @@ async function main() {
       await execCommand(
         conn,
         `curl -sf -o /dev/null -w 'login HTTP %{http_code}\\n' --resolve uat.gf-v.io:443:127.0.0.1 ${origin}/login`,
-      );
-      const anon = (
-        await execCommand(
-          conn,
-          "grep '^ANON_KEY=' /data/deploy/supabase/upstream/.env | head -1 | cut -d= -f2-",
-        )
-      ).trim();
-      await execCommand(
-        conn,
-        `curl -sf -o /dev/null -w 'auth HTTP %{http_code}\\n' --resolve uat.gf-v.io:443:127.0.0.1 -H 'apikey: ${anon.replace(/'/g, "'\\''")}' ${origin}/auth/v1/health`,
       );
     },
   });

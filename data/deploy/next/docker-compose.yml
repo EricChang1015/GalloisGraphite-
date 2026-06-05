@@ -1,9 +1,19 @@
 services:
+  # Runtime uses pre-built standalone on disk — no image rebuild on code deploy.
+  # First pull: node:22-alpine (~50MB). Updates: upload standalone/ + restart only.
   next:
     container_name: mada-next
-    build: .
+    image: node:22-alpine
+    working_dir: /app
+    command: ["node", "server.js"]
     restart: unless-stopped
     env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    volumes:
+      - ./standalone:/app:ro
     networks:
       - supabase_default
     deploy:

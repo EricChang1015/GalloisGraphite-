@@ -4,7 +4,7 @@
 > **Phase 2（已完成 2026-06-04）**：Next.js 同機部署至 `/data/deploy/next`，`https://uat.gf-v.io/` 為完整 App。  
 > 詳見 [`ROADMAP.md` §E](./ROADMAP.md#e-基礎設施--自建-uat)。
 
-**最後同步**：2026-06-04
+**最後同步**：2026-06-05
 
 ---
 
@@ -18,7 +18,7 @@ Internet ──HTTPS──► proxy (nginx) ──┬──► mada-next:3000   
 
 | 元件 | 容器 | 說明 |
 |------|------|------|
-| Next.js App | `mada-next` | standalone 映像，768MB limit |
+| Next.js App | `mada-next` | `node:22-alpine` + volume 掛載 `standalone/`（**每次 deploy 不 rebuild image**） |
 | Supabase API | kong + auth + rest + storage + realtime | runtime-only profile |
 | TLS | `proxy` | 憑證在 server `conf.d/*.pem`（**不入 git**） |
 | Postgres | `supabase-db` | `/data/data/postgres` |
@@ -33,22 +33,20 @@ Internet ──HTTPS──► proxy (nginx) ──┬──► mada-next:3000   
 ```
 data/deploy/
 ├── supabase/
-│   ├── bootstrap.sh                 # 首次 clone 官方 stack + compose up
-│   ├── compose-runtime.sh           # 只跑 App runtime（預設）
-│   ├── compose-dashboard.sh         # 開 Studio + 日誌
-│   ├── compose-dashboard-stop.sh    # 關 Dashboard
-│   ├── docker-compose.override.yml    # profiles + volume + Kong 依賴
-│   ├── COMPOSE.md                   # Compose profiles 詳細說明
-│   └── .env.uat.example             # server 端 UAT env 範本
-└── proxy/
-    ├── docker-compose.yml           # nginx，加入 supabase_default 網路
-    └── conf.d/                      # upstream、locations、SSL 設定
-├── next/
-│   ├── Dockerfile                   # standalone runtime 映像
-│   ├── docker-compose.yml           # mada-next 容器
 │   ├── bootstrap.sh
-│   ├── cron-payment-schedule.sh   # 取代 Vercel cron（host crontab）
-│   └── .env.example
+│   ├── compose-runtime.sh / compose-dashboard.sh / compose-dashboard-stop.sh
+│   ├── docker-compose.override.yml
+│   ├── COMPOSE.md
+│   └── .env.uat.example
+├── proxy/
+│   ├── docker-compose.yml
+│   └── conf.d/                      # upstream、locations、studio-locations、next-studio-map
+└── next/
+    ├── docker-compose.yml           # node:22-alpine + volume ./standalone
+    ├── bootstrap.sh                 # pull + up（不 build image）
+    ├── Dockerfile                   # 選用；預設 deploy 不用
+    ├── cron-payment-schedule.sh
+    └── .env.example
 ```
 
 **Server 端（不入 git）**
@@ -90,7 +88,12 @@ SUPABASE_SERVICE_ROLE_KEY=<deploy:uat:status>
 | `npm run deploy:uat:check` | SSH 連線 + docker 探測 |
 | `npm run deploy:uat:supabase` | 上傳 deploy 樹 + bootstrap + 重啟 proxy |
 | `npm run deploy:uat:compose` | **僅**上傳 override 並套用 runtime-only（不做 pull） |
-| `npm run deploy:uat:next` | 本機 build standalone + 部署 `mada-next` + 更新 nginx |
+| `npm run deploy:uat:next` | 本機 `npm run build` → 上傳 ~7MB tarball → **restart 容器**（不 rebuild Docker image） |
+| `npm run deploy:uat:next -- --skip-build` | 略過 build，只上傳現有 `.next/standalone` |
+| `npm run deploy:uat:next -- --next-only` | 只更新 Next.js，不重啟 nginx |
+| `npm run deploy:uat:next -- --sync-auth-env` | 順便 patch GoTrue `SITE_URL`（預設不做） |
+| `node scripts/compose-uat-dashboard.mjs` | 開 Studio dashboard profile |
+| `node scripts/ssh-uat-grow-rootfs.mjs` | AWS 擴 EBS 後延伸 root 分割區 |
 | `npm run deploy:uat:proxy` | 只更新 nginx |
 | `npm run deploy:uat:migrate` | 套用 `supabase/migrations/*.sql` |
 | `npm run deploy:uat:migrate:status` | 遠端 migration 狀態 |
@@ -133,6 +136,39 @@ bash /data/deploy/supabase/compose-dashboard-stop.sh
 
 ---
 
+## 5.1 Next.js 部署（`deploy:uat:next`）
+
+**流程（本機 Windows → UAT Linux）：**
+
+1. 本機 `npm run build`（`output: "standalone"`）
+2. 打包 `standalone/`（含 `.next/static`、`public`）→ tarball **~7MB**
+3. SSH 上傳至 `/data/deploy/next/standalone/`
+4. `docker compose restart` — **不 rebuild Docker image**
+
+**容器模型：** 固定映像 `node:22-alpine`，build 產物以 **volume 掛載** `./standalone:/app:ro`。
+
+**Windows 注意：** standalone 內 `sharp` 等 symlink 需 `dereference` 複製（腳本已處理 EPERM）。
+
+**典型日常發布（改一頁後）：**
+
+```powershell
+npm run deploy:uat:next -- --skip-build --next-only
+```
+
+---
+
+## 5.2 Supabase Studio（辦公室 IP）
+
+Dashboard profile 開啟後，nginx 白名單路徑（`studio-locations.cfg`）：
+
+- 允許 IP：`202.175.105.50`、`52.229.168.52`
+- URL：**https://uat.gf-v.io/studio/**
+- App 與 Studio 共用 `/_next/static/` 時，由 `next-studio-map.conf` 依 Referer 分流
+
+備用：SSH tunnel → `http://localhost:54323`（server `127.0.0.1:54323`）
+
+---
+
 ## 6. Migrations
 
 | 環境 | 指令 | 機制 |
@@ -162,7 +198,7 @@ SUPABASE_SERVICE_ROLE_KEY=...
 # + POE / SMTP / CRON_SECRET / PLATFORM_* …
 ```
 
-GoTrue `SITE_URL` 亦會同步為 `https://uat.gf-v.io`（deploy 時 merge 進 `upstream/.env` 並 recreate auth）。
+GoTrue `SITE_URL` 需與 App 同域時，使用 `npm run deploy:uat:next -- --sync-auth-env`（merge 進 `upstream/.env` 並 recreate auth）。
 
 Google OAuth redirect：`https://uat.gf-v.io/auth/v1/callback`
 
@@ -196,7 +232,8 @@ npm run build
 | `scripts/ssh-uat-debug-storage.mjs` | Storage 路由與 log |
 | `scripts/ssh-uat-debug-studio.mjs` | Studio（需 `--profile dashboard`） |
 | `scripts/ssh-uat-verify-data.mjs` | 遠端資料抽查 |
-| `scripts/ssh-uat-test-storage-upload.mjs` | Storage 上傳測試 |
+| `scripts/ssh-uat-debug-next.mjs` | Next.js + nginx 健康 |
+| `scripts/ssh-uat-grow-rootfs.mjs` | EBS 擴容後延伸 ext4 |
 
 ---
 
@@ -220,7 +257,7 @@ npm run build
 A: 不行。那是 Supabase Cloud Management API 專用。
 
 **Q: Studio 怎麼開？**  
-A: Server 上 `compose-dashboard.sh`，用 **SSH tunnel** 存取（nginx 已移除公網 `/studio` 路由，避免與 Next `/_next/` 衝突）。
+A: `node scripts/compose-uat-dashboard.mjs` 或 server 上 `compose-dashboard.sh`。辦公室 IP 可開 **https://uat.gf-v.io/studio/**；其餘 IP 用 SSH tunnel `http://localhost:54323`。
 
 **Q: 如何切回 Cloud？**  
 A: `.env.local` 把 `NEXT_PUBLIC_SUPABASE_URL` 改回 `*.supabase.co`，保留 UAT 變數加 `x` 前綴即可。
