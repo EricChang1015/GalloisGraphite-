@@ -8,6 +8,7 @@
     "payments": "付款",
     "news": "资讯",
     "minePhotos": "矿区照片",
+    "partners": "合作伙伴",
     "settings": "设置"
   },
   "layout": {
@@ -24,6 +25,7 @@
       "payments": "付款",
       "news": "资讯",
       "minePhotos": "矿区照片",
+      "partners": "合作伙伴",
       "settings": "设置"
     },
     "badges": {
@@ -407,6 +409,28 @@
     "altZh": "替代文字（中文）",
     "photosCount": "{count} 张照片",
     "uploadSuccess": "上传完成。",
+    "uploadFailed": "上传失败。",
+    "saveSuccess": "已保存。",
+    "saveFailed": "保存失败。",
+    "deleteSuccess": "已删除。",
+    "deleteFailed": "删除失败。"
+  },
+  "partners": {
+    "title": "合作伙伴",
+    "subtitle": "管理首页跑马灯显示的合作伙伴 Logo。",
+    "addPartner": "新增合作伙伴",
+    "editPartner": "编辑",
+    "deletePartner": "删除",
+    "deletePartnerConfirm": "确定删除此合作伙伴？",
+    "slug": "Slug（固定标识）",
+    "name": "名称",
+    "href": "网站链接",
+    "hrefHint": "留空则仅显示 Logo（无链接）。",
+    "sortOrder": "排序",
+    "published": "已发布",
+    "save": "保存",
+    "uploadIcon": "上传图标",
+    "uploadSuccess": "图标已上传。",
     "uploadFailed": "上传失败。",
     "saveSuccess": "已保存。",
     "saveFailed": "保存失败。",

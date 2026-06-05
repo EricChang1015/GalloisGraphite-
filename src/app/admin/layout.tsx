@@ -21,6 +21,7 @@ export default async function AdminLayout({
     { href: "/admin/payments" as const, label: t("layout.nav.payments") },
     { href: "/admin/news" as const, label: t("layout.nav.news") },
     { href: "/admin/mine-photos" as const, label: t("layout.nav.minePhotos") },
+    { href: "/admin/partners" as const, label: t("layout.nav.partners") },
     { href: "/admin/settings" as const, label: t("layout.nav.settings") },
   ];
 

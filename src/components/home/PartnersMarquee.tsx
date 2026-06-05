@@ -2,36 +2,23 @@ import Image from "next/image";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { getPublishedPartners } from "@/lib/partners/queries";
+
 /**
- * Partner logo marquee. Two duplicated rails sliding in opposite directions
- * give a continuous, calmer feel than a single track. Logos are monochrome
- * (grayscale + low opacity) and snap to full color + brand on hover.
- *
- * Server Component. Marquee is pure CSS keyframes (animate-marquee /
- * animate-marquee-slow + pause-on-hover), so no JS or framer-motion is
- * needed for this surface.
+ * Partner logo marquee — logos from CMS (`partners` table + storage bucket).
  */
-
-const PARTNERS = [
-  { name: "Vesuvius", href: "https://www.vesuvius.com/en/index.html", logo: "/images/partners/vesuvius.svg" },
-  { name: "AMG Graphite GK", href: "https://www.maaxlubritech.com/amg-graphite-gk/", logo: "/images/partners/amg-graphite-gk.png" },
-  { name: "Asbury", href: "https://www.asbury.com/", logo: "/images/partners/asbury.svg" },
-  { name: "Minchem Impex", href: "https://minchem.in/", logo: "/images/partners/minchem-impex.png" },
-  { name: "SGL Carbon", href: "https://www.sglcarbon.com/", logo: "/images/partners/sgl-carbon.svg" },
-  { name: "Krosaki Harima", href: "https://www.krosaki.co.jp/en", logo: "/images/partners/krosaki-harima.png" },
-  { name: "RHI Magnesita", href: "https://www.rhimagnesita.com/", logo: "/images/partners/rhi-magnesita.svg" },
-  { name: "GMI", href: "https://www.graphitemachininginc.com/", logo: "/images/partners/gmi.png" },
-  { name: "Superior Graphite", href: "https://superiorgraphite.com/", logo: "/images/partners/superior-graphite.svg" },
-  { name: "Morgan Advanced Materials", href: "https://www.morganadvancedmaterials.com/", logo: "/images/partners/morgan-advanced-materials.svg" },
-  { name: "CGM", href: "https://www.cgmgraphite.com/", logo: "/images/partners/cgm.jpg" },
-  { name: "Zircar Refractories", href: "https://zircarrefractories.in/", logo: "/images/partners/zircar-refractories.png" },
-  { name: "Aug. Gundlach", href: "https://www.aug-gundlach.de/", logo: "/images/partners/aug-gundlach.jpg" },
-  { name: "AGC PPL", href: "#", logo: "/images/partners/agc-ppl.png" },
-  { name: "UNIMEX", href: "https://unimextr.com/", logo: "/images/partners/unimex.png" },
-] as const;
-
 export async function PartnersMarquee() {
   const t = await getTranslations("home.partners");
+  const rows = await getPublishedPartners();
+  const partners = rows
+    .filter((p) => p.icon_url)
+    .map((p) => ({
+      name: p.name,
+      href: p.href,
+      logo: p.icon_url as string,
+    }));
+
+  if (!partners.length) return null;
 
   return (
     <section className="relative border-y border-border bg-surface-1">
@@ -43,27 +30,33 @@ export async function PartnersMarquee() {
               {t("title")}
             </h2>
           </div>
-          <p className="max-w-md text-xs text-muted-foreground">
-            {t("body")}
-          </p>
+          <p className="max-w-md text-xs text-muted-foreground">{t("body")}</p>
         </div>
       </div>
 
-      {/* Track 1 → */}
       <div className="mask-fade-x relative overflow-hidden">
         <div className="flex w-max animate-marquee pause-on-hover gap-3 px-3 pb-3">
-          {[...PARTNERS, ...PARTNERS].map((p, i) => (
-            <PartnerCard key={`a-${i}`} partner={p} visitLabel={t("visit", { name: p.name })} />
+          {[...partners, ...partners].map((p, i) => (
+            <PartnerCard
+              key={`a-${p.name}-${i}`}
+              partner={p}
+              visitLabel={t("visit", { name: p.name })}
+            />
           ))}
         </div>
       </div>
 
-      {/* Track 2 ← (reversed direction via negative animation) */}
       <div className="mask-fade-x relative overflow-hidden">
         <div className="flex w-max animate-marquee-slow pause-on-hover gap-3 px-3 pb-12 [animation-direction:reverse]">
-          {[...PARTNERS.slice().reverse(), ...PARTNERS.slice().reverse()].map((p, i) => (
-            <PartnerCard key={`b-${i}`} partner={p} visitLabel={t("visit", { name: p.name })} />
-          ))}
+          {[...partners.slice().reverse(), ...partners.slice().reverse()].map(
+            (p, i) => (
+              <PartnerCard
+                key={`b-${p.name}-${i}`}
+                partner={p}
+                visitLabel={t("visit", { name: p.name })}
+              />
+            )
+          )}
         </div>
       </div>
     </section>
@@ -95,7 +88,7 @@ function PartnerCard({
     </div>
   );
 
-  if (partner.href === "#") return inner;
+  if (!partner.href) return inner;
 
   return (
     <Link

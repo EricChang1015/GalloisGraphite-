@@ -630,6 +630,7 @@ supabase/migrations/
   031_mine_photos.sql               ← 礦區照片 CMS（`mine_photo_categories` / `mine_photos` + `mine-photos` Storage bucket + RLS）
   032_mine_photos_grants.sql        ← 補 `GRANT SELECT` 給 anon（公開 `/mining-photos` 可讀）
   033_mine_photo_cover_photo_id.sql ← 分類封面改為指向相簿內照片（`cover_photo_id`）；backfill 各分類第一張
+  034_partners.sql                    ← 首頁 Partners 跑馬燈 CMS（`partners` 表 + `partners` Storage bucket + seed 15 家）
 ```
 
 ### 自動執行（取代手動進 Dashboard SQL Editor）

@@ -46,6 +46,7 @@
     "deploy:uat:migrate-cloud:dry": "node scripts/migrate-cloud-to-uat.mjs --dry-run",
     "deploy:uat:migrate-cloud:storage": "node scripts/migrate-cloud-to-uat.mjs --storage-only",
     "import:mine-photos": "node scripts/import-legacy-mine-photos.mjs",
+    "import:partners": "node scripts/import-partners.mjs",
     "qa:mine-photos": "node scripts/smoke-mine-photos-public.mjs"
   },
   "dependencies": {

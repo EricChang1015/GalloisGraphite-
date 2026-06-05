@@ -8,6 +8,7 @@
     "payments": "Payments",
     "news": "News",
     "minePhotos": "Mine Photos",
+    "partners": "Partners",
     "settings": "Settings"
   },
   "layout": {
@@ -24,6 +25,7 @@
       "payments": "Payments",
       "news": "News",
       "minePhotos": "Mine Photos",
+      "partners": "Partners",
       "settings": "Settings"
     },
     "badges": {
@@ -407,6 +409,28 @@
     "altZh": "Alt text (ZH)",
     "photosCount": "{count} photos",
     "uploadSuccess": "Upload complete.",
+    "uploadFailed": "Upload failed.",
+    "saveSuccess": "Saved.",
+    "saveFailed": "Save failed.",
+    "deleteSuccess": "Deleted.",
+    "deleteFailed": "Delete failed."
+  },
+  "partners": {
+    "title": "Partners",
+    "subtitle": "Manage partner logos shown in the home page marquee.",
+    "addPartner": "Add partner",
+    "editPartner": "Edit",
+    "deletePartner": "Delete",
+    "deletePartnerConfirm": "Delete this partner?",
+    "slug": "Slug (stable id)",
+    "name": "Name",
+    "href": "Website URL",
+    "hrefHint": "Leave empty for logo-only (no link).",
+    "sortOrder": "Sort order",
+    "published": "Published",
+    "save": "Save",
+    "uploadIcon": "Upload icon",
+    "uploadSuccess": "Icon uploaded.",
     "uploadFailed": "Upload failed.",
     "saveSuccess": "Saved.",
     "saveFailed": "Save failed.",
