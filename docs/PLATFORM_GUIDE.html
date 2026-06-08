@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mada Graphite Platform Guide — 平台總覽與操作手冊</title>
+<style>
+  :root {
+    --graphite: #1a1a1a;
+    --graphite-soft: #2a2a2a;
+    --gold: #c9a961;
+    --gold-soft: #e7d9b4;
+    --bg: #f6f5f2;
+    --surface: #ffffff;
+    --border: #e2ded5;
+    --text: #23211d;
+    --muted: #6b675f;
+    --buyer: #2f6f4f;
+    --seller: #8a5a17;
+    --admin: #7a2e2e;
+    --code-bg: #f0ede6;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei",
+      "PingFang TC", "Noto Sans TC", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.7;
+  }
+  a { color: #8a6d27; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Layout */
+  .layout { display: flex; min-height: 100vh; }
+  #toc {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--graphite);
+    color: #e9e6df;
+    padding: 28px 20px 60px;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  #toc .brand {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: .5px;
+    margin-bottom: 2px;
+  }
+  #toc .brand span { color: var(--gold); }
+  #toc .tagline { font-size: 12px; color: #9c978c; margin-bottom: 22px; }
+  #toc ol { list-style: none; margin: 0; padding: 0; counter-reset: sec; }
+  #toc > ol > li { margin-bottom: 4px; }
+  #toc a { color: #cfcabf; display: block; padding: 5px 10px; border-radius: 6px; font-size: 14px; }
+  #toc a:hover { background: var(--graphite-soft); color: #fff; text-decoration: none; }
+  #toc ul { list-style: none; margin: 2px 0 8px; padding-left: 14px; }
+  #toc ul a { font-size: 12.5px; color: #9c978c; padding: 3px 10px; }
+
+  .content {
+    flex: 1;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 48px 56px 120px;
+  }
+
+  /* Headings */
+  h1 { font-size: 30px; margin: 0 0 6px; color: var(--graphite); }
+  h2 {
+    font-size: 23px;
+    margin: 56px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--gold);
+    color: var(--graphite);
+  }
+  h3 { font-size: 18px; margin: 30px 0 10px; color: var(--graphite); }
+  h4 { font-size: 15px; margin: 20px 0 8px; color: var(--seller); }
+  .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 24px; }
+
+  /* Elements */
+  p { margin: 10px 0; }
+  code, .route {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 13px;
+    background: var(--code-bg);
+    padding: 1.5px 6px;
+    border-radius: 4px;
+    color: #5a4a1f;
+  }
+  .route { color: #2c5a8a; white-space: nowrap; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+    background: var(--surface);
+  }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--graphite); color: #fff; font-weight: 600; }
+  tr:nth-child(even) td { background: #faf9f6; }
+
+  .badge {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    color: #fff;
+    letter-spacing: .3px;
+  }
+  .badge-buyer { background: var(--buyer); }
+  .badge-seller { background: var(--seller); }
+  .badge-admin { background: var(--admin); }
+  .badge-guest { background: #555; }
+  .badge-super { background: var(--graphite); border: 1px solid var(--gold); color: var(--gold); }
+
+  .callout {
+    border-left: 4px solid var(--gold);
+    background: #fcf9f0;
+    padding: 12px 18px;
+    margin: 18px 0;
+    border-radius: 0 8px 8px 0;
+  }
+  .callout.warn { border-left-color: var(--admin); background: #fbf2f2; }
+  .callout.tip { border-left-color: var(--buyer); background: #f1f8f3; }
+  .callout strong { color: var(--graphite); }
+
+  .step-list { counter-reset: step; list-style: none; padding-left: 0; margin: 16px 0; }
+  .step-list > li {
+    position: relative;
+    padding: 6px 0 14px 46px;
+    border-left: 2px dashed var(--border);
+    margin-left: 16px;
+  }
+  .step-list > li:last-child { border-left: 2px solid transparent; }
+  .step-list > li::before {
+    counter-increment: step;
+    content: counter(step);
+    position: absolute;
+    left: -16px;
+    top: 2px;
+    width: 30px; height: 30px;
+    background: var(--gold);
+    color: var(--graphite);
+    font-weight: 700;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .step-list .s-title { font-weight: 700; color: var(--graphite); }
+
+  pre.flow {
+    background: var(--graphite);
+    color: #e9e6df;
+    padding: 18px 20px;
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  pre.flow .gold { color: var(--gold); }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin: 16px 0; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .card h4 { margin: 0 0 6px; color: var(--graphite); }
+  .card p { margin: 0; font-size: 13px; color: var(--muted); }
+
+  .pill { display:inline-block; background: var(--gold-soft); color:#5a4a1f; font-size:12px; padding:1px 8px; border-radius:999px; margin-right:4px; }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  .top-link { font-size: 12px; color: var(--muted); float: right; }
+  .meta { font-size: 13px; color: var(--muted); border:1px solid var(--border); border-radius:8px; padding:10px 14px; background:#fbfaf7; }
+
+  /* Mobile toggle */
+  .toc-toggle { display: none; }
+
+  @media (max-width: 880px) {
+    .layout { flex-direction: column; }
+    #toc { width: 100%; height: auto; position: static; }
+    #toc > ol { display: none; }
+    #toc.open > ol { display: block; }
+    .toc-toggle {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--graphite);
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .content { padding: 28px 20px 80px; }
+  }
+
+  @media print {
+    #toc, .toc-toggle, .top-link { display: none; }
+    .content { max-width: none; padding: 0; }
+    h2 { page-break-after: avoid; }
+    table, pre.flow, .callout { page-break-inside: avoid; }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav id="toc">
+    <div class="brand">Mada <span>Graphite</span></div>
+    <div class="tagline">Platform Guide · 平台總覽與操作手冊</div>
+    <button class="toc-toggle" onclick="document.getElementById('toc').classList.toggle('open')">目錄 ▾</button>
+    <ol>
+      <li><a href="#overview">1. 專案概覽</a></li>
+      <li><a href="#public">2. 公開網站</a></li>
+      <li><a href="#account">3. 帳號與通用功能</a></li>
+      <li><a href="#buyer">4. Buyer 買家端</a>
+        <ul>
+          <li><a href="#buyer-browse">4.1 瀏覽與詢價</a></li>
+          <li><a href="#buyer-order">4.2 議價與下單</a></li>
+          <li><a href="#buyer-contract">4.3 合約簽署</a></li>
+          <li><a href="#buyer-payment">4.4 付款</a></li>
+          <li><a href="#buyer-shipment">4.5 出貨與收尾</a></li>
+        </ul>
+      </li>
+      <li><a href="#seller">5. Seller 賣家端</a>
+        <ul>
+          <li><a href="#seller-listing">5.1 上貨管理</a></li>
+          <li><a href="#seller-quote">5.2 報價與議價</a></li>
+          <li><a href="#seller-contract">5.3 合約起草</a></li>
+          <li><a href="#seller-ship">5.4 生產與出貨</a></li>
+          <li><a href="#seller-verify">5.5 付款審核</a></li>
+        </ul>
+      </li>
+      <li><a href="#admin">6. Admin 後台</a>
+        <ul>
+          <li><a href="#admin-dashboard">6.1 儀表板</a></li>
+          <li><a href="#admin-users">6.2 用戶與 KYC</a></li>
+          <li><a href="#admin-trade">6.3 訂單與付款</a></li>
+          <li><a href="#admin-cms">6.4 CMS 與設定</a></li>
+        </ul>
+      </li>
+      <li><a href="#appendix">7. 附錄</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+    <h1>Mada Graphite 平台總覽與操作手冊</h1>
+    <p class="subtitle">B2B 石墨交易平台 — 公開官網、Buyer / Seller 交易流程與 Admin 後台完整說明</p>
+    <div class="meta">
+      本文件依專案實際程式碼（<code>src/app</code>、<code>src/actions</code>、<code>src/proxy.ts</code>）與設計文件
+      （<code>docs/PRD.md</code>、<code>docs/ARCHITECTURE.md</code>）整理。路由群組 <code>(public)</code>、<code>(auth)</code>、<code>(app)</code>
+      不會出現在實際 URL 中。按鈕與分頁名稱保留英文原文，方便對照實際介面。
+    </div>
+
+    <!-- ============ 1. 概覽 ============ -->
+    <h2 id="overview">1. 專案概覽 <a class="top-link" href="#toc">↑ 目錄</a></h2>
+
+    <p>
+      <strong>Mada Graphite</strong> 是一個 B2B 石墨交易平台，連接全球買家與馬達加斯加在地賣家，
+      主要供應方為自有礦場的 Graphite Energy Inc.。平台整合 AI 智能諮詢、市場情報與線上 B2B 交易，
+      涵蓋從詢價、議價、合約簽署、多階段付款到出貨清關的完整流程。
+    </p>
+
+    <h3>技術棧</h3>
+    <div class="table-wrap">
+    <table>
+      <tr><th>層面</th><th>技術</th></tr>
+      <tr><td>前端框架</td><td>Next.js 16 App Router + TypeScript（strict）</td></tr>
+      <tr><td>後端 / 資料庫</td><td>Supabase（Auth + Postgres + Storage + Realtime），以 RLS 控管列級權限</td></tr>
+      <tr><td>資料寫入</td><td>Server Actions（<code>src/actions/*</code>），僅 AI streaming 與 webhook 用 route handler</td></tr>
+      <tr><td>UI</td><td>Tailwind CSS v4 + shadcn/ui，lucide 圖示，sonner toast，three 主題（light / dark / editorial）</td></tr>
+      <tr><td>AI 助手</td><td>POE API（OpenAI 相容），透過 <code>@ai-sdk/openai</code> 串接</td></tr>
+      <tr><td>通知</td><td>AWS SES SMTP（Email）+ SMS（需 Admin 開關與 env）</td></tr>
+      <tr><td>多語系</td><td>next-intl：儀表板與核心行銷頁支援 <code>en</code> / <code>zh-CN</code>；合約 / email / admin / news 仍英文</td></tr>
+    </table>
+    </div>
+
+    <h3>角色與權限</h3>
+    <div class="table-wrap">
+    <table>
+      <tr><th>角色</th><th>說明</th><th>權限要點</th></tr>
+      <tr><td><span class="badge badge-guest">guest</span></td><td>未登入訪客</td><td>瀏覽公開頁、使用 AI（僅知識性問答）</td></tr>
+      <tr><td><span class="badge badge-buyer">buyer</span></td><td>已驗證買家</td><td>詢價、下單、付款、確認收貨、站內訊息</td></tr>
+      <tr><td><span class="badge badge-seller">seller</span></td><td>已驗證賣家</td><td>上貨、回應詢價、起草合約、出貨更新、付款主審</td></tr>
+      <tr><td><span class="badge badge-admin">admin</span></td><td>平台運維</td><td>用戶 / 品類 / 訂單 / 付款覆審 / 新聞 / 介入爭議</td></tr>
+      <tr><td><span class="badge badge-super">super_admin</span></td><td>平台所有人</td><td>管理 admin、敏感設定（promote admin 僅此角色可執行）</td></tr>
+    </table>
+    </div>
+    <div class="callout">
+      存取控制由兩層把關：<code>src/proxy.ts</code> 在路由層做 UX 導向（<span class="route">(app)/*</span> 需登入、
+      <span class="route">/admin/*</span> 需 admin 或 super_admin、<code>status=frozen</code> 會被導回 dashboard），
+      實際資料權限則由 Supabase RLS policy 強制。
+    </div>
+
+    <h3>核心交易流程</h3>
+    <p>議價發生在 inquiry / quotation 層；買家接受報價後直接建立訂單並進入 <code>contract_pending</code>。
+      付款流程與訂單狀態<strong>解耦</strong>，由 <code>payment_schedules</code> 平行管理，未付清的分期只影響能否 <code>completed</code>，不卡其餘進度。</p>
+<pre class="flow">
+<span class="gold">[詢價議價 — inquiry 層]</span>
+ Buyer 提交 Inquiry ──► Seller 報價 Quotation ──► 雙方 Counter 來回 ──► Buyer Accept
+                                                                        │
+<span class="gold">[訂單 — order，12 階段線性]</span>                                          ▼
+ contract_pending ─► contract_signed ─► in_production ─► ready_to_ship
+   ─► shipped ─► in_transit ─► arrived ─► customs_cleared ─► completed
+   （任一節點可 ─► disputed / cancelled）
+                                                                        ▲
+<span class="gold">[付款 — payment_schedules，平行]</span>                                    │
+ scheduled ─► due ─► awaiting_review ─► paid  ───（全部 paid 才能完成）──┘
+</pre>
+
+    <!-- ============ 2. 公開網站 ============ -->
+    <h2 id="public">2. 公開網站 <a class="top-link" href="#toc">↑ 目錄</a></h2>
+    <p>公開區（<code>src/app/(public)</code>）無需登入即可瀏覽，主打品牌形象、產品資訊與內容行銷，並提供訪客版 AI 助理。</p>
+
+    <div class="table-wrap">
+    <table>
+      <tr><th>路由</th><th>頁面</th><th>功能介紹</th></tr>
+      <tr><td><span class="route">/</span></td><td>首頁</td><td>Hero、KPI 數據、礦場介紹、供應地圖、產品 Bento、永續儀表板、應用場景、AI 預覽、合作夥伴跑馬燈、CTA、礦場照片條</td></tr>
+      <tr><td><span class="route">/about</span></td><td>About</td><td>公司與礦場背景、統計數據、章節內容與礦場照片預覽</td></tr>
+      <tr><td><span class="route">/products</span></td><td>Products</td><td>產品目錄：品牌、網目（mesh）規格表、固定碳含量等規格</td></tr>
+      <tr><td><span class="route">/sustainability</span></td><td>Sustainability</td><td>永續採礦與供應鏈說明、社區與環境議題</td></tr>
+      <tr><td><span class="route">/geopolitics</span></td><td>Geopolitics</td><td>地緣政治與供應鏈風險、馬達加斯加供應優勢分析</td></tr>
+      <tr><td><span class="route">/mining-photos</span></td><td>礦場照片</td><td>礦場照片圖庫，可用 <code>?category=</code> 篩選分類</td></tr>
+      <tr><td><span class="route">/news</span></td><td>News 列表</td><td>平台新聞列表（ISR 5 分鐘，由 Supabase <code>news</code> 讀取）</td></tr>
+      <tr><td><span class="route">/news/[slug]</span></td><td>News 詳情</td><td>單篇新聞文章（支援多語 slug）</td></tr>
+      <tr><td><span class="route">/chat</span></td><td>AI Assistant</td><td>公開 AI 助理：未登入僅回答石墨知識 / 公司介紹；偵測到購買意圖回 <code>[LOGIN_REQUIRED]</code> 提示登入</td></tr>
+    </table>
+    </div>
+
+    <h4>使用說明 — AI 助理</h4>
+    <div class="callout tip">
+      訪客可直接在 <span class="route">/chat</span> 詢問石墨知識、規格、公司資訊。當問題涉及實際詢價 / 下單，
+      助理會引導登入。登入後 AI 可參考 listing 與訂單的價格範圍，提供更貼近交易的回覆。
+    </div>
+
+    <!-- ============ 3. 帳號 ============ -->
+    <h2 id="account">3. 帳號與通用功能 <a class="top-link" href="#toc">↑ 目錄</a></h2>
+
+    <h3>3.1 註冊與登入</h3>
+    <ul>
+      <li><strong>Email 註冊</strong>（<span class="route">/register</span>）：填 email、密碼、角色（buyer / seller）、公司名 / 國家。系統寄出驗證信，點擊連結後帳號 <code>status</code> 由 pending 轉 active。</li>
+      <li><strong>Email 驗證</strong>（<span class="route">/verify</span>）：可重寄驗證信。</li>
+      <li><strong>Google OAuth</strong>：一鍵登入，預設角色 buyer，公司資料可日後補齊。</li>
+      <li><strong>忘記 / 重設密碼</strong>（<span class="route">/forgot-password</span> → <span class="route">/reset-password</span>）：寄 recovery 連結；Google 用戶可藉此額外綁定 email/password，同一 profile 兩種方式皆可登入。</li>
+    </ul>
+
+    <h3>3.2 共用儀表板與設定</h3>
+    <div class="table-wrap">
+    <table>
+      <tr><th>路由</th><th>功能</th></tr>
+      <tr><td><span class="route">/dashboard</span></td><td>角色感知首頁：依角色顯示待辦（待回覆詢價、待付款、待簽合約）、進行中訂單與快速連結；admin 角色另顯示「Go to Admin Console」。</td></tr>
+      <tr><td><span class="route">/settings</span></td><td>個人 / 公司資料、頭像、語言切換、KYC 入口。<code>company_name</code> 與 <code>country</code> 為商業資料 gate（詳下）。</td></tr>
+      <tr><td><span class="route">/settings/kyc</span></td><td>KYC：手機驗證、證件上傳，四級 level（0–3）。</td></tr>
+      <tr><td><span class="route">/messages</span> · <span class="route">/messages/[userId]</span></td><td>站內訊息：每對 buyer + seller 一條 thread，使用 Supabase Realtime；可從 market、inquiry、order 頁的「Message」按鈕開啟。</td></tr>
+    </table>
+    </div>
+    <div class="callout warn">
+      <strong>商業資料 Gate：</strong>當 <code>profiles.company_name</code> 或 <code>country</code> 為空時，
+      <code>createInquiry</code>（買家）、<code>createListing</code>（賣家）、<code>submitPayment</code> 會回傳
+      <code>PROFILE_INCOMPLETE</code>，前端以 toast 提示並導向 <span class="route">/settings?prompt=incomplete</span> 補齊。
+    </div>
+    <div class="callout">
+      <strong>i18n：</strong>儀表板（<code>(app)/**</code>）與核心公開行銷頁支援英文 / 簡體中文（cookie <code>mg-locale</code> + <code>profiles.locale</code>）；
+      合約正文、email、SMS、admin 後台、news 與 chat 內容目前仍為英文。
+    </div>
+
+    <!-- ============ 4. Buyer ============ -->
+    <h2 id="buyer">4. Buyer 買家端 <a class="top-link" href="#toc">↑ 目錄</a></h2>
+    <p>
+      <span class="badge badge-buyer">buyer</span>
+      買家的核心任務是「找貨 → 詢價 → 議價 → 簽約 → 分期付款 → 收貨」。以下依交易階段說明功能與逐步操作；
+      每一步標註對應路由與主要 UI 元件。
+    </p>
+
+    <h3 id="buyer-browse">4.1 瀏覽與詢價</h3>
+    <p><strong>功能介紹：</strong>買家在市場瀏覽 active listing，進入單品詳情查看規格、圖庫與賣家資訊，並送出詢價（Inquiry）。</p>
+    <ol class="step-list">
+      <li><span class="s-title">瀏覽市場</span><br />進入 <span class="route">/market</span>，以卡片瀏覽所有上架商品，卡片顯示 spec chip、最小起訂量（MOQ）與縮圖。</li>
+      <li><span class="s-title">查看單品</span><br />點入 <span class="route">/market/[id]</span>，透過 <code>&lt;ListingGallery /&gt;</code> 看 hero + 縮圖、規格、賣家與可出貨時間。</li>
+      <li><span class="s-title">送出詢價</span><br />點「Submit Inquiry」開啟 <code>&lt;InquiryDialog /&gt;</code>，填 requested_qty、target_price、destination、message。系統檢查 MOQ、商業資料與 KYC 門檻，通過後建立 inquiry。</li>
+      <li><span class="s-title">追蹤詢價</span><br />在 <span class="route">/inquiries</span> 的 <strong>Sent</strong> 分頁查看已送出詢價的狀態。</li>
+      <li><span class="s-title">與賣家溝通</span><br />可用單品頁的「Message」按鈕開啟 <span class="route">/messages/[sellerUserId]</span> 私訊賣家。</li>
+    </ol>
+
+    <h3 id="buyer-order">4.2 議價與下單</h3>
+    <p><strong>功能介紹：</strong>賣家回覆 quotation 後，買家可在詢價詳情頁審閱報價、議價或接受。接受報價即自動建立訂單。</p>
+    <ol class="step-list">
+      <li><span class="s-title">審閱報價</span><br />進入 <span class="route">/inquiries/[id]</span>，以 <code>&lt;QuotationActions /&gt;</code> 看 quotation timeline（規格 / 價格 / Incoterm / 有效期）。</li>
+      <li><span class="s-title">議價或接受</span><br />可選 <strong>Counter</strong>（<code>counterQuotation</code>，inquiry 轉 negotiating）、<strong>Decline</strong>，或 <strong>Accept</strong>。</li>
+      <li><span class="s-title">接受報價建立訂單</span><br /><code>acceptQuotation</code> 會建立 order（status = <code>contract_pending</code>），把 Incoterm 快照到訂單，inquiry 轉 <code>converted</code>，並導向 <span class="route">/orders/[id]</span>。</li>
+    </ol>
+    <div class="callout">提案方不能接受自己提出的 offer；接受動作一律由收到報價的一方執行。</div>
+
+    <h3 id="buyer-contract">4.3 合約簽署</h3>
+    <p><strong>功能介紹：</strong>賣家起草合約後，買家在 Contract 分頁預覽、核准或退回，並上傳簽名掃描檔。</p>
+    <ol class="step-list">
+      <li><span class="s-title">預覽合約</span><br />在 <span class="route">/orders/[id]</span> 的 <strong>Contract</strong> 分頁，以 <code>&lt;ContractPreview /&gt;</code> 檢視合約內容與付款排程表，可用 <code>window.print()</code> 輸出 PDF。</li>
+      <li><span class="s-title">核准或退回</span><br /><code>&lt;ContractApproveReject /&gt;</code> 提供 Approve（<code>approveContract</code>）與 Reject（<code>rejectContract</code>，附 reason → 賣家重新起草，<code>revision_no++</code>）。</li>
+      <li><span class="s-title">上傳簽名掃描</span><br />印出簽名後，用 <code>&lt;SignedScanUploader /&gt;</code> 上傳買方簽名件（image 或 PDF）。</li>
+      <li><span class="s-title">完成簽約</span><br />雙方皆上傳簽名 + 買家 approve 後，訂單自動 <code>contract_pending → contract_signed → in_production</code>。</li>
+    </ol>
+
+    <h3 id="buyer-payment">4.4 付款</h3>
+    <p><strong>功能介紹：</strong>付款為平行流程，由 <code>payment_schedules</code> 多筆分期構成，不卡訂單其他進度。賣家為付款主審。</p>
+    <ol class="step-list">
+      <li><span class="s-title">查看排程</span><br />在 <strong>Payment</strong> 分頁，<code>&lt;PaymentScheduleTable /&gt;</code> 顯示各分期狀態；進度條右上顯示「Payments X/Y paid」。</li>
+      <li><span class="s-title">提交付款</span><br />對 <code>due</code> / <code>overdue</code> 分期，用 <code>&lt;PaymentForm /&gt;</code> 提交（<code>submitPayment</code>）；對 <code>scheduled</code> 列亦可「Pay Early」提前結算。</li>
+      <li><span class="s-title">付款方式</span><br />支援 USDT（TRC20 / ERC20）、USDI、MUP、bank_transfer。鏈上方式填 <code>tx_hash</code>；銀行 / USDI / MUP 上傳付款憑證圖到 Storage。</li>
+      <li><span class="s-title">等待審核</span><br />提交後分期轉 <code>awaiting_review</code>，由賣家 verify；若被 reject 則回 <code>due</code>，需重新提交。</li>
+    </ol>
+
+    <h3 id="buyer-shipment">4.5 出貨追蹤與收尾</h3>
+    <ol class="step-list">
+      <li><span class="s-title">追蹤物流</span><br /><strong>Shipment</strong> 分頁查看 B/L No、vessel、container、ETD / ETA / ATA。</li>
+      <li><span class="s-title">文件中心</span><br /><strong>Documents</strong> 分頁查看 / 上傳 13 種文件（Contract / Invoice / Logistics / Inspection / Customs / Payment / Other）。</li>
+      <li><span class="s-title">到港與清關</span><br />任一方可 <code>markArrived</code>（記 ATA）；買家 <code>markCustomsCleared</code> 進入 <code>customs_cleared</code>。</li>
+      <li><span class="s-title">完成訂單</span><br />清關時若全部 schedule 已 paid，自動 <code>completed</code>；否則停在 <code>customs_cleared</code>，待最後一筆付款 verify 後自動完成。</li>
+    </ol>
+
+    <h4>訂單詳情的 7 個分頁</h4>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Tab</th><th>內容</th></tr>
+      <tr><td>Overview</td><td>雙方卡片、進度條、Message 對方按鈕</td></tr>
+      <tr><td>Quotation</td><td>報價歷程快照</td></tr>
+      <tr><td>Contract</td><td>合約預覽、approve / reject、簽名掃描</td></tr>
+      <tr><td>Payment</td><td>分期排程表、提交 / 審核付款、milestone 按鈕</td></tr>
+      <tr><td>Shipment</td><td>B/L、船舶、貨櫃、時程</td></tr>
+      <tr><td>Documents</td><td>13 種文件分組上傳與 admin 核驗徽章</td></tr>
+      <tr><td>Timeline</td><td>append-only 狀態轉換事件</td></tr>
+    </table>
+    </div>
+
+    <!-- ============ 5. Seller ============ -->
+    <h2 id="seller">5. Seller 賣家端 <a class="top-link" href="#toc">↑ 目錄</a></h2>
+    <p>
+      <span class="badge badge-seller">seller</span>
+      賣家的核心任務是「上貨 → 回應詢價 → 起草合約 → 生產出貨 → 審核付款」。
+    </p>
+
+    <h3 id="seller-listing">5.1 上貨管理</h3>
+    <p><strong>功能介紹：</strong>賣家建立並維護自己的 listing，含結構化規格、MOQ、圖片與上下架狀態。</p>
+    <ol class="step-list">
+      <li><span class="s-title">建立 listing</span><br />進入 <span class="route">/listings/new</span>，選品類（讀 <code>product_categories.spec_schema</code>）、填 title、specs、數量 / 單位、出貨地、可出貨時間區間、單價 / 幣別、Incoterm、備註與圖片。<code>createListing</code> 後立即出現在 market。</li>
+      <li><span class="s-title">規格與 MOQ</span><br />支援結構化 Flake Graphite 規格（product_type / mesh_size / fixed_carbon 範圍等）與 Custom Grade 自填 mesh；可設 optional MOQ，並用「Generate title」自動生成標題。</li>
+      <li><span class="s-title">上傳圖片</span><br /><code>&lt;ListingImageUploader /&gt;</code> 支援上傳新圖或重用既往圖庫，上傳前自動壓到 720px WebP。</li>
+      <li><span class="s-title">管理 listing</span><br />在 <span class="route">/listings</span> 的 Actions 欄行內操作：Edit（<span class="route">/listings/[id]/edit</span>）、Pause / Resume、Sold-out、Delete（已有訂單的 listing 無法刪除，回 <code>LISTING_HAS_ORDERS</code>）。</li>
+    </ol>
+
+    <h3 id="seller-quote">5.2 報價與議價</h3>
+    <ol class="step-list">
+      <li><span class="s-title">收到詢價</span><br />在 <span class="route">/inquiries</span> 的 <strong>Received</strong> 分頁查看，並收到 Email / SMS 通知。</li>
+      <li><span class="s-title">送出報價</span><br />進 <span class="route">/inquiries/[id]</span>，用 <code>&lt;QuotationForm /&gt;</code>（<code>submitQuotation</code>）發報價，可預設 listing 條件與 14 天有效期；或對 pending 詢價用 <code>acceptInquiry</code> 快速生成預設報價。</li>
+      <li><span class="s-title">議價來回</span><br /><code>counterQuotation</code> 送出新報價；<code>rejectInquiry</code> / <code>rejectQuotation</code> 拒絕。</li>
+      <li><span class="s-title">等待買家接受</span><br />買家 <code>acceptQuotation</code> 後，訂單自動建立並進入 <code>contract_pending</code>。</li>
+    </ol>
+
+    <h3 id="seller-contract">5.3 合約起草</h3>
+    <ol class="step-list">
+      <li><span class="s-title">起草合約</span><br />在訂單 <strong>Contract</strong> 分頁，用 <code>&lt;ContractDraftForm /&gt;</code> 選 Incoterm（FOB / CFR / CIF），由模板動態生成 HTML。</li>
+      <li><span class="s-title">設定付款排程</span><br /><code>&lt;PaymentScheduleBuilder /&gt;</code> 拆出 1–10 筆分期（prepayment / regular / postpayment，總和須為 100%），建立 <code>payment_schedules</code>。</li>
+      <li><span class="s-title">上傳簽名掃描</span><br />印出簽名後用 <code>&lt;SignedScanUploader /&gt;</code> 上傳賣方簽名件。</li>
+      <li><span class="s-title">買家退回時</span><br />若買家 reject，可重新 <code>draftContract</code>（revision_no 遞增）。</li>
+    </ol>
+
+    <h3 id="seller-ship">5.4 生產與出貨</h3>
+    <ol class="step-list">
+      <li><span class="s-title">生產中</span><br />簽約後通常自動 <code>in_production</code>；可用 <code>&lt;OrderPhaseActions /&gt;</code> 操作各階段。</li>
+      <li><span class="s-title">備貨完成</span><br /><code>markReadyToShip</code> → <code>ready_to_ship</code>。</li>
+      <li><span class="s-title">出貨</span><br /><strong>Shipment</strong> 分頁用 <code>&lt;ShipmentForm /&gt;</code> 填 B/L No、vessel name / IMO、container、ETD / ATD / ETA，<code>markShipped</code> → <code>shipped</code>；可選上傳 B/L 掃描與 Inspection Report（COA / SGS）。</li>
+      <li><span class="s-title">在途與到港</span><br /><code>markInTransit</code> → <code>in_transit</code>；任一方 <code>markArrived</code> → <code>arrived</code>。</li>
+    </ol>
+
+    <h3 id="seller-verify">5.5 付款審核（賣家為主審）</h3>
+    <ol class="step-list">
+      <li><span class="s-title">審核付款</span><br />買家提交付款後分期轉 <code>awaiting_review</code>，賣家在 <strong>Payment</strong> 分頁用 <code>&lt;PaymentVerifyActions /&gt;</code> 執行 <code>verifyPayment</code>：通過 → schedule <code>paid</code>；拒絕 → 回 <code>due</code>。</li>
+      <li><span class="s-title">Milestone 手動觸發</span><br /><code>&lt;MilestoneActionButtons /&gt;</code> 觸發細節點：賣家側如 <code>markBeforeProduction</code> / <code>markBeforeShipment</code> / <code>markBeforeLoading</code>；買家側如 <code>markBlReceived</code> / <code>markGoodsPickedUp</code> 等（依 Incoterm 顯示）。粗節點隨訂單狀態自動觸發，<code>bl_date_plus_N</code> 由 cron <span class="route">/api/cron/payment-schedule</span> 排程。</li>
+    </ol>
+    <div class="callout">
+      付款審核權設計：<strong>賣家為 primary reviewer</strong>，Admin 在 <span class="route">/admin/payments</span> 保留覆審 / 爭議介入權（migration 015）。
+    </div>
+
+    <!-- ============ 6. Admin ============ -->
+    <h2 id="admin">6. Admin 後台 <a class="top-link" href="#toc">↑ 目錄</a></h2>
+    <p>
+      <span class="badge badge-admin">admin</span>
+      <span class="badge badge-super">super_admin</span>
+      後台位於 <span class="route">/admin/*</span>，僅 admin 或 super_admin 可進入。導覽包含 10 條路由，
+      涵蓋平台運維、交易監管與內容管理。Admin actions 分散於 <code>src/actions/admin.ts</code>、
+      <code>admin-news.ts</code>、<code>admin-mine-photos*.ts</code>、<code>admin-partners*.ts</code> 與跨域的
+      <code>order.ts</code> / <code>payment.ts</code> / <code>document.ts</code>。幾乎所有 admin mutation 都寫入 <code>audit_logs</code>。
+    </p>
+
+    <h3 id="admin-dashboard">6.1 儀表板總覽</h3>
+    <p><strong>路由：</strong><span class="route">/admin</span></p>
+    <ul>
+      <li>統計卡：總用戶數、總訂單數、爭議訂單數、待審付款數。</li>
+      <li>Priority Actions：爭議訂單、待審付款、需處理用戶（KYC pending / status pending / profile 不完整）。</li>
+      <li>側邊欄 badge：Users（金）、Payments（金）、Orders disputed（紅），即時提醒待辦。</li>
+    </ul>
+
+    <h3 id="admin-users">6.2 用戶與 KYC 管理</h3>
+    <p><strong>路由：</strong><span class="route">/admin/users</span></p>
+    <ol class="step-list">
+      <li><span class="s-title">瀏覽與篩選</span><br />查看全平台 profiles（email、公司、角色、狀態、KYC level），可依 attention / role / status / KYC 篩選與搜尋。</li>
+      <li><span class="s-title">凍結 / 解凍</span><br /><code>freezeUser</code>（status → frozen）/ <code>unfreezeUser</code>（→ active）。凍結用戶會被 proxy 導回 dashboard。</li>
+      <li><span class="s-title">變更角色</span><br /><code>setUserRole</code>：buyer / seller / admin。<strong>將用戶 promote 為 admin 僅 super_admin 可執行</strong>。</li>
+      <li><span class="s-title">KYC 審核</span><br />透過 <code>&lt;UserKycDialog /&gt;</code> 檢視上傳證件（signed URL）與電話驗證狀態，<code>approveKycDocuments</code> 核准後自動升級 level，或用 <code>setUserKycLevel</code> 手動設定（0–3，含備註）。</li>
+    </ol>
+
+    <h3 id="admin-trade">6.3 訂單、付款與文件監管</h3>
+    <div class="table-wrap">
+    <table>
+      <tr><th>路由</th><th>能做什麼</th></tr>
+      <tr>
+        <td><span class="route">/admin/orders</span></td>
+        <td>全平台訂單列表（order_no、buyer / seller、金額、狀態）。</td>
+      </tr>
+      <tr>
+        <td><span class="route">/admin/orders/[id]</span></td>
+        <td>訂單詳情 + Admin 介入：進度條、合約簽名狀態、付款排程、文件中心、timeline；顯示<strong>該訂單</strong> audit log（最近 20 筆）。
+          <code>&lt;AdminOrderActions /&gt;</code> 提供 <strong>Force Transition</strong>（繞過狀態機強制切換，爭議解決 / 恢復用）、
+          <code>raiseDispute</code>、<code>cancelOrder</code>（出貨前；會 waive 未付 schedule、reject pending payments）。</td>
+      </tr>
+      <tr>
+        <td><span class="route">/admin/payments</span></td>
+        <td>付款覆審：Pending Review + History。與賣家共用 <code>&lt;PaymentVerifyActions /&gt;</code> 執行 verify / reject，
+          作為賣家失職 / 爭議時的 fallback 審核。買家提交付款時 admin 會收到 CC email。</td>
+      </tr>
+    </table>
+    </div>
+    <p><strong>文件核驗：</strong>Admin 可在訂單詳情標記 <code>order_documents</code> 為已核驗（<code>verifyOrderDocument</code>）並刪除任何文件（<code>deleteOrderDocument</code>）；當事人僅能在上傳後 1 小時內刪除未驗證文件。</p>
+
+    <h3 id="admin-cms">6.4 內容管理（CMS）與平台設定</h3>
+    <div class="table-wrap">
+    <table>
+      <tr><th>路由</th><th>能做什麼</th></tr>
+      <tr><td><span class="route">/admin/categories</span></td><td>產品品類 CRUD 與結構化 <code>spec_schema</code>（product_type / mesh_size / fixed_carbon / moisture 等）；軟刪除（is_active=false）/ 重新啟用。</td></tr>
+      <tr><td><span class="route">/admin/news</span></td><td>新聞 CMS：tab 分 pending / published / rejected / draft。手動 CRUD（<code>upsertNews</code>）、自動抓取候選（<code>fetchNewsCandidatesAction</code> / <code>importNewsCandidatesAction</code>）、審核（approve / reject / unpublish）與多語翻譯（<code>translateNewsArticleAction</code>）。</td></tr>
+      <tr><td><span class="route">/admin/mine-photos</span></td><td>礦場照片 CMS：分類 CRUD（slug / 中英標題 / 排序 / 發布）、上傳 / 刪除照片、設定分類封面。</td></tr>
+      <tr><td><span class="route">/admin/partners</span></td><td>首頁合作夥伴管理：partner CRUD（slug / name / href / 排序 / 發布）與 logo 上傳。</td></tr>
+      <tr><td><span class="route">/admin/settings</span></td><td>平台設定：SMTP 狀態與「Send test email」（驗證 AWS SES）、KYC 門檻（詢價 / 上架最低 level）、SMS 通知開關。</td></tr>
+    </table>
+    </div>
+
+    <div class="callout warn">
+      <strong>後台刻意不含的功能：</strong>沒有全域 audit log 瀏覽頁（僅 per-order 片段可見）、
+      沒有專屬 chat 管理後台（admin 可在資料層讀取任何 chat room，但無發訊 UI）、
+      AI chat log 僅 DB RLS 可查無 UI、無自動新聞爬蟲（改半自動抓取審核）、無區塊鏈 / 自動結算。
+    </div>
+
+    <!-- ============ 7. 附錄 ============ -->
+    <h2 id="appendix">7. 附錄 <a class="top-link" href="#toc">↑ 目錄</a></h2>
+
+    <h3>7.1 完整路由表</h3>
+    <div class="table-wrap">
+    <table>
+      <tr><th>群組</th><th>路由</th><th>存取</th></tr>
+      <tr><td rowspan="9">(public)</td><td><span class="route">/</span></td><td rowspan="9">公開</td></tr>
+      <tr><td><span class="route">/about</span></td></tr>
+      <tr><td><span class="route">/products</span></td></tr>
+      <tr><td><span class="route">/sustainability</span></td></tr>
+      <tr><td><span class="route">/geopolitics</span></td></tr>
+      <tr><td><span class="route">/mining-photos</span></td></tr>
+      <tr><td><span class="route">/news</span> · <span class="route">/news/[slug]</span></td></tr>
+      <tr><td><span class="route">/chat</span></td></tr>
+      <tr><td>（API）<span class="route">/api/chat</span></td></tr>
+      <tr><td rowspan="5">(auth)</td><td><span class="route">/login</span></td><td rowspan="5">未登入</td></tr>
+      <tr><td><span class="route">/register</span></td></tr>
+      <tr><td><span class="route">/verify</span></td></tr>
+      <tr><td><span class="route">/forgot-password</span></td></tr>
+      <tr><td><span class="route">/reset-password</span></td></tr>
+      <tr><td rowspan="9">(app)</td><td><span class="route">/dashboard</span></td><td rowspan="9">需登入</td></tr>
+      <tr><td><span class="route">/market</span> · <span class="route">/market/[id]</span></td></tr>
+      <tr><td><span class="route">/listings</span> · <span class="route">/listings/new</span> · <span class="route">/listings/[id]/edit</span></td></tr>
+      <tr><td><span class="route">/inquiries</span> · <span class="route">/inquiries/[id]</span></td></tr>
+      <tr><td><span class="route">/orders</span> · <span class="route">/orders/[id]</span></td></tr>
+      <tr><td><span class="route">/messages</span> · <span class="route">/messages/[userId]</span></td></tr>
+      <tr><td><span class="route">/settings</span> · <span class="route">/settings/kyc</span></td></tr>
+      <tr><td>（API）<span class="route">/api/cron/payment-schedule</span></td></tr>
+      <tr><td>—</td></tr>
+      <tr><td rowspan="10">admin</td><td><span class="route">/admin</span></td><td rowspan="10">admin / super_admin</td></tr>
+      <tr><td><span class="route">/admin/users</span></td></tr>
+      <tr><td><span class="route">/admin/categories</span></td></tr>
+      <tr><td><span class="route">/admin/orders</span> · <span class="route">/admin/orders/[id]</span></td></tr>
+      <tr><td><span class="route">/admin/payments</span></td></tr>
+      <tr><td><span class="route">/admin/news</span></td></tr>
+      <tr><td><span class="route">/admin/mine-photos</span></td></tr>
+      <tr><td><span class="route">/admin/partners</span></td></tr>
+      <tr><td><span class="route">/admin/settings</span></td></tr>
+      <tr><td>—</td></tr>
+    </table>
+    </div>
+
+    <h3>7.2 訂單狀態機（12 階段線性）</h3>
+<pre class="flow">
+quotation_pending ─► quoted ◄─► negotiating
+   └─ buyer accept quotation
+        └─ <span class="gold">contract_pending</span> ◄── 賣家可重新起草（revision_no++）
+             └─ buyer approve + 雙方上傳簽名掃描
+                  └─ contract_signed ─► in_production ─► ready_to_ship
+                       ─► shipped ─► in_transit ─► arrived
+                       ─► customs_cleared ─► <span class="gold">completed</span>
+
+任一非終止狀態 ─► disputed / cancelled
+定義：src/lib/order/stateMachine.ts
+</pre>
+    <div class="callout">實務上議價在 inquiry 層（pending → quoted ↔ negotiating → converted）完成，
+      <code>acceptQuotation</code> 建立 order 時狀態已是 <code>contract_pending</code>。</div>
+
+    <h3>7.3 付款排程生命週期</h3>
+<pre class="flow">
+scheduled ─► due ─► awaiting_review ─► <span class="gold">paid</span>
+   │            │
+   │            └─► overdue（逾期）
+   └─► waived（取消訂單時 waive）
+
+買家 submitPayment → awaiting_review；賣家 / admin verifyPayment → paid（拒絕回 due）
+1–10 筆 installment / 訂單，總和 100%；bl_date_plus_N 由 cron 觸發
+</pre>
+
+    <h3>7.4 相關文件</h3>
+    <div class="card-grid">
+      <div class="card"><h4>PRD</h4><p><code>docs/PRD.md</code> — 產品需求與功能實作狀態</p></div>
+      <div class="card"><h4>Architecture</h4><p><code>docs/ARCHITECTURE.md</code> — 實作架構單一真相來源</p></div>
+      <div class="card"><h4>Schema</h4><p><code>docs/SCHEMA.md</code> — 資料表結構（migrations 001–028）</p></div>
+      <div class="card"><h4>Testing</h4><p><code>docs/TESTING.md</code> — QA 與煙霧測試</p></div>
+      <div class="card"><h4>I18N Plan</h4><p><code>docs/I18N_PLAN.md</code> — 多語系規劃</p></div>
+      <div class="card"><h4>Contract</h4><p><code>docs/CONTRACT_TEMPLATE.md</code> — 合約模板</p></div>
+    </div>
+
+    <hr />
+    <p class="subtitle">Mada Graphite Platform — 本指南依專案程式碼與設計文件整理，供團隊與利害關係人快速理解平台功能與操作流程。</p>
+  </main>
+</div>
+
+<script>
+  document.querySelectorAll('#toc a').forEach(function (a) {
+    a.addEventListener('click', function () {
+      if (window.innerWidth <= 880) {
+        document.getElementById('toc').classList.remove('open');
+      }
+    });
+  });
+</script>
+</body>
+</html>
