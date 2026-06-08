@@ -75,6 +75,6 @@ export const config = {
      * - _next/static, _next/image
      * - favicon and public assets
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|images/|.*\\..*).*)",
+    "/((?!api|auth/callback|_next/static|_next/image|favicon.ico|images/|.*\\..*).*)",
   ],
 };

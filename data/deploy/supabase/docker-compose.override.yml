@@ -85,3 +85,14 @@ services:
   functions:
     profiles:
       - edge
+
+  # ── GoTrue — Google OAuth (credentials in upstream/.env via .env.uat) ─
+  # Passthrough required: .env vars are not visible inside auth without these lines.
+  # See docs/DEPLOY_SELFHOST.md §7.1 and scripts/deploy-uat-auth-oauth.mjs
+  auth:
+    environment:
+      # Default false when unset — empty string crashes GoTrue (ParseBool error).
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED:-false}
+      GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET:-}
+      GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback

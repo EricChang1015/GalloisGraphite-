@@ -63,7 +63,7 @@ npm run deploy:uat:check
 │   │   ├── .env.uat          # gitignored on server; merged into upstream/.env
 │   │   └── upstream/         # official supabase/docker (cloned on server)
 │   ├── proxy/                # nginx + TLS → Kong on Docker network
-│   └── next/                 # Phase 2: Next.js (not yet)
+│   └── next/                 # Phase 2: Next.js (mada-next)
 └── logs/supabase/
 ```
 
@@ -122,6 +122,7 @@ After updating override locally, run `npm run deploy:uat:supabase` then `compose
 | `npm run deploy:uat:status` | Container health + `/auth/v1/health` + print API keys for Vercel |
 | `npm run deploy:uat:compose` | Upload override + apply runtime-only stack (no bootstrap pull) |
 | `npm run deploy:uat:next` | Build Next.js standalone locally + deploy `mada-next` + nginx |
+| `npm run deploy:uat:oauth` | Enable Google OAuth on GoTrue (override + `.env.uat` merge + recreate auth) |
 | `npm run deploy:uat:migrate-cloud` | Cloud → UAT data migration (if script present) |
 
 ## Standard workflows

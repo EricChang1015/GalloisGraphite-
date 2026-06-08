@@ -440,9 +440,11 @@ Google OAuth 流程不走 server action，而是：
 
 1. Client `<GoogleSignInButton />` 呼叫 `supabase.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: ${origin}/auth/callback?next=... } })`
 2. 瀏覽器跳轉到 Google 同意頁
-3. Google 回呼 `https://<project-ref>.supabase.co/auth/v1/callback`，Supabase 再 302 到我們的 `/auth/callback?code=...`
-4. `app/auth/callback/route.ts` 用 server SSR client 呼 `exchangeCodeForSession(code)` 寫入 session cookies
-5. DB trigger `handle_new_user`（007 migration 後）對 `auth.users.email_confirmed_at` 已非 null 的列直接建立 `profiles.status='active'`，避開 email_confirmed trigger
+3. Google 回呼 GoTrue `/auth/v1/callback`（Cloud：`*.supabase.co`；自建 UAT：同域 `https://uat.gf-v.io/auth/v1/callback`），GoTrue 再 302 到 App `/auth/callback?code=...`
+4. `app/auth/callback/route.ts` 用 `createRouteHandlerClient`（`src/lib/supabase/route-handler.ts`）把 `exchangeCodeForSession` 的 session cookies 寫入**同一個** `NextResponse.redirect`；redirect base 用 `getAppUrl()`（自建優先 `APP_URL` runtime env）
+5. `src/proxy.ts` matcher 排除 `/auth/callback`，避免 middleware 干擾 PKCE
+6. 自建 UAT：nginx 加大 `proxy_buffer_size` / `large_client_header_buffers`（OAuth 後大型 Set-Cookie）；`mada-next` 設 `extra_hosts: uat.gf-v.io:host-gateway` 供容器內 SSR 解析公網 API
+7. DB trigger `handle_new_user`（008 migration）對 `email_confirmed_at` 已非 null 的列直接建立 `profiles.status='active'`
 
 ---
 

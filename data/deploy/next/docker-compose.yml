@@ -12,6 +12,9 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
+    # Resolve public API host to the VM (nginx) — avoids hairpin/timeouts for SSR auth.
+    extra_hosts:
+      - "uat.gf-v.io:host-gateway"
     volumes:
       - ./standalone:/app:ro
     networks:

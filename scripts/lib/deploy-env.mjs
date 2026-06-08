@@ -63,6 +63,8 @@ export function buildNextServerEnvFile(env) {
     "NODE_ENV=production",
     `NEXT_PUBLIC_SUPABASE_URL=${origin}`,
     `NEXT_PUBLIC_APP_URL=${origin}`,
+    // Runtime server redirects (not inlined at build — see src/lib/app-url.ts)
+    `APP_URL=${origin}`,
   ];
   for (const key of SERVER_ENV_KEYS) {
     if (env[key]) lines.push(`${key}=${env[key]}`);
@@ -73,17 +75,47 @@ export function buildNextServerEnvFile(env) {
 /** Supabase GoTrue SITE_URL / redirects when App lives on UAT. */
 export function buildSupabaseUatEnvPatch(env) {
   const origin = uatPublicOrigin(env);
+  const host = new URL(origin).hostname;
   return [
     `SUPABASE_PUBLIC_URL=${origin}`,
     `API_EXTERNAL_URL=${origin}`,
     `SITE_URL=${origin}`,
     `ADDITIONAL_REDIRECT_URLS=${origin}/auth/callback,http://localhost:3000/auth/callback`,
+    `GOTRUE_MAILER_EXTERNAL_HOSTS=${host}`,
   ];
+}
+
+/** Google OAuth lines for upstream/.env (GoTrue reads GOOGLE_* via compose passthrough). */
+export function buildGoogleOAuthEnvLines(env) {
+  const clientId = env.GOOGLE_CLIENT_ID?.trim();
+  const secret = env.GOOGLE_SECRET?.trim();
+  if (!clientId || !secret) {
+    return ["GOOGLE_ENABLED=false"];
+  }
+  const enabled = env.GOOGLE_ENABLED?.trim() || "true";
+  return [
+    `GOOGLE_ENABLED=${enabled}`,
+    `GOOGLE_CLIENT_ID=${clientId}`,
+    `GOOGLE_SECRET=${secret}`,
+  ];
+}
+
+/** @returns {string | null} Error message when Google OAuth deploy prerequisites are missing. */
+export function validateGoogleOAuthEnv(env) {
+  const clientId = env.GOOGLE_CLIENT_ID?.trim();
+  const secret = env.GOOGLE_SECRET?.trim();
+  if (!clientId || !secret) {
+    return (
+      "Missing GOOGLE_CLIENT_ID or GOOGLE_SECRET in .env.local — " +
+      "copy from Google Cloud Console → Credentials → OAuth 2.0 Client ID."
+    );
+  }
+  return null;
 }
 
 /** Full .env.uat for server (merged into upstream/.env by bootstrap pattern). */
 export function buildSupabaseUatEnvFile(env) {
-  const lines = [...buildSupabaseUatEnvPatch(env)];
+  const lines = [...buildSupabaseUatEnvPatch(env), ...buildGoogleOAuthEnvLines(env)];
   const smtpKeys = [
     "SMTP_HOST",
     "SMTP_PORT",

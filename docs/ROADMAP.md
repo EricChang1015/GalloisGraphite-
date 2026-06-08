@@ -374,7 +374,8 @@ marketing copy / AI 知識庫），改成「Flake Graphite × {mesh size} + Cust
 **待補（上線前）**：
 
 - [ ] Regenerate JWT / ANON / SERVICE keys（勿沿用 demo keys）
-- [ ] GoTrue SMTP + Google OAuth redirect 指向 `uat.gf-v.io`
+- [x] GoTrue Google OAuth redirect 指向 `uat.gf-v.io`（2026-06-08 UAT 驗證）
+- [ ] GoTrue SMTP
 - [ ] 正式 domain 憑證與 DNS
 
 ### E2. Phase 2 — Next.js 同機部署 ✅（2026-06-04）

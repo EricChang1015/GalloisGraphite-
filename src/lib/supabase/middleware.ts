@@ -92,9 +92,8 @@ export async function updateSession(request: NextRequest) {
 
   // Allow the project to boot even before .env.local is populated. This is
   // useful during scaffolding — the proxy simply becomes a no-op.
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !anonKey) {
     return { response, user: null, supabase: null as never };
   }
 
@@ -112,7 +111,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   const supabase = createServerClient<Database>(
-    url,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
     anonKey,
     {
       auth: SERVER_AUTH_OPTIONS,

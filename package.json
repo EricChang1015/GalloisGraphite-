@@ -42,6 +42,7 @@
     "deploy:uat:status": "node scripts/ssh-uat-status.mjs",
     "deploy:uat:compose": "node scripts/compose-uat-runtime.mjs",
     "deploy:uat:next": "node scripts/deploy-uat-next.mjs",
+    "deploy:uat:oauth": "node scripts/deploy-uat-auth-oauth.mjs",
     "deploy:uat:migrate-cloud": "node scripts/migrate-cloud-to-uat.mjs",
     "deploy:uat:migrate-cloud:dry": "node scripts/migrate-cloud-to-uat.mjs --dry-run",
     "deploy:uat:migrate-cloud:storage": "node scripts/migrate-cloud-to-uat.mjs --storage-only",

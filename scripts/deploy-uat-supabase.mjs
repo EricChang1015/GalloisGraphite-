@@ -16,6 +16,7 @@ import { readdirSync, statSync, writeFileSync, unlinkSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { buildSupabaseUatEnvFile } from "./lib/deploy-env.mjs";
 import { loadEnvLocal } from "./lib/supabase-env.mjs";
 import {
   execCommand,
@@ -47,24 +48,6 @@ async function uploadDir(conn, localDir, remoteDir) {
   }
 }
 
-function buildEnvUat(env) {
-  const appUrl = env.NEXT_PUBLIC_APP_URL || "https://galloisgraphite.vercel.app";
-  const lines = [
-    `SUPABASE_PUBLIC_URL=https://${env.SELF_HOST_SUPABASE_HOST}`,
-    `API_EXTERNAL_URL=https://${env.SELF_HOST_SUPABASE_HOST}`,
-    `SITE_URL=${appUrl}`,
-    `ADDITIONAL_REDIRECT_URLS=${appUrl}/auth/callback,http://localhost:3000/auth/callback`,
-  ];
-  if (env.SMTP_HOST) lines.push(`SMTP_HOST=${env.SMTP_HOST}`);
-  if (env.SMTP_PORT) lines.push(`SMTP_PORT=${env.SMTP_PORT}`);
-  if (env.SMTP_USER) lines.push(`SMTP_USER=${env.SMTP_USER}`);
-  if (env.SMTP_PASS) lines.push(`SMTP_PASS=${env.SMTP_PASS}`);
-  if (env.EMAIL_FROM_ADDRESS)
-    lines.push(`SMTP_ADMIN_EMAIL=${env.EMAIL_FROM_ADDRESS}`);
-  if (env.EMAIL_FROM_NAME) lines.push(`SMTP_SENDER_NAME=${env.EMAIL_FROM_NAME}`);
-  return lines.join("\n") + "\n";
-}
-
 async function main() {
   console.log("▸ UAT Supabase deploy");
   console.log(`▸ Local deploy tree: ${DEPLOY_LOCAL}`);
@@ -92,7 +75,7 @@ async function main() {
         await uploadDir(conn, join(DEPLOY_LOCAL, "supabase"), "/data/deploy/supabase");
 
         const tmpUat = join(ROOT, ".tmp.env.uat");
-        writeFileSync(tmpUat, buildEnvUat(env));
+        writeFileSync(tmpUat, buildSupabaseUatEnvFile(env));
         try {
           await uploadFile(conn, tmpUat, "/data/deploy/supabase/.env.uat");
         } finally {
