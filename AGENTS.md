@@ -72,3 +72,50 @@ Skills cite the matching `npm run qa:*` commands; do not invent new test command
     run `npm run qa:check-dev` (reads `.next/dev/logs/next-development.log`, writes
     `dev-errors.latest.txt`). Exit code must be 0 before claiming "done". With
     browser MCP, also call `browser_console_messages` after each navigation.
+
+## Cursor Cloud specific instructions
+
+### Environment
+
+- **Node.js 22** and **npm 10** are pre-installed; no version manager needed.
+- All required secrets (Supabase, POE, SMTP, etc.) are injected as environment
+  variables. However, `npm run dev` (Next.js Turbopack) reads from `.env.local`,
+  not the parent shell env. Before starting the dev server, generate `.env.local`:
+  ```bash
+  printenv | grep -E '^(NEXT_PUBLIC_|SUPABASE_|POE_|SMTP_|EMAIL_FROM_|SMS_|ADMIN_EMAIL|CRON_SECRET|PLATFORM_|PHONE_OTP_)' | grep -v 'CLOUD_AGENT' > .env.local
+  ```
+- The update script (`npm install`) handles dependency refresh on startup.
+
+### Running the dev server
+
+```bash
+npm run dev          # starts on port 3000 (Turbopack)
+```
+
+First compilation takes ~6 s; subsequent page navigations compile on-demand.
+If port 3000 is occupied, find the PID (`lsof -ti :3000`) and kill it — never
+use an alternate port.
+
+### Key commands
+
+| Purpose | Command |
+|---------|---------|
+| Lint | `npm run lint` |
+| Build (mandatory before commit) | `npm run build` |
+| Dev server | `npm run dev` |
+| Migration status | `npm run db:migrate:status` |
+| Regenerate DB types | `npm run db:types` |
+| QA preflight (build + schema) | `npm run qa:preflight` |
+| Dev log errors | `npm run qa:check-dev` |
+
+### Caveats
+
+- **Lint has pre-existing warnings/errors** in `docs/oldSite/` (legacy JS files)
+  and a few React hooks purity warnings in `src/hooks/`. These are not blockers
+  for commits — only `npm run build` exit 0 is the hard gate.
+- **No local database** — all data goes through Supabase Cloud. Smoke tests
+  (`scripts/smoke-*.mjs`, `scripts/qa-*.mjs`) hit the remote Supabase project
+  directly using `SUPABASE_SERVICE_ROLE_KEY`.
+- **Test accounts** (see `docs/TESTING.md` §1): admin/seller/buyer all use
+  password `a1234567` with Gmail aliases `eric.chang.1015+{admin,seller,buyer}@gmail.com`.
+- **`.env.local` is gitignored** — do not commit it. Regenerate it each session.
